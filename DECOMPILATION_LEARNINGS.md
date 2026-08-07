@@ -883,3 +883,11 @@ The present-box model transition's decompressed frame buffer uses the same `0x18
 file-local struct containing one unknown word and `0x17C` bytes of padding. The typed frame pointer can be passed
 directly as segment 2 data; taking the address of a synthetic first field is unnecessary and generates the same
 code.
+
+## Decode Flagged Array Indices with Named Constants
+
+Unlock-screen item IDs use bit `0x80` to mark purchased entries. When KMC indexes an `s32` price table with
+`encodedId - 0x80`, it folds the subtraction into the table's base address: the emitted code shifts the encoded
+ID directly and loads from `paintShopItemPrices - 0x200`. A disassembler may consequently describe that base
+as an offset from an unrelated preceding symbol. Keep the real price-table symbol and express the decode with
+a named flag/index macro; this preserves the exact code while avoiding a misleading cross-symbol array access.

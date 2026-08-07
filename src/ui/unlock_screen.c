@@ -13,8 +13,10 @@
 #include "system/rom_loader.h"
 #include "system/task_scheduler.h"
 #include "ui/save_data.h"
+#include "ui/title_screen.h"
 
-extern s32 storyMapLocationNames[];
+#define PURCHASED_SHOP_ITEM_FLAG 0x80
+#define SHOP_ITEM_INDEX(itemId) ((itemId) - PURCHASED_SHOP_ITEM_FLAG)
 
 void unlockScreenScheduleDisplayTasks(void);
 void updateUnlockScreen(void);
@@ -315,16 +317,15 @@ void updateUnlockScreen(void) {
 
         case 6:
             itemId = state->modeData.unlockScreen.itemIds[state->modeData.unlockScreen.selectedItemIndex];
-            state->modeData.unlockScreen.itemIds[state->modeData.unlockScreen.selectedItemIndex] = itemId + 0x80;
+            state->modeData.unlockScreen.itemIds[state->modeData.unlockScreen.selectedItemIndex] =
+                itemId + PURCHASED_SHOP_ITEM_FLAG;
             if ((itemId & 0xFF) < 9) {
                 EepromSaveData->characterPaletteIds[itemId & 0xFF] = (itemId & 0xFF) / 3 + 1;
             } else {
                 EepromSaveData->characterPaletteIds[itemId & 0xFF] = itemId + 7;
             }
-            addPlayerGold(
-                -storyMapLocationNames
-                    [state->modeData.unlockScreen.itemIds[state->modeData.unlockScreen.selectedItemIndex] + 19]
-            );
+            itemId = state->modeData.unlockScreen.itemIds[state->modeData.unlockScreen.selectedItemIndex];
+            addPlayerGold(-paintShopItemPrices[SHOP_ITEM_INDEX(itemId)]);
             state->modeData.unlockScreen.screenPhase = 1;
             break;
 

@@ -2,8 +2,7 @@
 #include "gamestate.h"
 #include "system/task_scheduler.h"
 #include "triggers/event_trigger.h"
-
-extern char storyMapLocationNames[][20];
+#include "ui/title_screen.h"
 
 void checkGenericLocationDiscovery(LocationDiscoveryTrigger *);
 

@@ -152,8 +152,8 @@ Vec2sXZ storyMapLocationCoords[10] = {
     { 0xFF8B, 0xFFBC },
 };
 
-// Location names: 6 groups of 20 bytes each (total 120 bytes)
-s8 storyMapLocationNames[6][20] = {
+// Location names
+char storyMapLocationNames[6][20] = {
     "PAINT", "U.F.O.", "TIMES", "SCHOOL", "BOARDSHOP", "TEACHER",
 };
 
