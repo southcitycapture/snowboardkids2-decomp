@@ -158,6 +158,14 @@ while ((u16)i < 4) {
 
 The `while` loop's `goto next` targets a user-defined label, not the loop's continue label. GCC's delay slot filler doesn't find the increment as a beqzl candidate at the goto target, so it falls back to using the fall-through instruction in a regular `beqz` delay slot.
 
+## Preserve Zero-Trip Guards When Converting `do` Loops to `for`
+
+For a signed loop index and a runtime bound, a conventional `for (i = 0; i < count; i++)` can make KMC emit
+`blez` for the entry test, while a separately guarded post-test loop emits the target `beqz` and uses `slt` at
+the back edge. A matching `for` representation is to retain the explicit `count != 0` guard, use `for (;;)`,
+increment at the bottom, and break when the incremented index reaches the bound. Moving the increment into the
+`for` header can also change delay-slot scheduling and register allocation even though the loop is equivalent.
+
 ## Register Allocation: Extra Variables Affect Register Choice
 
 Adding an explicit local variable for a subexpression can change which physical register the compiler assigns to other variables. For example:

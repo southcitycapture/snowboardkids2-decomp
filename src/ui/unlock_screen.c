@@ -25,12 +25,12 @@ void unlockScreenAwaitFadeIn(void);
 void unlockScreenCountdownToExit(void);
 void waitForUnlocksAssetsReady(void);
 
-s32 D_8008D960_8E560[] = { 0x00000000, 0x0000C350, 0x000186A0, 0x00000000, 0x0000AFC8, 0x00015F90, 0x00000000,
-                           0x0000EA60, 0x0001D4C0, 0x000249F0, 0x00001388, 0x000003E8, 0x00013880, 0x00000064,
-                           0x00013880, 0x0000C350, 0x00030D40, 0x00061A80, 0x00000000, 0x00000000 };
+s32 paintShopItemPrices[] = { 0x00000000, 0x0000C350, 0x000186A0, 0x00000000, 0x0000AFC8, 0x00015F90, 0x00000000,
+                              0x0000EA60, 0x0001D4C0, 0x000249F0, 0x00001388, 0x000003E8, 0x00013880, 0x00000064,
+                              0x00013880, 0x0000C350, 0x00030D40, 0x00061A80, 0x00000000, 0x00000000 };
 
 void initUnlockScreen(void) {
-    GameState *state;
+    UnlockScreenState *state;
     ViewportNode *viewports;
     u8 lightBuffer[0x20];
     volatile s32 pad;
@@ -39,8 +39,8 @@ void initUnlockScreen(void) {
     u32 count;
     s32 i;
 
-    state = allocateTaskMemory(0x5E0);
-    viewports = (ViewportNode *)state;
+    state = allocateTaskMemory(sizeof(UnlockScreenState));
+    viewports = state->viewports;
     setupTaskSchedulerNodes(0x44, 6, 0, 0, 0, 0, 0, 0);
     state->modeData.unlockScreen.frameCounter = 0;
     state->modeData.unlockScreen.screenPhase = 0;
@@ -53,7 +53,7 @@ void initUnlockScreen(void) {
     initMenuCameraNode(&viewports[1], 8, 15, 1);
     initMenuCameraNode(&viewports[2], 1, 8, 1);
     createViewportTransform(lightBuffer, 0, 0, 0x600000, 0, 0, 0);
-    setViewportTransformById(((ViewportNode *)state)->viewportId, lightBuffer);
+    setViewportTransformById(state->viewports[0].viewportId, lightBuffer);
     setViewportFadeValue(NULL, 0xFF, 0);
     memcpy(&state->modeData.unlockScreen.itemRotation, &identityMatrix, sizeof(Transform3D));
     state->modeData.unlockScreen.itemRotationAngle = 0;
@@ -79,7 +79,7 @@ void initUnlockScreen(void) {
 
     i = 0;
     if (count != 0) {
-        do {
+        for (;;) {
             card = (StoryMapShopItemCardState *)scheduleTask(initStoryMapShopItemCard, 0, 0, 0x5A);
             if (card != NULL) {
                 card->itemIndex = i;
@@ -89,7 +89,10 @@ void initUnlockScreen(void) {
                 }
             }
             i++;
-        } while (i < (s32)count);
+            if (i >= (s32)count) {
+                break;
+            }
+        }
     }
 
     if (state->modeData.unlockScreen.unlockedItemCount >= 3) {
@@ -240,7 +243,7 @@ void updateUnlockScreen(void) {
                     state->modeData.unlockScreen.screenPhase = 8;
                     playSoundEffectOnChannelNoPriority(0xEE, 1);
                     state->modeData.unlockScreen.pendingFairyAnimation = 3;
-                } else if (gGameSessionContext->gold >= D_8008D960_8E560[itemId & 0xFF]) {
+                } else if (gGameSessionContext->gold >= paintShopItemPrices[itemId & 0xFF]) {
                     sound = 0x2C;
                     channel = 0;
                     state->modeData.unlockScreen.screenPhase = 3;

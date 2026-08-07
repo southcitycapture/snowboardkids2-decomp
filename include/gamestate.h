@@ -371,6 +371,12 @@ typedef union {
 } GameStateModeData;
 
 typedef struct {
+    /* 0x000 */ ViewportNode viewports[3];
+    /* 0x588 */ GameStateModeData modeData;
+    /* 0x5DC */ u8 padding5DC[4];
+} UnlockScreenState;
+
+typedef struct {
     /* 0x0 */ ViewportNode *audioViewport;
     /* 0x4 */ ViewportNode *playerOverlayViewports;
     /* 0x8 */ ViewportNode *playerCameraViewports;
