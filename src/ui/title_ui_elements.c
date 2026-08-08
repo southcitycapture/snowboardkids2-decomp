@@ -1,6 +1,7 @@
 #include "ui/title_ui_elements.h"
 #include "assets.h"
 #include "common.h"
+#include "common_bss.h"
 #include "core/main.h"
 #include "gamestate.h"
 #include "graphics/graphics.h"
@@ -9,10 +10,7 @@
 #include "math/geometry.h"
 #include "system/task_scheduler.h"
 #include "ui/level_preview_3d.h"
-
-extern u8 gConnectedControllerMask;
-extern Transform3D gTitleCharacterTransforms[];
-extern u16 *gTitleCharacterAnimSequences[2];
+#include "ui/title_screen.h"
 
 void cleanupTitleLogoTask(TitleLogoTask *);
 void enqueueTitleLogoRender(TitleLogoTask *);
