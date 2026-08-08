@@ -1775,9 +1775,10 @@ segments:
     start: 0x215A60
 
   - name: FONT_DATA_TABLE
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x215D70
+    decompressed_size: 0x918
 
   - name: PARTICLE_EFFECT_COMPRESSED_GRAPHICS
     type: bin
@@ -2211,29 +2212,34 @@ segments:
     decompressed_size: 0xB0
 
   - name: hudSpriteAsset
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x34CB50
+    decompressed_size: 0x5E28
 
   - name: UI_MENUS_GRAPHICS
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x34F7E0
+    decompressed_size: 0x438
 
   - name: shootCrossSprites
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x34F9A0
+    decompressed_size: 0xE08
 
   - name: speedCrossSprites
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x350140
+    decompressed_size: 0x868
 
   - name: trickCrossSprites
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x3505F0
+    decompressed_size: 0xA88
 
   - name: SLASH_BOARD0_COMPRESSED_DATA
     type: modelpayload
@@ -2597,9 +2603,10 @@ segments:
     decompressed_size: 0x3094
 
   - name: ITEM_SPRITE_METADATA
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x3ECE40
+    decompressed_size: 0xA518
 
   - name: SLASH_FACE_ICON
     type: bin
@@ -2657,41 +2664,48 @@ segments:
     start: 0x3F37C0
 
   - name: playerFinishPositionAsset
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x3F3940
+    decompressed_size: 0x888
 
   - [0x3F3D10, bin]
 
   - name: playerItemIconAsset
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x3F3EF0
+    decompressed_size: 0x2608
 
   - name: playerItemIconMultiplayerAsset
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x3F58E0
+    decompressed_size: 0xB08
 
   - name: lapCounterIconAsset
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x3F6420
+    decompressed_size: 0x168
 
   - name: lapCounterMultiplayerIconAsset
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x3F65C0
+    decompressed_size: 0x98
 
   - name: goldIconSprite
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x3F6670
+    decompressed_size: 0x388
 
   - name: digit_sprite
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x3F6950
+    decompressed_size: 0x508
 
   - name: COSTUME_SLOT_00_COMPRESSED_DATA
     type: modelpayload
@@ -3287,9 +3301,10 @@ segments:
     start: 0x414CF0
 
   - name: titleScreenSprites
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x418520
+    decompressed_size: 0x2238
 
   - name: gameStateInitUncompressedData
     type: bin
@@ -3297,19 +3312,22 @@ segments:
     start: 0x419440
 
   - name: optionsMenuSprites
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x_4196E0
+    decompressed_size: 0xBB8
 
   - name: uiCornerSprites
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x419C60
+    decompressed_size: 0x1548
 
   - name: okPromptSprites
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x41A1D0
+    decompressed_size: 0x1B48
 
   - name: characterSelectBoardTexture
     type: bin
@@ -3339,9 +3357,10 @@ segments:
       0x15: board_rating_star_very_happy_24x24
 
   - name: playerCountSelectSprites
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x426EF0
+    decompressed_size: 0xEEE8
 
   - name: shopBackgroundAsset
     type: tiled_background
@@ -3350,9 +3369,10 @@ segments:
     decompressed_size: 0x14410
 
   - name: levelSelectPortraits
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x43A000
+    decompressed_size: 0xB198
 
   - name: levelPreviewImageAsset
     type: bin
@@ -3366,9 +3386,10 @@ segments:
     decompressed_size: 0x14410
 
   - name: snowflakeSprite
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x4547D0
+    decompressed_size: 0x9488
 
   - name: tiledSnowmanAsset
     type: bin
@@ -3376,19 +3397,22 @@ segments:
     start: 0x458E30
 
   - name: uiFontSpriteSheet
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x459310
+    decompressed_size: 0x2278
 
   - name: font_main
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x459E00
+    decompressed_size: 0x22E8
 
   - name: locationMarkerSprite
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x45A890
+    decompressed_size: 0x3108
 
   - name: SLASHS_ANIMATION_DATA
     type: animationdata
@@ -4951,14 +4975,16 @@ segments:
     start: 0x67BEB0
 
   - name: racdymFootprintSprites
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x67DB80
+    decompressed_size: 0x1A68
 
   - name: cornerDecorationAsset
-    type: bin
+    type: sprite_sheet
     vram: 0
     start: 0x67E860
+    decompressed_size: 0x2448
 
   - name: galleryBackgroundAsset
     type: tiled_background

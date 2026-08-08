@@ -9,7 +9,13 @@ from splat.util import log, options
 from tools.course_assets_common import write_palette_part, write_texture_part, write_yaml
 from tools.modelpayload_common import read_palette_s
 from tools.sno import decompress_sno_with_consumed
-from tools.sprite_sheet_common import CI4_PALETTE_SIZE, FRAME_ENTRY_SIZE, HEADER_SIZE, parse_frame_entry
+from tools.sprite_sheet_common import (
+    FRAME_ENTRY_SIZE,
+    HEADER_SIZE,
+    PALETTE_SLOT_SIZE,
+    palette_specs_for_frames,
+    parse_frame_entry,
+)
 
 
 class N64SegSprite_sheet(CommonSegment):
@@ -106,11 +112,19 @@ class N64SegSprite_sheet(CommonSegment):
 
         first_texture_offset = min(int(frame["texture_offset"], 0) for frame in frames)
         palette_data_size = first_texture_offset - palette_base
-        if palette_data_size < 0 or palette_data_size % CI4_PALETTE_SIZE != 0:
+        if palette_data_size < 0 or palette_data_size % PALETTE_SLOT_SIZE != 0:
             log.error(f"sprite sheet segment {self.name} has an invalid palette range")
-        palette_count = palette_data_size // CI4_PALETTE_SIZE
-        if palette_count == 0 or max(frame["palette_index"] for frame in frames) >= palette_count:
-            log.error(f"sprite sheet segment {self.name} has an invalid palette reference")
+        palette_slot_count = palette_data_size // PALETTE_SLOT_SIZE
+        try:
+            palette_specs = palette_specs_for_frames(frames, palette_slot_count)
+        except ValueError as exc:
+            log.error(f"sprite sheet segment {self.name}: {exc}")
+
+        palette_ranges = []
+        for index, colors in sorted(palette_specs.items()):
+            start = palette_base + index * PALETTE_SLOT_SIZE
+            end = start + colors * 2
+            palette_ranges.append((start, end))
 
         root = self.out_path().parent / self.name
         (root / "palettes").mkdir(parents=True, exist_ok=True)
@@ -118,18 +132,18 @@ class N64SegSprite_sheet(CommonSegment):
 
         palettes = []
         palette_values = {}
-        for index in range(palette_count):
-            offset = palette_base + index * CI4_PALETTE_SIZE
+        for index, colors in sorted(palette_specs.items()):
+            offset = palette_base + index * PALETTE_SLOT_SIZE
             name = f"palette_{index:02d}"
             rel_path = f"{self.name}/palettes/{name}.rgba16.s"
-            write_palette_part(self.out_path().parent, rel_path, data[offset : offset + CI4_PALETTE_SIZE], offset)
+            write_palette_part(self.out_path().parent, rel_path, data[offset : offset + colors * 2], offset)
             palettes.append(
                 {
                     "index": index,
                     "name": name,
                     "offset": f"0x{offset:X}",
                     "path": rel_path,
-                    "colors": 16,
+                    "colors": colors,
                     "format": "rgba16",
                 }
             )
@@ -146,7 +160,8 @@ class N64SegSprite_sheet(CommonSegment):
                 palette_values[frame["palette_index"]],
             )
 
-        covered = [(0, palette_base), (palette_base, first_texture_offset)]
+        covered = [(0, palette_base)]
+        covered.extend(palette_ranges)
         covered.extend(
             (int(frame["texture_offset"], 0), int(frame["texture_offset"], 0) + int(frame["size"], 0))
             for frame in frames
