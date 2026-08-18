@@ -585,9 +585,19 @@ void updateFloatingItemSprite(FloatingItemSpriteTask *arg0) {
     }
 
     if (arg0->halfSizeRender == 0) {
-        enqueueCallbackBySlotIndex(arg0->renderPriority, 1, renderSpriteFrameWithPalette, arg0);
+        pushViewportCallbackBySlot(
+            arg0->renderPriority,
+            VIEWPORT_CALLBACK_LAYER_OPAQUE,
+            renderSpriteFrameWithPalette,
+            arg0
+        );
     } else {
-        enqueueCallbackBySlotIndex(arg0->renderPriority, 1, renderHalfSizeSpriteWithCustomPalette, arg0);
+        pushViewportCallbackBySlot(
+            arg0->renderPriority,
+            VIEWPORT_CALLBACK_LAYER_OPAQUE,
+            renderHalfSizeSpriteWithCustomPalette,
+            arg0
+        );
     }
 }
 

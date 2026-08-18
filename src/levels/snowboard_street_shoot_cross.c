@@ -88,7 +88,7 @@ void activateShootCrossTargets(ShootCrossTargets *arg0) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueCallbackBySlotIndex((u16)i, 4, renderShootCrossTargets, arg0);
+        pushViewportCallbackBySlot((u16)i, VIEWPORT_CALLBACK_LAYER_SPRITES, renderShootCrossTargets, arg0);
     }
 }
 

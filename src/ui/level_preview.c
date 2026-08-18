@@ -710,7 +710,7 @@ void renderLevelPreviewPortraits(SpriteRenderArg *portraitEntries) {
         setCallbackWithContinue(&initPortraitRotationFrames);
     } else {
         for (i = 0; i < 2; i++) {
-            enqueueCallbackBySlotIndex(8, 7, renderSpriteFrame, &portraitEntries[i]);
+            pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_FINAL, renderSpriteFrame, &portraitEntries[i]);
         }
     }
 }
@@ -842,30 +842,30 @@ void renderCharacterSelectDisplay(CharacterSelectDisplayState *state) {
     levelSelect = (LevelSelectState *)getCurrentAllocation();
 
     for (i = 0; i < 10; i++) {
-        enqueueCallbackBySlotIndex(8, 0, renderSpriteFrame, &state->iconEntries[i]);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderSpriteFrame, &state->iconEntries[i]);
     }
 
     if (gGameSessionContext->gameMode == 0) {
         selectedChar = levelSelect->levelIdList[levelSelect->selectedIndex];
         temp_a0 = selectedChar & 0xFF;
         if (temp_a0 == 3 || temp_a0 == 7 || temp_a0 == 11) {
-            enqueueCallbackBySlotIndex(8, 0, renderSpriteFrame, &state->sprite78);
+            pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderSpriteFrame, &state->sprite78);
         } else if ((u32)(selectedChar - 12) < 3 && levelSelect->menuState < MENU_STATE_DETAIL_OPEN) {
-            enqueueCallbackBySlotIndex(8, 0, renderSpriteFrame, &state->sprite84);
+            pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderSpriteFrame, &state->sprite84);
         }
     }
 
     characterIndex = levelSelect->levelIdList[levelSelect->selectedIndex];
     if (EepromSaveData->levelUnlockStatus[characterIndex] == 1) {
         callback = (void (*)(void *))renderSpriteFrame;
-        enqueueCallbackBySlotIndex(8, 6, callback, &state->sprite90);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY, callback, &state->sprite90);
         characterIndex = levelSelect->levelIdList[levelSelect->selectedIndex];
         if (characterIndex < 9) {
             sprintf(state->numBuffer, "%d", characterIndex + 1);
-            enqueueCallbackBySlotIndex(8, 7, renderTextPalette, &state->textPaletteData);
+            pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_FINAL, renderTextPalette, &state->textPaletteData);
         } else {
             state->sprite9C.frameIndex = characterIndex + 4;
-            enqueueCallbackBySlotIndex(8, 7, callback, &state->sprite9C);
+            pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_FINAL, callback, &state->sprite9C);
         }
     }
 
@@ -889,7 +889,7 @@ void renderCharacterSelectDisplay(CharacterSelectDisplayState *state) {
             }
             for (i = 0; i < 4; i++) {
                 state->textEntries[i].color.paletteAndAlpha = state->textAlpha;
-                enqueueCallbackBySlotIndex(8, 7, renderTextSprite, &state->textEntries[i]);
+                pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_FINAL, renderTextSprite, &state->textEntries[i]);
             }
         }
     }
@@ -917,7 +917,7 @@ void renderConfirmationIndicator(void *arg0) {
     LevelSelectState *levelSelect = (LevelSelectState *)getCurrentAllocation();
 
     if (levelSelect->menuState == MENU_STATE_CONFIRM) {
-        enqueueCallbackBySlotIndex(8, 7, renderSpriteFrame, arg0);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_FINAL, renderSpriteFrame, arg0);
     }
 }
 
@@ -948,7 +948,7 @@ void initUnlockNotificationSprite(UnlockNotificationState *state) {
 void renderUnlockNotification(UnlockNotificationState *state) {
     u16 nextFrame;
 
-    enqueueCallbackBySlotIndex(0xA, 0, renderTiledTextureMap, &state->tileMap);
+    pushViewportCallbackBySlot(0xA, VIEWPORT_CALLBACK_LAYER_INITIAL, renderTiledTextureMap, &state->tileMap);
 
     if (gGameSessionContext->gameMode == 0) {
         if (EepromSaveData->levelUnlockStatus[0] == 5) {
@@ -961,7 +961,7 @@ void renderUnlockNotification(UnlockNotificationState *state) {
                     state->frameIndex = 0x13;
                 }
             }
-            enqueueCallbackBySlotIndex(8, 7, renderSpriteFrame, &state->x);
+            pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_FINAL, renderSpriteFrame, &state->x);
         }
     }
 }
@@ -1115,7 +1115,7 @@ void updateMenuBackgroundEffect(MenuTiledBackgroundState *state) {
         state->tileMap.y++;
         state->tileMap.x &= 0x3FF;
         state->tileMap.y &= 0x3FF;
-        enqueueCallbackBySlotIndex(0xB, 0, renderTiledTextureMap, &state->tileMap);
+        pushViewportCallbackBySlot(0xB, VIEWPORT_CALLBACK_LAYER_INITIAL, renderTiledTextureMap, &state->tileMap);
     }
 }
 
@@ -1261,15 +1261,15 @@ void updatePrizeDisplay(PrizeDisplayState *state) {
 
     if ((u32)(levelSelect->menuState - 2) < 2) {
         renderTiledSprite3x3(state->backgroundAsset, -0x40, -0x8, 8, 4, 0, 0x60, 0xC0, 8, 0);
-        enqueueCallbackBySlotIndex(8, 1, renderTextLayout, &state->titleX);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_OPAQUE, renderTextLayout, &state->titleX);
 
         spriteEntry = state->spriteEntries;
         for (i = 0; i < 2; i++) {
-            enqueueCallbackBySlotIndex(8, 1, renderTextSprite, &spriteEntry[i]);
+            pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_OPAQUE, renderTextSprite, &spriteEntry[i]);
         }
 
         state->prizeCount = levelSelect->selectedLapCount;
-        enqueueCallbackBySlotIndex(8, 1, renderTextLayout, &state->counterX);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_OPAQUE, renderTextLayout, &state->counterX);
     }
 }
 

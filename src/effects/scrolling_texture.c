@@ -142,7 +142,7 @@ void updateTransitionFadeOut(TransitionSpawnerState *state) {
     new_var = alpha;
     state->alphaValue = (s8)new_var;
 
-    enqueueCallbackBySlotIndex(1, 0, &renderScaledAlphaSpriteFrame, &state->unk10);
+    pushViewportCallbackBySlot(1, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderScaledAlphaSpriteFrame, &state->unk10);
 }
 
 void updateTransitionFadeIn(TransitionSpawnerState *state) {
@@ -161,7 +161,7 @@ void updateTransitionFadeIn(TransitionSpawnerState *state) {
     alpha = state->delayTimer.halfword;
     state->alphaValue = (s8)alpha;
 
-    enqueueCallbackBySlotIndex(1, 0, &renderScaledAlphaSpriteFrame, &state->unk10);
+    pushViewportCallbackBySlot(1, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderScaledAlphaSpriteFrame, &state->unk10);
 }
 
 void cleanupTransitionLayer(TransitionCleanupData **data) {

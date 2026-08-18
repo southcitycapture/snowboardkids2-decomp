@@ -428,7 +428,7 @@ void updateCharacterSelectSprites(CharacterSelectSprites *arg0) {
             arg0->playerMarkers[i].color.paletteAndAlpha = 0xFF;
         }
 
-        enqueueCallbackBySlotIndex(8, 0, renderTextSprite, &arg0->playerMarkers[i]);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderTextSprite, &arg0->playerMarkers[i]);
     }
 }
 
@@ -473,12 +473,12 @@ void updateCoordinateDisplayTask(CoordinateDisplayTaskState *arg0) {
         arg0->selectedCoordinate.y + 7
     );
 
-    enqueueCallbackBySlotIndex(0, 7, &renderTextPalette, &arg0->coordinateLabel);
+    pushViewportCallbackBySlot(0, VIEWPORT_CALLBACK_LAYER_FINAL, &renderTextPalette, &arg0->coordinateLabel);
 
     arg0->selectionMarker.x = arg0->selectedCoordinate.x;
     arg0->selectionMarker.y = arg0->selectedCoordinate.y;
 
-    enqueueCallbackBySlotIndex(0, 7, &renderTextPalette, &arg0->selectionMarker);
+    pushViewportCallbackBySlot(0, VIEWPORT_CALLBACK_LAYER_FINAL, &renderTextPalette, &arg0->selectionMarker);
 }
 
 void cleanupCharacterSelectTextureData(CharacterSelectBackgroundState *arg0) {
@@ -500,7 +500,7 @@ void initCharacterSelectTextureRenderState(CharacterSelectBackgroundState *arg0)
 void enqueueCharacterSelectTextureRender(void *arg0) {
     CharacterSelectBackgroundState *state = arg0;
 
-    enqueueCallbackBySlotIndex(9, 0, renderTiledTextureMap, &state->renderState);
+    pushViewportCallbackBySlot(9, VIEWPORT_CALLBACK_LAYER_INITIAL, renderTiledTextureMap, &state->renderState);
 }
 
 void initPlayer3CharacterSelectIndicator(SpriteRenderArg *arg0) {
@@ -518,7 +518,7 @@ void initPlayer3CharacterSelectIndicator(SpriteRenderArg *arg0) {
 void updatePlayer3CharacterSelectIndicator(void *arg0) {
     GameState *state = getCurrentAllocation();
     if (state->modeData.storyMap.selectionState[0] == 3) {
-        enqueueCallbackBySlotIndex(8, 0, renderSpriteFrame, arg0);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderSpriteFrame, arg0);
     } else {
         terminateCurrentTask();
     }
@@ -543,7 +543,7 @@ void initPlayer2CharacterSelectIndicator(SpriteRenderArg *arg0) {
 void updatePlayer2CharacterSelectIndicator(void *arg0) {
     GameState *state = getCurrentAllocation();
     if (state->modeData.storyMap.selectionState[0] == 2) {
-        enqueueCallbackBySlotIndex(8, 0, renderSpriteFrame, arg0);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderSpriteFrame, arg0);
     } else {
         terminateCurrentTask();
     }

@@ -266,7 +266,7 @@ void updateSaveSlotStatSprites(SaveSlotStatSpritesState *arg0) {
         callbackEntry = &arg0->entries[i];
 
         i++;
-        enqueueCallbackBySlotIndex(arg0->slotIndex + 9, isSpecial, renderTextSprite, callbackEntry);
+        pushViewportCallbackBySlot(arg0->slotIndex + 9, isSpecial, renderTextSprite, callbackEntry);
     } while (i < 13);
 }
 
@@ -334,7 +334,12 @@ void updateSaveSlotNameEntryGrid(SaveSlotGridState *arg0) {
             entryIndex = rowStartIndex + colIndex;
             arg0->entries[entryIndex].x = allocation->nameEntryGridX + col;
             arg0->entries[entryIndex].y = allocation->nameEntryCursorY + row;
-            enqueueCallbackBySlotIndex(8U, 0U, renderTextSprite, &arg0->entries[entryIndex]);
+            pushViewportCallbackBySlot(
+                8U,
+                VIEWPORT_CALLBACK_LAYER_INITIAL,
+                renderTextSprite,
+                &arg0->entries[entryIndex]
+            );
         }
 
         row += 0x10;
@@ -357,7 +362,7 @@ void updateSaveSlotNameEntryGrid(SaveSlotGridState *arg0) {
         }
     }
 
-    enqueueCallbackBySlotIndex(8U, 1U, renderSpriteFrame, &arg0->cursorSprite);
+    pushViewportCallbackBySlot(8U, VIEWPORT_CALLBACK_LAYER_OPAQUE, renderSpriteFrame, &arg0->cursorSprite);
 }
 
 void cleanupSaveSlotNameEntryGrid(SaveSlotGridState *arg0) {
@@ -476,7 +481,12 @@ void updateSaveSlotItemIcons(SaveSlotItemIconsState *arg0) {
             arg0->icons[i].overridePaletteCount = 0xFF;
         }
 
-        enqueueCallbackBySlotIndex(arg0->slotIndex + 9, 0, renderTextSprite, &arg0->icons[i]);
+        pushViewportCallbackBySlot(
+            arg0->slotIndex + 9,
+            VIEWPORT_CALLBACK_LAYER_INITIAL,
+            renderTextSprite,
+            &arg0->icons[i]
+        );
         i++;
     } while (i < 15);
 
@@ -541,7 +551,7 @@ check_ac6:
     arg0->label.shade.value = 0x60;
 
 end:
-    enqueueCallbackBySlotIndex(arg0->slotIndex + 9, 0, renderTextLayout, &arg0->label);
+    pushViewportCallbackBySlot(arg0->slotIndex + 9, VIEWPORT_CALLBACK_LAYER_INITIAL, renderTextLayout, &arg0->label);
 }
 
 void cleanupSaveSlotNameText(SaveSlotNameTextState *arg0) {
@@ -667,9 +677,19 @@ void updateSaveSlotNumberLabels(SaveSlotNumberLabelsState *arg0) {
         }
 
         if (i < 9) {
-            enqueueCallbackBySlotIndex(arg0->slotIndex + 9, 1, renderTextColored, &arg0->texts[i]);
+            pushViewportCallbackBySlot(
+                arg0->slotIndex + 9,
+                VIEWPORT_CALLBACK_LAYER_OPAQUE,
+                renderTextColored,
+                &arg0->texts[i]
+            );
         } else {
-            enqueueCallbackBySlotIndex(arg0->slotIndex + 9, 1, renderTextSprite, &arg0->sprites[i - 9]);
+            pushViewportCallbackBySlot(
+                arg0->slotIndex + 9,
+                VIEWPORT_CALLBACK_LAYER_OPAQUE,
+                renderTextSprite,
+                &arg0->sprites[i - 9]
+            );
         }
 
         i++;
@@ -868,9 +888,14 @@ void updateSaveSlotGoldDisplay(SaveSlotGoldDisplayState *state) {
         sprintf((char *)&state->textBuffers[i], gGoldFormatString7d, allocation->slotData[i].gold);
 
         if (allocation->saveSlotMenuState != 0x18 || allocation->selectedSaveSlot != i) {
-            enqueueCallbackBySlotIndex(i + 9, 7, renderTextColored, &state->text[i]);
+            pushViewportCallbackBySlot(i + 9, VIEWPORT_CALLBACK_LAYER_FINAL, renderTextColored, &state->text[i]);
         }
-        enqueueCallbackBySlotIndex(i + 9, 0, renderScaledShadedSpriteFrame, &state->icons[i]);
+        pushViewportCallbackBySlot(
+            i + 9,
+            VIEWPORT_CALLBACK_LAYER_INITIAL,
+            renderScaledShadedSpriteFrame,
+            &state->icons[i]
+        );
     }
 }
 
@@ -899,7 +924,7 @@ void renderSaveSlotConfirmationIndicator(void *arg0) {
     val = allocation->saveSlotMenuState;
 
     if (val == 3 || val == 0x3C || val == 0x17) {
-        enqueueCallbackBySlotIndex(8, 7, renderSpriteFrame, arg0);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_FINAL, renderSpriteFrame, arg0);
     }
 }
 
@@ -967,7 +992,12 @@ void updateSaveSlotSelectionParticles(SaveSlotSelectionParticlesState *state) {
                 }
             }
 
-            enqueueCallbackBySlotIndex(8, 0, renderSpriteFrameWithPalette, (void *)&state->entries[i]);
+            pushViewportCallbackBySlot(
+                8,
+                VIEWPORT_CALLBACK_LAYER_INITIAL,
+                renderSpriteFrameWithPalette,
+                (void *)&state->entries[i]
+            );
         }
     } else {
         terminateCurrentTask();
@@ -1155,7 +1185,7 @@ void updateSaveSlotDeleteArrow(SaveSlotDeleteArrowState *state) {
             state->blinkAlpha = 0;
         }
 
-        enqueueCallbackBySlotIndex(8, 1, renderTextSprite, state);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_OPAQUE, renderTextSprite, state);
 
         if (allocation->saveSlotMenuState == 0x33) {
             state->animDelay++;

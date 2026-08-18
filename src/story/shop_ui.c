@@ -182,8 +182,8 @@ void updateDebugCameraYState(cameraState *arg0) {
     arg0->cameraYString = cameraYString;
     arg0->cameraYRotationString = cameraYRotation;
 
-    enqueueCallbackBySlotIndex(8, 7, &renderTextPalette, arg0);
-    enqueueCallbackBySlotIndex(8, 7, &renderTextPalette, &arg0->unkC);
+    pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_FINAL, &renderTextPalette, arg0);
+    pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_FINAL, &renderTextPalette, &arg0->unkC);
 }
 
 void initStoryMapShopFairyModel(StoryMapShopFairyState *arg0) {
@@ -532,7 +532,7 @@ void initStoryMapShopBackgroundRenderState(StoryMapShopBackgroundState *state) {
 }
 
 void enqueueStoryMapShopBackgroundRender(StoryMapShopBackgroundState *state) {
-    enqueueCallbackBySlotIndex(1, 0, renderTiledTextureMap, &state->renderState);
+    pushViewportCallbackBySlot(1, VIEWPORT_CALLBACK_LAYER_INITIAL, renderTiledTextureMap, &state->renderState);
 }
 
 void cleanupStoryMapShopBackground(StoryMapShopBackgroundState *state) {
@@ -607,7 +607,7 @@ void updateUnlockScreenScrollArrows(UnlockScreenScrollArrowsState *arrowState) {
         arrowState->animationCounter &= 0x1F;
 
         for (i = 0; i < 2; i++) {
-            enqueueCallbackBySlotIndex(8, 0, &renderTextSprite, &arrowState->arrows[i]);
+            pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderTextSprite, &arrowState->arrows[i]);
         }
     }
 }
@@ -677,7 +677,7 @@ void updateStoryMapShopItemIcon(TextRenderArg *iconState) {
                 }
             }
             itemValue = 0;
-            enqueueCallbackBySlotIndex(8, itemValue, &renderTextSprite, iconState);
+            pushViewportCallbackBySlot(8, itemValue, &renderTextSprite, iconState);
         }
     }
 }
@@ -744,7 +744,7 @@ void updateStoryMapShopItemStatLabel(TextRenderArg *arg0) {
             }
         }
 
-        enqueueCallbackBySlotIndex(8, 0, &renderTextSprite, arg0);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderTextSprite, arg0);
     }
 }
 
@@ -769,7 +769,7 @@ void updateStoryMapShopExitOverlay(void *arg0) {
     GameState *state = getCurrentAllocation();
 
     if (state->modeData.unlockScreen.screenPhase == 4) {
-        enqueueCallbackBySlotIndex(8, 7, &renderSpriteFrame, arg0);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_FINAL, &renderSpriteFrame, arg0);
     }
 }
 
@@ -829,12 +829,12 @@ void updateStoryMapShopGoldDisplay(StoryMapShopGoldDisplayState *arg0) {
         char c = arg0->goldAmountBuffer[i];
         if (c != space) {
             digit->frameIndex = c - '0';
-            enqueueCallbackBySlotIndex(8, 0, &renderSpriteFrameWithPalette, digit);
+            pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderSpriteFrameWithPalette, digit);
         }
         digit++;
     } while (++i < 7);
 
-    enqueueCallbackBySlotIndex(8, 0, &renderSpriteFrameWithPalette, &arg0->goldIcon);
+    pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderSpriteFrameWithPalette, &arg0->goldIcon);
 }
 
 void cleanupStoryMapShopGoldDisplay(StoryMapShopGoldDisplayState *arg0) {
@@ -910,7 +910,7 @@ void updateStoryMapShopItemPriceDisplay(StoryMapShopItemPriceDisplayState *arg0)
         char c = arg0->priceBuffer[i];
         if (c != space) {
             digit->frameIndex = c - '0';
-            enqueueCallbackBySlotIndex(8, 0, &renderSpriteFrameWithPalette, digit);
+            pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderSpriteFrameWithPalette, digit);
         }
         digit++;
     } while (++i < 6);
@@ -974,7 +974,7 @@ void updateStoryMapShopItemStatsDisplay(UnlockScreenItemStatsDisplay *arg0) {
         currentItem = state->modeData.unlockScreen.itemIds[state->modeData.unlockScreen.selectedItemIndex];
         isValidItem = (u32)currentItem < 0x80U;
         if (isValidItem != 0) {
-            enqueueCallbackBySlotIndex(8U, 1U, &renderSpriteFrame, &arg0->priceLabelSprite);
+            pushViewportCallbackBySlot(8U, VIEWPORT_CALLBACK_LAYER_OPAQUE, &renderSpriteFrame, &arg0->priceLabelSprite);
         }
         if (state->modeData.unlockScreen.screenPhase != 2) {
             if (isValidItem != 0) {
@@ -986,7 +986,12 @@ void updateStoryMapShopItemStatsDisplay(UnlockScreenItemStatsDisplay *arg0) {
 
                 labelIndex = 0;
                 do {
-                    enqueueCallbackBySlotIndex(8U, 1U, &renderTextPalette, &arg0->statLabels[labelIndex]);
+                    pushViewportCallbackBySlot(
+                        8U,
+                        VIEWPORT_CALLBACK_LAYER_OPAQUE,
+                        &renderTextPalette,
+                        &arg0->statLabels[labelIndex]
+                    );
                     labelIndex += 1;
                 } while (labelIndex < 3);
             }
@@ -1017,7 +1022,7 @@ void updateStoryMapShopSoldOutLabel(void *arg0) {
     s8 index = state->modeData.unlockScreen.selectedItemIndex;
 
     if (state->modeData.unlockScreen.itemIds[index] >= 0x80 || state->modeData.unlockScreen.unlockedItemCount == 0) {
-        enqueueCallbackBySlotIndex(8, 1, renderSpriteFrame, arg0);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_OPAQUE, renderSpriteFrame, arg0);
     }
 }
 
@@ -1061,8 +1066,8 @@ void drawUnlockScreenItemIcons(void *untypedArg0) {
 
     if (alloc->modeData.unlockScreen.showItemIcons != 0) {
         for (i = 0; i < 4; i++) {
-            enqueueCallbackBySlotIndex(8, 0, &renderSpriteFrame, &arg0->items[i]);
-            enqueueCallbackBySlotIndex(8, 1, &renderTextLayout, &arg0->title);
+            pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderSpriteFrame, &arg0->items[i]);
+            pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_OPAQUE, &renderTextLayout, &arg0->title);
         }
     }
 }

@@ -1052,15 +1052,15 @@ void enqueueDisplayListObjectWithFullRenderState(s32 arg0, void *arg1) {
     ((DisplayListObject *)arg1)->transformMatrix = 0;
 
     if (((DisplayListObject *)arg1)->displayLists->opaqueDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(arg0, 1, renderOpaqueDisplayList, arg1);
+        pushViewportCallbackBySlot(arg0, VIEWPORT_CALLBACK_LAYER_OPAQUE, renderOpaqueDisplayList, arg1);
     }
 
     if (((DisplayListObject *)arg1)->displayLists->transparentDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(arg0, 3, renderTransparentDisplayList, arg1);
+        pushViewportCallbackBySlot(arg0, VIEWPORT_CALLBACK_LAYER_TRANSLUCENT, renderTransparentDisplayList, arg1);
     }
 
     if (((DisplayListObject *)arg1)->displayLists->overlayDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(arg0, 5, renderOverlayDisplayList, arg1);
+        pushViewportCallbackBySlot(arg0, VIEWPORT_CALLBACK_LAYER_OVERLAY, renderOverlayDisplayList, arg1);
     }
 }
 
@@ -1167,13 +1167,28 @@ void renderOverlayDisplayListCallback(DisplayListObject *obj) {
 void enqueueDisplayListObject(s32 arg0, DisplayListObject *arg1) {
     arg1->transformMatrix = 0;
     if (arg1->displayLists->opaqueDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(arg0 & 0xFFFF, 1, renderOpaqueDisplayListCallback, arg1);
+        pushViewportCallbackBySlot(
+            arg0 & 0xFFFF,
+            VIEWPORT_CALLBACK_LAYER_OPAQUE,
+            renderOpaqueDisplayListCallback,
+            arg1
+        );
     }
     if (arg1->displayLists->transparentDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(arg0 & 0xFFFF, 3, renderTransparentDisplayListCallback, arg1);
+        pushViewportCallbackBySlot(
+            arg0 & 0xFFFF,
+            VIEWPORT_CALLBACK_LAYER_TRANSLUCENT,
+            renderTransparentDisplayListCallback,
+            arg1
+        );
     }
     if (arg1->displayLists->overlayDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(arg0 & 0xFFFF, 5, renderOverlayDisplayListCallback, arg1);
+        pushViewportCallbackBySlot(
+            arg0 & 0xFFFF,
+            VIEWPORT_CALLBACK_LAYER_OVERLAY,
+            renderOverlayDisplayListCallback,
+            arg1
+        );
     }
 }
 
@@ -1203,13 +1218,23 @@ void renderOverlayDisplayListWithFrustumCull(DisplayListObject *arg0) {
 void enqueueDisplayListWithFrustumCull(s32 arg0, DisplayListObject *arg1) {
     arg1->transformMatrix = 0;
     if (arg1->displayLists->opaqueDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(arg0, 1, &renderOpaqueDisplayListWithFrustumCull, arg1);
+        pushViewportCallbackBySlot(arg0, VIEWPORT_CALLBACK_LAYER_OPAQUE, &renderOpaqueDisplayListWithFrustumCull, arg1);
     }
     if (arg1->displayLists->transparentDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(arg0, 3, &renderTransparentDisplayListWithFrustumCull, arg1);
+        pushViewportCallbackBySlot(
+            arg0,
+            VIEWPORT_CALLBACK_LAYER_TRANSLUCENT,
+            &renderTransparentDisplayListWithFrustumCull,
+            arg1
+        );
     }
     if (arg1->displayLists->overlayDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(arg0, 5, &renderOverlayDisplayListWithFrustumCull, arg1);
+        pushViewportCallbackBySlot(
+            arg0,
+            VIEWPORT_CALLBACK_LAYER_OVERLAY,
+            &renderOverlayDisplayListWithFrustumCull,
+            arg1
+        );
     }
 }
 
@@ -1259,13 +1284,23 @@ void buildOverlayDisplayListSegment(DisplayListObject *obj) {
 void enqueueDisplayListObjectWithSegments(s32 arg0, DisplayListObject *arg1) {
     arg1->transformMatrix = 0;
     if (arg1->displayLists->opaqueDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(arg0 & 0xFFFF, 1, &buildDisplayListSegment, arg1);
+        pushViewportCallbackBySlot(arg0 & 0xFFFF, VIEWPORT_CALLBACK_LAYER_OPAQUE, &buildDisplayListSegment, arg1);
     }
     if (arg1->displayLists->transparentDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(arg0 & 0xFFFF, 3, &buildTransparentDisplayListSegment, arg1);
+        pushViewportCallbackBySlot(
+            arg0 & 0xFFFF,
+            VIEWPORT_CALLBACK_LAYER_TRANSLUCENT,
+            &buildTransparentDisplayListSegment,
+            arg1
+        );
     }
     if (arg1->displayLists->overlayDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(arg0 & 0xFFFF, 5, &buildOverlayDisplayListSegment, arg1);
+        pushViewportCallbackBySlot(
+            arg0 & 0xFFFF,
+            VIEWPORT_CALLBACK_LAYER_OVERLAY,
+            &buildOverlayDisplayListSegment,
+            arg1
+        );
     }
 }
 
@@ -1434,15 +1469,20 @@ void enqueueBillboardedDisplayListObject(s32 arg0, DisplayListObject *arg1) {
     arg1->transformMatrix = 0;
 
     if (arg1->displayLists->opaqueDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(arg0, 1, &renderBillboardedOpaqueDisplayList, arg1);
+        pushViewportCallbackBySlot(arg0, VIEWPORT_CALLBACK_LAYER_OPAQUE, &renderBillboardedOpaqueDisplayList, arg1);
     }
 
     if (arg1->displayLists->transparentDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(arg0, 3, &renderBillboardedTransparentDisplayList, arg1);
+        pushViewportCallbackBySlot(
+            arg0,
+            VIEWPORT_CALLBACK_LAYER_TRANSLUCENT,
+            &renderBillboardedTransparentDisplayList,
+            arg1
+        );
     }
 
     if (arg1->displayLists->overlayDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(arg0, 5, &renderBillboardedOverlayDisplayList, arg1);
+        pushViewportCallbackBySlot(arg0, VIEWPORT_CALLBACK_LAYER_OVERLAY, &renderBillboardedOverlayDisplayList, arg1);
     }
 }
 
@@ -1670,14 +1710,19 @@ void enqueuePreLitMultiPartDisplayList(s32 arg0, DisplayListObject *arg1, s32 ar
     }
 
     if (renderFlags & 1) {
-        enqueueCallbackBySlotIndex(arg0, 1, &renderMultiPartOpaqueDisplayLists, arg1);
+        pushViewportCallbackBySlot(arg0, VIEWPORT_CALLBACK_LAYER_OPAQUE, &renderMultiPartOpaqueDisplayLists, arg1);
     }
     new_var = arg1;
     if (renderFlags & 2) {
-        enqueueCallbackBySlotIndex(arg0, 3, &renderMultiPartTransparentDisplayLists, new_var);
+        pushViewportCallbackBySlot(
+            arg0,
+            VIEWPORT_CALLBACK_LAYER_TRANSLUCENT,
+            &renderMultiPartTransparentDisplayLists,
+            new_var
+        );
     }
     if (renderFlags & 4) {
-        enqueueCallbackBySlotIndex(arg0, 5, &renderMultiPartOverlayDisplayLists, arg1);
+        pushViewportCallbackBySlot(arg0, VIEWPORT_CALLBACK_LAYER_OVERLAY, &renderMultiPartOverlayDisplayLists, arg1);
     }
 }
 
@@ -1823,15 +1868,20 @@ void enqueueDisplayListObjectWithLights(s32 arg0, DisplayListObject *arg1) {
     arg1->transformMatrix = 0;
 
     if (arg1->displayLists->opaqueDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(arg0, 1, &renderOpaqueDisplayListWithLights, arg1);
+        pushViewportCallbackBySlot(arg0, VIEWPORT_CALLBACK_LAYER_OPAQUE, &renderOpaqueDisplayListWithLights, arg1);
     }
 
     if (arg1->displayLists->transparentDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(arg0, 3, &renderTransparentDisplayListWithLights, arg1);
+        pushViewportCallbackBySlot(
+            arg0,
+            VIEWPORT_CALLBACK_LAYER_TRANSLUCENT,
+            &renderTransparentDisplayListWithLights,
+            arg1
+        );
     }
 
     if (arg1->displayLists->overlayDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(arg0, 5, &renderOverlayDisplayListWithLights, arg1);
+        pushViewportCallbackBySlot(arg0, VIEWPORT_CALLBACK_LAYER_OVERLAY, &renderOverlayDisplayListWithLights, arg1);
     }
 }
 
@@ -2014,14 +2064,29 @@ void enqueueMultiPartDisplayList(s32 arg0, DisplayListObject *arg1, s32 arg2) {
     }
 
     if (renderFlags & 1) {
-        enqueueCallbackBySlotIndex(arg0, 1, &renderMultiPartOpaqueDisplayListsWithLights, arg1);
+        pushViewportCallbackBySlot(
+            arg0,
+            VIEWPORT_CALLBACK_LAYER_OPAQUE,
+            &renderMultiPartOpaqueDisplayListsWithLights,
+            arg1
+        );
     }
     new_var = arg1;
     if (renderFlags & 2) {
-        enqueueCallbackBySlotIndex(arg0, 3, &renderMultiPartTransparentDisplayListsWithLights, new_var);
+        pushViewportCallbackBySlot(
+            arg0,
+            VIEWPORT_CALLBACK_LAYER_TRANSLUCENT,
+            &renderMultiPartTransparentDisplayListsWithLights,
+            new_var
+        );
     }
     if (renderFlags & 4) {
-        enqueueCallbackBySlotIndex(arg0, 5, &renderMultiPartOverlayDisplayListsWithLights, arg1);
+        pushViewportCallbackBySlot(
+            arg0,
+            VIEWPORT_CALLBACK_LAYER_OVERLAY,
+            &renderMultiPartOverlayDisplayListsWithLights,
+            arg1
+        );
     }
 }
 
@@ -2115,7 +2180,7 @@ void renderCameraRelativeDisplayList(DisplayListObject *displayListObj) {
 
 void enqueueCameraRelativeDisplayList(s32 arg0, DisplayListObject *arg1) {
     arg1->transformMatrix = 0;
-    enqueueCallbackBySlotIndex(arg0 & 0xFFFF, 0, &renderCameraRelativeDisplayList, arg1);
+    pushViewportCallbackBySlot(arg0 & 0xFFFF, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderCameraRelativeDisplayList, arg1);
 }
 
 void renderTexturedBillboardSprite(TexturedSpriteState *state) {
@@ -2189,7 +2254,7 @@ void renderTexturedBillboardSprite(TexturedSpriteState *state) {
 
 void enqueueTexturedBillboardSprite(s32 arg0, TexturedBillboardSprite *arg1) {
     arg1->matrix = NULL;
-    enqueueCallbackBySlotIndex(arg0 & 0xFFFF, 4, &renderTexturedBillboardSprite, arg1);
+    pushViewportCallbackBySlot(arg0 & 0xFFFF, VIEWPORT_CALLBACK_LAYER_SPRITES, &renderTexturedBillboardSprite, arg1);
 }
 
 void renderRotatedBillboardSprite(RotatedBillboardSprite *state) {
@@ -2262,7 +2327,7 @@ void renderRotatedBillboardSprite(RotatedBillboardSprite *state) {
 
 void enqueueRotatedBillboardSprite(s32 arg0, MatrixEntry_202A0 *arg1) {
     arg1->renderMatrix = NULL;
-    enqueueCallbackBySlotIndex(arg0 & 0xFFFF, 4, &renderRotatedBillboardSprite, arg1);
+    pushViewportCallbackBySlot(arg0 & 0xFFFF, VIEWPORT_CALLBACK_LAYER_SPRITES, &renderRotatedBillboardSprite, arg1);
 }
 
 void renderTexturedBillboardSpriteTile(TexturedSpriteState *state) {
@@ -2344,7 +2409,12 @@ void renderTexturedBillboardSpriteTile(TexturedSpriteState *state) {
 
 void enqueueTexturedBillboardSpriteTile(u16 arg0, TexturedBillboardSprite *arg1) {
     arg1->matrix = NULL;
-    enqueueCallbackBySlotIndex(arg0 & 0xFFFF, 4, &renderTexturedBillboardSpriteTile, arg1);
+    pushViewportCallbackBySlot(
+        arg0 & 0xFFFF,
+        VIEWPORT_CALLBACK_LAYER_SPRITES,
+        &renderTexturedBillboardSpriteTile,
+        arg1
+    );
 }
 
 void renderAlphaBillboardSprite(AlphaSpriteState *state) {
@@ -2427,7 +2497,7 @@ void renderAlphaBillboardSprite(AlphaSpriteState *state) {
 
 void enqueueAlphaBillboardSprite(s32 arg0, loadAssetMetadata_arg *arg1) {
     (arg1 + 1)->assetTemplate = 0;
-    enqueueCallbackBySlotIndex(arg0 & 0xFFFF, 6, &renderAlphaBillboardSprite, arg1);
+    pushViewportCallbackBySlot(arg0 & 0xFFFF, VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY, &renderAlphaBillboardSprite, arg1);
 }
 
 void renderAlphaSprite(AlphaSpriteState *state) {
@@ -2511,7 +2581,7 @@ void renderAlphaSprite(AlphaSpriteState *state) {
 
 void enqueueAlphaSprite(s32 arg0, loadAssetMetadata_arg *arg1) {
     (arg1 + 1)->assetTemplate = 0;
-    enqueueCallbackBySlotIndex(arg0, 6, &renderAlphaSprite, arg1);
+    pushViewportCallbackBySlot(arg0, VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY, &renderAlphaSprite, arg1);
 }
 
 void loadAssetMetadata(loadAssetMetadata_arg *arg0, void *arg1, s32 arg2) {

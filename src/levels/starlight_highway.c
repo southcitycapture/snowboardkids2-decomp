@@ -183,18 +183,33 @@ void renderDebugDisplayLists(StarlightDebugDisplayTaskState *arg0) {
 
     for (i = 0; i < 4; i++) {
         if (arg0->displayObject.displayLists->opaqueDisplayList != NULL) {
-            enqueueCallbackBySlotIndex(i & 0xFFFF, 1, renderColorIndexedOpaqueDisplayList, arg0);
+            pushViewportCallbackBySlot(
+                i & 0xFFFF,
+                VIEWPORT_CALLBACK_LAYER_OPAQUE,
+                renderColorIndexedOpaqueDisplayList,
+                arg0
+            );
         }
 
         if (arg0->displayObject.displayLists->transparentDisplayList != NULL) {
-            enqueueCallbackBySlotIndex(i & 0xFFFF, 3, renderColorIndexedTransparentDisplayList, arg0);
+            pushViewportCallbackBySlot(
+                i & 0xFFFF,
+                VIEWPORT_CALLBACK_LAYER_TRANSLUCENT,
+                renderColorIndexedTransparentDisplayList,
+                arg0
+            );
         }
 
         if (arg0->displayObject.displayLists->overlayDisplayList == NULL) {
             continue;
         }
 
-        enqueueCallbackBySlotIndex(i & 0xFFFF, 5, renderColorIndexedOverlayDisplayList, arg0);
+        pushViewportCallbackBySlot(
+            i & 0xFFFF,
+            VIEWPORT_CALLBACK_LAYER_OVERLAY,
+            renderColorIndexedOverlayDisplayList,
+            arg0
+        );
     }
 }
 

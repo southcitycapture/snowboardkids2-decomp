@@ -106,8 +106,8 @@ void updateCreditsCornerDecorationSprites(CreditsState *state) {
         void *callback = renderTextSprite;
         state->leftBottomCornerSprite.color.paletteAndAlpha = shortVal;
         state->leftTopCornerSprite.color.paletteAndAlpha = shortVal;
-        enqueueCallbackBySlotIndex(1, 4, callback, &state->leftTopCornerSprite);
-        enqueueCallbackBySlotIndex(1, 4, callback, &state->leftBottomCornerSprite);
+        pushViewportCallbackBySlot(1, VIEWPORT_CALLBACK_LAYER_SPRITES, callback, &state->leftTopCornerSprite);
+        pushViewportCallbackBySlot(1, VIEWPORT_CALLBACK_LAYER_SPRITES, callback, &state->leftBottomCornerSprite);
     }
 
     temp_v0 = state->rightCornerAlpha;
@@ -116,7 +116,7 @@ void updateCreditsCornerDecorationSprites(CreditsState *state) {
         void *callback = renderTextSprite;
         state->rightBottomCornerSprite.color.paletteAndAlpha = shortVal;
         state->rightTopCornerSprite.color.paletteAndAlpha = shortVal;
-        enqueueCallbackBySlotIndex(1, 4, callback, &state->rightTopCornerSprite);
-        enqueueCallbackBySlotIndex(1, 4, callback, &state->rightBottomCornerSprite);
+        pushViewportCallbackBySlot(1, VIEWPORT_CALLBACK_LAYER_SPRITES, callback, &state->rightTopCornerSprite);
+        pushViewportCallbackBySlot(1, VIEWPORT_CALLBACK_LAYER_SPRITES, callback, &state->rightBottomCornerSprite);
     }
 }

@@ -150,7 +150,7 @@ void *gLinearAllocPtr BSS = 0;
 void *gLinearAllocEnd BSS = 0;
 void **gLinearArenaRegions BSS = 0;
 void *gLinearArenaBuffer BSS = 0;
-CallbackPoolSlot *gViewportCallbackPools[0x10] BSS = { 0 };
+ViewportNode *gViewportCallbackPools[0x10] BSS = { 0 };
 s32 D_800A35C8_A0058[2] BSS = { 0 };
 
 void restoreViewportOffsets(void);
@@ -341,11 +341,11 @@ void renderFrame(u32 viScanline) {
         storedViScanline = viScanline + 3;
 
         do {
-            temp = node->viewportFlags;
+            temp = node->uses3DRendering;
 
             while (node->list3_next != NULL) {
                 node->frameCallbackMsg = NULL;
-                if (node->list3_next->viewportFlags != (u8)temp) {
+                if (node->list3_next->uses3DRendering != (u8)temp) {
                     break;
                 }
 
@@ -516,13 +516,13 @@ void renderFrame(u32 viScanline) {
                 gTextClipAndOffsetData.offsetX = node->offsetX;
                 gTextClipAndOffsetData.offsetY = node->offsetY;
 
-                gTextureEnabled = node->viewportFlags;
+                gTextureEnabled = node->uses3DRendering;
                 gGraphicsMode = -1;
 
-                if (node->viewportFlags == 0) {
+                if (node->uses3DRendering == 0) {
                     gDPSetColorDither(gDisplayListAllocPtr++, G_CD_DISABLE);
 
-                    for (callbackEntry = (CallbackEntry *)node->pool; callbackEntry != NULL;
+                    for (callbackEntry = node->callbackLayers; callbackEntry != NULL;
                          callbackEntry = callbackEntry->next) {
                         if (callbackEntry->callback == NULL) {
                             continue;
@@ -532,7 +532,7 @@ void renderFrame(u32 viScanline) {
                             break;
                         }
 
-                        gCurrentPoolIndex = callbackEntry->poolIndex;
+                        gCurrentPoolIndex = callbackEntry->callbackLayer;
                         ((void (*)(void *))callbackEntry->callback)(callbackEntry->callbackData);
                         gCallbackCounter++;
                     }
@@ -690,7 +690,7 @@ void renderFrame(u32 viScanline) {
                         goto bail;
                     }
 
-                    for (callbackEntry = (CallbackEntry *)node->pool; callbackEntry != NULL;
+                    for (callbackEntry = node->callbackLayers; callbackEntry != NULL;
                          callbackEntry = callbackEntry->next) {
                         if (callbackEntry->callback == NULL) {
                             continue;
@@ -700,7 +700,7 @@ void renderFrame(u32 viScanline) {
                             break;
                         }
 
-                        gCurrentPoolIndex = callbackEntry->poolIndex;
+                        gCurrentPoolIndex = callbackEntry->callbackLayer;
                         ((void (*)(void *))callbackEntry->callback)(callbackEntry->callbackData);
                         gCallbackCounter++;
                     }
@@ -989,13 +989,21 @@ void updateViewportBounds(void) {
     }
 }
 
-void setModelCameraTransform(ViewportNode *node, s16 arg1, s16 arg2, s16 arg3, s16 arg4, s16 arg5, s16 arg6) {
-    node->originX = arg1;
-    node->originY = arg2;
-    node->viewportLeft = arg3;
-    node->viewportTop = arg4;
-    node->viewportRight = arg5;
-    node->viewportBottom = arg6;
+void setModelCameraTransform(
+    ViewportNode *node,
+    s16 originX,
+    s16 originY,
+    s16 viewportLeft,
+    s16 viewportTop,
+    s16 viewportRight,
+    s16 viewportBottom
+) {
+    node->originX = originX;
+    node->originY = originY;
+    node->viewportLeft = viewportLeft;
+    node->viewportTop = viewportTop;
+    node->viewportRight = viewportRight;
+    node->viewportBottom = viewportBottom;
 }
 
 void setViewportScale(ViewportNode *arg0, f32 scaleX, f32 scaleY) {
@@ -1013,94 +1021,100 @@ void initViewportCallbackPool(ViewportNode *node) {
 
     i = 7;
     while (i >= 0) {
-        node->pool[i].callback = NULL;
+        node->callbackLayers[i].callback = NULL;
         i--;
     }
 
     i = 1;
     while (i < 8) {
-        node->pool[i - 1].next = &node->pool[i];
+        node->callbackLayers[i - 1].next = &node->callbackLayers[i];
         i++;
     }
 
-    node->unk88 = NULL;
+    node->callbackLayers[VIEWPORT_CALLBACK_LAYER_COUNT - 1].next = NULL;
 }
 
-void initViewportNode(ViewportNode *arg0, ViewportNode *arg1, s32 arg2, s32 arg3, s32 arg4) {
+void initViewportNode(
+    ViewportNode *node,
+    ViewportNode *parent,
+    s32 callbackSlot,
+    s32 renderOrder,
+    s32 uses3DRendering
+) {
     ViewportNode *temp_v0;
     ViewportNode *var_a0;
-    u8 arg4_byte = (u8)arg4;
+    u8 uses3DRenderingByte = (u8)uses3DRendering;
 
-    gViewportCallbackPools[arg2 & 0xFFFF] = (CallbackPoolSlot *)arg0;
+    gViewportCallbackPools[callbackSlot & 0xFFFF] = node;
 
-    if (arg1 == NULL) {
-        arg0->unk0.next = &gRootViewport;
-        arg0->prev = &gRootViewport;
+    if (parent == NULL) {
+        node->unk0.next = &gRootViewport;
+        node->prev = &gRootViewport;
         temp_v0 = gRootViewport.unk8.list2_next;
-        arg0->unk8.list2_next = temp_v0;
+        node->unk8.list2_next = temp_v0;
         if (temp_v0 != NULL) {
-            temp_v0->prev = arg0;
+            temp_v0->prev = node;
         }
-        gRootViewport.unk8.list2_next = arg0;
+        gRootViewport.unk8.list2_next = node;
     } else {
-        arg0->unk0.next = arg1;
-        arg0->prev = arg1;
-        temp_v0 = arg1->unk8.list2_next;
-        arg0->unk8.list2_next = temp_v0;
+        node->unk0.next = parent;
+        node->prev = parent;
+        temp_v0 = parent->unk8.list2_next;
+        node->unk8.list2_next = temp_v0;
         if (temp_v0 != NULL) {
-            temp_v0->prev = arg0;
+            temp_v0->prev = node;
         }
-        arg1->unk8.list2_next = arg0;
+        parent->unk8.list2_next = node;
     }
 
     var_a0 = &gRootViewport;
     if (gRootViewport.list3_next != NULL) {
         do {
             ViewportNode *temp_v1 = var_a0->list3_next;
-            if ((u8)arg3 < (u8)temp_v1->renderOrder) {
+            if ((u8)renderOrder < (u8)temp_v1->renderOrder) {
                 break;
             }
             var_a0 = temp_v1;
         } while (var_a0->list3_next != NULL);
     }
 
-    arg0->list2_prev = var_a0;
-    arg0->list3_next = var_a0->list3_next;
-    var_a0->list3_next = arg0;
-    temp_v0 = arg0->list3_next;
+    node->list2_prev = var_a0;
+    node->list3_next = var_a0->list3_next;
+    var_a0->list3_next = node;
+    temp_v0 = node->list3_next;
     if (temp_v0 != NULL) {
-        temp_v0->list2_prev = arg0;
+        temp_v0->list2_prev = node;
     }
 
-    arg0->renderOrder = (s8)arg3;
-    arg0->callbackSlotIndex = (u16)arg2;
-    arg0->viewportFlags = (s8)arg4_byte;
-    arg0->displayFlags = 0;
-    arg0->viewportId = 0;
-    arg0->numLights = 0;
-    arg0->viewportWidth = 0x280;
-    arg0->viewportHeight = 0x1E0;
-    arg0->unkCC = 0x1FF;
-    arg0->unkCE = 0;
-    arg0->unkD0 = 0x280;
-    arg0->unkD2 = 0x1E0;
-    arg0->unkD4 = 0x1FF;
-    arg0->unkD6 = 0;
-    memcpy(&arg0->viewTransform, &identityMatrix, sizeof(Transform3D));
-    guPerspective(&arg0->projectionMatrix, &arg0->perspNorm, 30.0f, 1.3333334f, 20.0f, 2000.0f, 1.0f);
-    arg0->fogA = 0xFF;
-    arg0->fogStartPermille = 0x3DE;
-    arg0->fogB = 0;
-    arg0->fogG = 0;
-    arg0->fogR = 0;
-    arg0->fogEndPermille = 0x3E6;
-    arg0->envR = 0;
-    arg0->envG = 0;
-    arg0->envB = 0;
-    arg0->prevFadeValue = 0;
-    arg0->fadeMode = 0;
-    arg0->scaleY = 1.0f;
-    initViewportCallbackPool(arg0);
+    node->renderOrder = (s8)renderOrder;
+    node->callbackSlotIndex = (u16)callbackSlot;
+    node->uses3DRendering = (s8)uses3DRenderingByte;
+    node->displayFlags = 0;
+    node->viewportId = 0;
+    node->numLights = 0;
+    node->viewportWidth = 0x280;
+    node->viewportHeight = 0x1E0;
+    node->unkCC = 0x1FF;
+    node->unkCE = 0;
+    node->unkD0 = 0x280;
+    node->unkD2 = 0x1E0;
+    node->unkD4 = 0x1FF;
+    node->unkD6 = 0;
+    memcpy(&node->viewTransform, &identityMatrix, sizeof(Transform3D));
+    guPerspective(&node->projectionMatrix, &node->perspNorm, 30.0f, 1.3333334f, 20.0f, 2000.0f, 1.0f);
+    node->fogA = 0xFF;
+    node->fogStartPermille = 0x3DE;
+    node->fogB = 0;
+    node->fogG = 0;
+    node->fogR = 0;
+    node->fogEndPermille = 0x3E6;
+    node->envR = 0;
+    node->envG = 0;
+    node->envB = 0;
+    node->prevFadeValue = 0;
+    node->fadeMode = 0;
+    node->scaleY = 1.0f;
+    initViewportCallbackPool(node);
 }
 
 void nullViewportFunction(void) {
@@ -1271,41 +1285,39 @@ void unlinkNode(ViewportNode *node) {
     node->list2_prev->list3_next = node->list3_next;
 }
 
-void enqueueCallbackBySlotIndex(u16 index, u8 slotIndex, void *callback, void *callbackData) {
-    CallbackPoolSlot *manager;
-    CallbackEntry *block;
-    CallbackPoolSlot *slot;
+void pushViewportCallbackBySlot(u16 viewportSlot, u8 callbackLayer, void *callback, void *callbackData) {
+    ViewportNode *viewport;
+    CallbackEntry *entry;
 
-    manager = gViewportCallbackPools[index];
-    if (manager != NULL) {
-        block = (CallbackEntry *)linearAlloc(0x10);
-        if (block != NULL) {
-            slot = &manager[slotIndex];
-            block->next = slot[1].unk8;
-            block->callback = callback;
-            block->callbackData = callbackData;
-            block->poolIndex = slotIndex;
-            slot[1].unk8 = block;
+    viewport = gViewportCallbackPools[viewportSlot];
+    if (viewport != NULL) {
+        entry = (CallbackEntry *)linearAlloc(sizeof(CallbackEntry));
+        if (entry != NULL) {
+            entry->next = viewport->callbackLayers[callbackLayer].next;
+            entry->callback = callback;
+            entry->callbackData = callbackData;
+            entry->callbackLayer = callbackLayer;
+            viewport->callbackLayers[callbackLayer].next = entry;
         }
     }
 }
 
-void enqueueViewportCallback(ViewportNode *viewport, u8 poolIndex, void *callback, void *callbackData) {
+void pushViewportCallback(ViewportNode *viewport, u8 callbackLayer, void *callback, void *callbackData) {
     CallbackEntry *newEntry;
     CallbackEntry *oldHead;
 
     newEntry = (CallbackEntry *)linearAlloc(0x10);
     if (newEntry != NULL) {
-        oldHead = viewport->pool[poolIndex].next;
+        oldHead = viewport->callbackLayers[callbackLayer].next;
         newEntry->callback = callback;
         newEntry->callbackData = callbackData;
-        newEntry->poolIndex = poolIndex;
+        newEntry->callbackLayer = callbackLayer;
         newEntry->next = oldHead;
-        viewport->pool[poolIndex].next = newEntry;
+        viewport->callbackLayers[callbackLayer].next = newEntry;
     }
 }
 
-void enqueueViewportCallbackById(u16 viewportId, u8 poolIndex, void *callback, void *callbackData) {
+void pushViewportCallbackById(u16 viewportId, u8 callbackLayer, void *callback, void *callbackData) {
     ViewportNode *viewport;
     CallbackEntry *newEntry;
     CallbackEntry *oldHead;
@@ -1316,12 +1328,12 @@ void enqueueViewportCallbackById(u16 viewportId, u8 poolIndex, void *callback, v
         if (viewport->viewportId == viewportId) {
             newEntry = (CallbackEntry *)linearAlloc(sizeof(CallbackEntry));
             if (newEntry != NULL) {
-                oldHead = viewport->pool[poolIndex].next;
+                oldHead = viewport->callbackLayers[callbackLayer].next;
                 newEntry->callback = callback;
                 newEntry->callbackData = callbackData;
-                newEntry->poolIndex = poolIndex;
+                newEntry->callbackLayer = callbackLayer;
                 newEntry->next = oldHead;
-                viewport->pool[poolIndex].next = newEntry;
+                viewport->callbackLayers[callbackLayer].next = newEntry;
             }
         }
         viewport = viewport->list3_next;

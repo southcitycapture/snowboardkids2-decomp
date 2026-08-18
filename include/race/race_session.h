@@ -7,6 +7,13 @@
 #include "math/geometry.h"
 #include "system/memory_allocator.h"
 
+typedef enum {
+    RACE_PLAYER_CAMERA_VIEWPORT_SLOT_BASE = 0,
+    RACE_PLAYER_ROOT_VIEWPORT_SLOT_BASE = 4,
+    RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE = 8,
+    RACE_SHARED_VIEWPORT_SLOT = 12,
+} RaceViewportSlot;
+
 typedef struct {
     u8 padding[0x14];
 } D_8008D7FC_8E3FC_item;

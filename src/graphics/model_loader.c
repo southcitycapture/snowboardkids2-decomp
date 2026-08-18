@@ -187,11 +187,21 @@ void buildViewportAuxFramebufferFillDisplayList(SceneRenderTask *arg0) {
 }
 
 void enqueueViewportAuxFramebufferFill(SceneRenderTask *ctx) {
-    enqueueCallbackBySlotIndex(ctx->node->base.callbackSlotIndex, 7, buildViewportAuxFramebufferFillDisplayList, ctx);
+    pushViewportCallbackBySlot(
+        ctx->node->base.callbackSlotIndex,
+        VIEWPORT_CALLBACK_LAYER_FINAL,
+        buildViewportAuxFramebufferFillDisplayList,
+        ctx
+    );
 }
 
 void enqueueMainFramebufferTargetSetup(SceneRenderTask *ctx) {
-    enqueueCallbackBySlotIndex(ctx->node->base.callbackSlotIndex, 0, setColorImageToMainFramebuffer, ctx);
+    pushViewportCallbackBySlot(
+        ctx->node->base.callbackSlotIndex,
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        setColorImageToMainFramebuffer,
+        ctx
+    );
 }
 
 void enableSceneRenderViewportEffect(SceneRenderNode *node) {

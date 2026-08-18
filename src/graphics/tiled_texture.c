@@ -140,15 +140,30 @@ void enqueueScrollingTextureRender(u16 renderLayer, DisplayListObject *displayLi
     displayListObj->transformMatrix = 0;
 
     if (displayListObj->displayLists->opaqueDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(renderLayer, 1, &renderOpaqueScrollingTexture, displayListObj);
+        pushViewportCallbackBySlot(
+            renderLayer,
+            VIEWPORT_CALLBACK_LAYER_OPAQUE,
+            &renderOpaqueScrollingTexture,
+            displayListObj
+        );
     }
 
     if (displayListObj->displayLists->transparentDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(renderLayer, 3, &renderTransparentScrollingTexture, displayListObj);
+        pushViewportCallbackBySlot(
+            renderLayer,
+            VIEWPORT_CALLBACK_LAYER_TRANSLUCENT,
+            &renderTransparentScrollingTexture,
+            displayListObj
+        );
     }
 
     if (displayListObj->displayLists->overlayDisplayList != NULL) {
-        enqueueCallbackBySlotIndex(renderLayer, 5, &renderOverlayScrollingTexture, displayListObj);
+        pushViewportCallbackBySlot(
+            renderLayer,
+            VIEWPORT_CALLBACK_LAYER_OVERLAY,
+            &renderOverlayScrollingTexture,
+            displayListObj
+        );
     }
 }
 
@@ -266,13 +281,18 @@ void renderOverlayTiledTexture(s32 arg0) {
 void enqueueTiledTextureRender(s32 arg0, TrickBurstEffectTask *arg1) {
     arg1->base.transformMatrix = 0;
     if (arg1->base.displayLists->opaqueDisplayList != 0) {
-        enqueueCallbackBySlotIndex(arg0 & 0xFFFF, 1, &renderOpaqueTiledTexture, arg1);
+        pushViewportCallbackBySlot(arg0 & 0xFFFF, VIEWPORT_CALLBACK_LAYER_OPAQUE, &renderOpaqueTiledTexture, arg1);
     }
     if (arg1->base.displayLists->transparentDisplayList != 0) {
-        enqueueCallbackBySlotIndex(arg0 & 0xFFFF, 3, &renderTransparentTiledTexture, arg1);
+        pushViewportCallbackBySlot(
+            arg0 & 0xFFFF,
+            VIEWPORT_CALLBACK_LAYER_TRANSLUCENT,
+            &renderTransparentTiledTexture,
+            arg1
+        );
     }
     if (arg1->base.displayLists->overlayDisplayList != 0) {
-        enqueueCallbackBySlotIndex(arg0 & 0xFFFF, 5, &renderOverlayTiledTexture, arg1);
+        pushViewportCallbackBySlot(arg0 & 0xFFFF, VIEWPORT_CALLBACK_LAYER_OVERLAY, &renderOverlayTiledTexture, arg1);
     }
 }
 

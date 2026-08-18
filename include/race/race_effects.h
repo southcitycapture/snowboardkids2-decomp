@@ -418,7 +418,7 @@ void updateVictorySnowflakeWave(VictorySnowflakeState *state);
 void renderVictorySnowflake(VictorySnowflakeState *state);
 void renderVictorySnowflakeSmall(VictorySnowflakeState *state);
 void updateVictorySnowflakeDrift(VictorySnowflakeState *state);
-void renderPauseMenuDisplay(PauseMenuDisplayState *);
+void queuePauseMenuDisplayCallbacks(PauseMenuDisplayState *);
 void cleanupPauseMenuDisplayTask(PauseMenuDisplayState *);
 void updateShotScoreDisplay(ShotScoreDisplayState *);
 void cleanupShotScoreDisplayTask(ShotScoreDisplayState *);

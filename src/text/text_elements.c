@@ -448,14 +448,14 @@ void updateOrbitCamera(OrbitCameraState *camera) {
     newAngle = camera->rotationAngle + 0x58;
     camera->rotationAngle = newAngle;
     if (newAngle == 0x12E8) {
-        setViewportEnvColor(gameState->audioViewport, 0xFF, 0xFF, 0xFF);
-        setViewportFadeValue(gameState->audioViewport, 0xFF, 0x20);
+        setViewportEnvColor(gameState->sharedRaceViewport, 0xFF, 0xFF, 0xFF);
+        setViewportFadeValue(gameState->sharedRaceViewport, 0xFF, 0x20);
     }
     currentAngle = camera->rotationAngle;
     if (currentAngle == 0x1EF0) {
         gameState->raceIntroState--;
         terminateCurrentTask();
-        setViewportFadeValue(gameState->audioViewport, 0, 0x10);
+        setViewportFadeValue(gameState->sharedRaceViewport, 0, 0x10);
         return;
     }
     createYRotationMatrix(&rotationMatrix, (currentAngle + 0x1000) & 0xFFFF);

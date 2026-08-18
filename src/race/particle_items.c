@@ -611,13 +611,13 @@ void updateShieldEffect(ShieldEffectState *arg0) {
 
     for (i = 0; i < 4; i++) {
         if (arg0->displayConfig->displayList1 != 0) {
-            enqueueCallbackBySlotIndex((u16)i, 1, renderShieldLayer1, arg0);
+            pushViewportCallbackBySlot((u16)i, VIEWPORT_CALLBACK_LAYER_OPAQUE, renderShieldLayer1, arg0);
         }
         if (arg0->displayConfig->displayList2 != 0) {
-            enqueueCallbackBySlotIndex((u16)i, 3, renderShieldLayer2, arg0);
+            pushViewportCallbackBySlot((u16)i, VIEWPORT_CALLBACK_LAYER_TRANSLUCENT, renderShieldLayer2, arg0);
         }
         if (arg0->displayConfig->displayList3 != 0) {
-            enqueueCallbackBySlotIndex((u16)i, 5, renderShieldLayer3, arg0);
+            pushViewportCallbackBySlot((u16)i, VIEWPORT_CALLBACK_LAYER_OVERLAY, renderShieldLayer3, arg0);
         }
     }
 }
@@ -2378,7 +2378,7 @@ void processItemTriggers(ItemTriggerTaskState *arg0) {
         i = 0;
     }
     do {
-        enqueueCallbackBySlotIndex((u16)i, 4, &renderItemTriggers, arg0);
+        pushViewportCallbackBySlot((u16)i, VIEWPORT_CALLBACK_LAYER_SPRITES, &renderItemTriggers, arg0);
         i++;
     } while (i < 4);
 }

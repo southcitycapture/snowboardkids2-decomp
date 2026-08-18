@@ -33,7 +33,7 @@ void cleanupTitleLogoTask(TitleLogoTask *arg0) {
 }
 
 void enqueueTitleLogoRender(TitleLogoTask *arg0) {
-    enqueueCallbackBySlotIndex(8, 0, renderTiledTextureMap, &arg0->tileMap);
+    pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderTiledTextureMap, &arg0->tileMap);
 }
 
 void initTitleLogoRenderState(TitleLogoTask *arg0) {
@@ -124,7 +124,7 @@ void updateControllerSlotHighlights(TitleMenuOptionsState *arg0) {
                     option->color.paletteAndAlpha = unselectedAlpha;
                 }
 
-                enqueueCallbackBySlotIndex(
+                pushViewportCallbackBySlot(
                     8,
                     1,
                     renderTextSpriteWithTransparency,
@@ -135,8 +135,13 @@ void updateControllerSlotHighlights(TitleMenuOptionsState *arg0) {
         }
     }
 
-    enqueueCallbackBySlotIndex(8, 1, renderSpriteFrame, &arg0->legalNotices.copyrightNotice);
-    enqueueCallbackBySlotIndex(8, 1, renderSpriteFrame, &arg0->legalNotices.licenseNotice);
+    pushViewportCallbackBySlot(
+        8,
+        VIEWPORT_CALLBACK_LAYER_OPAQUE,
+        renderSpriteFrame,
+        &arg0->legalNotices.copyrightNotice
+    );
+    pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_OPAQUE, renderSpriteFrame, &arg0->legalNotices.licenseNotice);
 }
 
 void cleanupControllerSlotDisplay(TitleMenuOptionsState *state) {
@@ -172,7 +177,7 @@ void updatePressStartPrompt(TitlePressStartPromptState *arg0) {
     } else {
         arg0->blinkDelay--;
     }
-    enqueueCallbackBySlotIndex(8, 1, renderSpriteFrame, &arg0->sprite);
+    pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_OPAQUE, renderSpriteFrame, &arg0->sprite);
 }
 
 void cleanupPressStartPrompt(TitlePressStartPromptState *state) {

@@ -636,7 +636,7 @@ void enqueueOpaqueSprite(u16 slot, Node *node) {
     node->unk1C = NULL;
     node->callback = NULL;
     node->cleanupCallback = NULL;
-    enqueueCallbackBySlotIndex(slot, 4, &renderOpaqueSpriteCallback, node);
+    pushViewportCallbackBySlot(slot, VIEWPORT_CALLBACK_LAYER_SPRITES, &renderOpaqueSpriteCallback, node);
 }
 
 void enqueueTranslucentSprite(u16 slot, Node *node) {
@@ -644,7 +644,7 @@ void enqueueTranslucentSprite(u16 slot, Node *node) {
     node->unk1C = NULL;
     node->callback = NULL;
     node->cleanupCallback = NULL;
-    enqueueCallbackBySlotIndex(slot, 4, &renderTranslucentSpriteCallback, node);
+    pushViewportCallbackBySlot(slot, VIEWPORT_CALLBACK_LAYER_SPRITES, &renderTranslucentSpriteCallback, node);
 }
 
 void enqueueTransformedSprite(u16 slot, Node *node) {
@@ -652,7 +652,7 @@ void enqueueTransformedSprite(u16 slot, Node *node) {
     node->unk1C = NULL;
     node->callback = NULL;
     node->cleanupCallback = NULL;
-    enqueueCallbackBySlotIndex(slot, 4, &renderTransformedSpriteCallback, node);
+    pushViewportCallbackBySlot(slot, VIEWPORT_CALLBACK_LAYER_SPRITES, &renderTransformedSpriteCallback, node);
 }
 
 void setSpriteAssetEnabled(SpriteAssetState *state) {

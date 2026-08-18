@@ -1014,7 +1014,7 @@ void updateSceneAnimationTask(SceneAnimationTaskNew *arg0) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueCallbackBySlotIndex((u16)i, 4, renderSceneAnimationTask, arg0);
+        pushViewportCallbackBySlot((u16)i, VIEWPORT_CALLBACK_LAYER_SPRITES, renderSceneAnimationTask, arg0);
     }
 }
 
@@ -1249,15 +1249,20 @@ void updateScrollingSceneryTask(ScrollingSceneryTaskState *arg0) {
 
     for (i = 0; i < 4; i++) {
         if (arg0->displayLists->opaqueDisplayList != NULL) {
-            enqueueCallbackBySlotIndex(i, 1, &renderScrollingSceneryOpaque, arg0);
+            pushViewportCallbackBySlot(i, VIEWPORT_CALLBACK_LAYER_OPAQUE, &renderScrollingSceneryOpaque, arg0);
         }
 
         if (arg0->displayLists->transparentDisplayList != NULL) {
-            enqueueCallbackBySlotIndex(i, 3, &renderScrollingSceneryTransparent, arg0);
+            pushViewportCallbackBySlot(
+                i,
+                VIEWPORT_CALLBACK_LAYER_TRANSLUCENT,
+                &renderScrollingSceneryTransparent,
+                arg0
+            );
         }
 
         if (arg0->displayLists->overlayDisplayList != NULL) {
-            enqueueCallbackBySlotIndex(i, 5, &renderScrollingSceneryOverlay, arg0);
+            pushViewportCallbackBySlot(i, VIEWPORT_CALLBACK_LAYER_OVERLAY, &renderScrollingSceneryOverlay, arg0);
         }
     }
 }
@@ -1803,7 +1808,7 @@ void updateGoldCoinsTask(GoldCoinUpdateState *arg0) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueCallbackBySlotIndex((u16)i, 4, renderGoldCoins, arg0);
+        pushViewportCallbackBySlot((u16)i, VIEWPORT_CALLBACK_LAYER_SPRITES, renderGoldCoins, arg0);
     }
 }
 
@@ -2686,7 +2691,7 @@ void updateItemBoxBurstFrame(ItemBoxBurstEffectState *state) {
     state->renderEntry = frameData;
 
     for (i = 0; i < 4; i++) {
-        enqueueCallbackBySlotIndex(i, 1, &renderItemBoxBurstEffect, state);
+        pushViewportCallbackBySlot(i, VIEWPORT_CALLBACK_LAYER_OPAQUE, &renderItemBoxBurstEffect, state);
     }
 
     if (gameState->gamePaused == 0) {

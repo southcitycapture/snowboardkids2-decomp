@@ -638,6 +638,11 @@ void updateBossProximityCheckpoints(Player *arg0) {
     arg0->shadowMeshNeedsUpdate = 1;
 
     for (checkpointIndex = 0; checkpointIndex < 4; checkpointIndex++) {
-        enqueueCallbackBySlotIndex((u16)checkpointIndex, 1, renderRacerProjectedShadow, arg0);
+        pushViewportCallbackBySlot(
+            (u16)checkpointIndex,
+            VIEWPORT_CALLBACK_LAYER_OPAQUE,
+            renderRacerProjectedShadow,
+            arg0
+        );
     }
 }

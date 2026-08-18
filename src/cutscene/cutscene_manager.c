@@ -249,7 +249,7 @@ s32 processCutsceneFrame(CutsceneManager *cutsceneManager) {
 
     if (cutsceneManager->showDebugInfo) {
         sprintf((char *)cutsceneManager->debugText, gDebugFrameFormatString, cutsceneManager->currentFrame);
-        enqueueCallbackBySlotIndex(
+        pushViewportCallbackBySlot(
             cutsceneManager->uiResource->callbackSlotIndex,
             6,
             &renderTextPalette,
@@ -1396,19 +1396,39 @@ void updateCutsceneFadeTask(FadeTaskData *task) {
     switch (node->fadeType) {
         case 0:
             task->centerSprite.b = (u8)task->fadeAlpha;
-            enqueueCallbackBySlotIndex(task->unk04.split.unk6, 0, &renderScaledAlphaSpriteFrame, &task->centerSprite);
+            pushViewportCallbackBySlot(
+                task->unk04.split.unk6,
+                VIEWPORT_CALLBACK_LAYER_INITIAL,
+                &renderScaledAlphaSpriteFrame,
+                &task->centerSprite
+            );
             break;
         case 1:
             task->centerSprite.b = (u8)task->fadeAlpha;
-            enqueueCallbackBySlotIndex(task->unk04.split.unk6, 0, &renderScaledAlphaSpriteFrame, &task->centerSprite);
+            pushViewportCallbackBySlot(
+                task->unk04.split.unk6,
+                VIEWPORT_CALLBACK_LAYER_INITIAL,
+                &renderScaledAlphaSpriteFrame,
+                &task->centerSprite
+            );
             task->bottomSprite.b = (u8)task->fadeAlpha;
-            enqueueCallbackBySlotIndex(task->unk04.split.unk6, 0, &renderScaledAlphaSpriteFrame, &task->bottomSprite);
+            pushViewportCallbackBySlot(
+                task->unk04.split.unk6,
+                VIEWPORT_CALLBACK_LAYER_INITIAL,
+                &renderScaledAlphaSpriteFrame,
+                &task->bottomSprite
+            );
             break;
     }
 
     for (i = 0; i < 6; i++) {
         task->sprites[i].b = (u8)task->fadeAlpha;
-        enqueueCallbackBySlotIndex(task->unk04.split.unk6, 0, &renderScaledAlphaSpriteFrame, &task->sprites[i]);
+        pushViewportCallbackBySlot(
+            task->unk04.split.unk6,
+            VIEWPORT_CALLBACK_LAYER_INITIAL,
+            &renderScaledAlphaSpriteFrame,
+            &task->sprites[i]
+        );
     }
 }
 

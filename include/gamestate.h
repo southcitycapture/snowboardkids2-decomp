@@ -377,7 +377,11 @@ typedef struct {
 } UnlockScreenState;
 
 typedef struct {
-    /* 0x0 */ ViewportNode *audioViewport;
+    /*
+     * Slot 12: shared full-screen race overlays (pause/progress) and race-wide
+     * fades historically associated with audio/intro state.
+     */
+    /* 0x0 */ ViewportNode *sharedRaceViewport;
     /* 0x4 */ ViewportNode *playerOverlayViewports;
     /* 0x8 */ ViewportNode *playerCameraViewports;
     /* 0xC */ ViewportNode *playerRootViewports;

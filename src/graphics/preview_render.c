@@ -525,7 +525,7 @@ void animateBoardShopSnowParticles(SnowParticleState *arg0) {
             }
         }
 
-        enqueueCallbackBySlotIndex(8, 0, renderSpriteFrame, &arg0->particles[i]);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderSpriteFrame, &arg0->particles[i]);
     };
 
     if (state->unk780 == 0) {
@@ -894,7 +894,7 @@ void initBoardShopBackgroundRenderState(BoardShopBackgroundState *state) {
 }
 
 void enqueueBoardShopBackgroundRender(BoardShopBackgroundState *state) {
-    enqueueCallbackBySlotIndex(9, 0, &renderTiledTextureMap, &state->renderState);
+    pushViewportCallbackBySlot(9, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderTiledTextureMap, &state->renderState);
 }
 
 void cleanupBoardShopBackground(BoardShopBackgroundState *state) {
@@ -995,7 +995,7 @@ void updateBoardShopComparisonIcons(BoardShopComparisonIconsState *arg0) {
             }
         }
 
-        enqueueCallbackBySlotIndex(8, 0, renderTextSprite, icon);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderTextSprite, icon);
         icon++;
         if ((s32)icon < (s32)(arg0->icons + 2)) {
             goto loop;
@@ -1078,7 +1078,7 @@ void updateBoardShopRowSelectorArrow(BoardShopRowSelectorArrowState *arg0) {
                 }
             }
 
-            enqueueCallbackBySlotIndex(8, 0, renderTextSprite, arg0);
+            pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderTextSprite, arg0);
         }
     }
 }
@@ -1136,7 +1136,7 @@ void updateBoardShopColumnSelectorArrow(BoardShopColumnSelectorArrowState *arg0)
                 }
             }
 
-            enqueueCallbackBySlotIndex(8, 0, &renderTextSprite, arg0);
+            pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderTextSprite, arg0);
         }
     }
 }
@@ -1166,7 +1166,7 @@ void updateBoardShopExitOverlay(void *arg0) {
 
     allocation = getCurrentAllocation();
     if (allocation->unk788[0x13] == 0x19) {
-        enqueueCallbackBySlotIndex(8, 7, &renderSpriteFrame, arg0);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_FINAL, &renderSpriteFrame, arg0);
     }
 }
 
@@ -1225,12 +1225,12 @@ void updateBoardShopGoldDisplay(BoardShopGoldDisplayState *arg0) {
     for (; i < 7; i++) {
         if (arg0->goldString[i] != space) {
             digit->digitValue = arg0->goldString[i] - 0x30;
-            enqueueCallbackBySlotIndex(9, 7, renderSpriteFrameWithPalette, digit);
+            pushViewportCallbackBySlot(9, VIEWPORT_CALLBACK_LAYER_FINAL, renderSpriteFrameWithPalette, digit);
         }
         digit++;
     }
 
-    enqueueCallbackBySlotIndex(9, 7, renderSpriteFrameWithPalette, &arg0->iconX);
+    pushViewportCallbackBySlot(9, VIEWPORT_CALLBACK_LAYER_FINAL, renderSpriteFrameWithPalette, &arg0->iconX);
 }
 
 void cleanupBoardShopGoldDisplay(BoardShopGoldDisplayCleanupArg *arg0) {
@@ -1298,7 +1298,7 @@ void animateBoardShopBoardIconsSlideIn(BoardShopBoardIconsState *arg0) {
             }
             animatingCount++;
         }
-        enqueueCallbackBySlotIndex(8, 0, renderFlippedScaledSpriteFrame, &arg0->icons[i]);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderFlippedScaledSpriteFrame, &arg0->icons[i]);
     }
 
     if ((animatingCount & 0xFF) == 0) {
@@ -1341,7 +1341,7 @@ void updateBoardShopBoardIconSelection(BoardShopIconSelectionState *arg0) {
             arg0->icons[i].flipX = 0;
             arg0->icons[i].scaleX = 0x400;
         }
-        enqueueCallbackBySlotIndex(8, 0, renderFlippedScaledSpriteFrame, &arg0->icons[i]);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderFlippedScaledSpriteFrame, &arg0->icons[i]);
     }
 
     if (state->shopState == 0x11) {
@@ -1365,7 +1365,7 @@ void updateBoardShopBoardIconSelection(BoardShopIconSelectionState *arg0) {
         temp = state->unk788[state->unk784[state->selectedIconIndex]];
         sprintf(&arg0->priceTextBuffer, &D_8009E480_9F080, D_8008F150_8FD50[temp]);
         arg0->priceTextY = (state->selectedIconIndex * 0x28) - 0x2A;
-        enqueueCallbackBySlotIndex(8, 7, renderTextPalette, &arg0->priceTextX);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_FINAL, renderTextPalette, &arg0->priceTextX);
         if (state->shopState == 0x14) {
             setCallback(blinkBoardShopBoardIconConfirmation);
         }
@@ -1398,7 +1398,12 @@ void blinkBoardShopBoardIconConfirmation(BoardShopIconSelectionState *arg0) {
             arg0->icons[i].alpha = 0x80;
         }
 
-        enqueueCallbackBySlotIndex(8, 0, &renderFlippedScaledSpriteFrame, &arg0->icons[i]);
+        pushViewportCallbackBySlot(
+            8,
+            VIEWPORT_CALLBACK_LAYER_INITIAL,
+            &renderFlippedScaledSpriteFrame,
+            &arg0->icons[i]
+        );
     }
 
     temp = state->unk784[state->selectedIconIndex];
@@ -1406,7 +1411,7 @@ void blinkBoardShopBoardIconConfirmation(BoardShopIconSelectionState *arg0) {
 
     sprintf(&arg0->priceTextBuffer, &D_8009E480_9F080, D_8008F150_8FD50[temp]);
     arg0->priceTextY = state->selectedIconIndex * 0x28 - 0x2A;
-    enqueueCallbackBySlotIndex(8, 7, &renderTextPalette, &arg0->priceTextX);
+    pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_FINAL, &renderTextPalette, &arg0->priceTextX);
     if (state->shopState < 0x14) {
         setCallback(&updateBoardShopBoardIconSelection);
     }
@@ -1433,7 +1438,12 @@ void initBoardShopCharacterPortraitsSlideIn(BoardShopCharacterPortraitState *arg
         arg0->portraits[i].x = currentX;
         arg0->portraits[i].spriteIndex = allocation->unk788[allocation->unk784[i]];
         arg0->animationFrameCounters[i] = 0;
-        enqueueCallbackBySlotIndex(8, 0, &renderFlippedScaledSpriteFrame, &arg0->portraits[i]);
+        pushViewportCallbackBySlot(
+            8,
+            VIEWPORT_CALLBACK_LAYER_INITIAL,
+            &renderFlippedScaledSpriteFrame,
+            &arg0->portraits[i]
+        );
         currentX += 0x28;
     }
 
@@ -1455,7 +1465,12 @@ void animateBoardShopCharacterPortraitsSlideIn(BoardShopCharacterPortraitState *
             arg0->portraits[i].x += 10;
         }
 
-        enqueueCallbackBySlotIndex(8, 0, &renderFlippedScaledSpriteFrame, &arg0->portraits[i]);
+        pushViewportCallbackBySlot(
+            8,
+            VIEWPORT_CALLBACK_LAYER_INITIAL,
+            &renderFlippedScaledSpriteFrame,
+            &arg0->portraits[i]
+        );
     }
 
     if (arg0->animationFrameCounters[0] == 4) {
@@ -1488,7 +1503,7 @@ void animateBoardShopBoardIconsSlideOut(BoardShopBoardIconsSlideOutState *arg0) 
                 }
             }
         }
-        enqueueCallbackBySlotIndex(8, 0, &renderFlippedScaledSpriteFrame, &icons[i]);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderFlippedScaledSpriteFrame, &icons[i]);
     }
 
     if (arg0->icons[0].y < (-0x88)) {
@@ -1530,7 +1545,7 @@ void initBoardShopSnowflakeSlideIn(BoardShopSnowflakeSpriteState *arg0) {
 }
 
 void queueBoardShopSnowflakeRender(void *arg0) {
-    enqueueCallbackBySlotIndex(8, 0, &renderFlippedScaledSpriteFrame, arg0);
+    pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderFlippedScaledSpriteFrame, arg0);
     setCallback(&animateBoardShopSnowflakeSlideIn);
 }
 
@@ -1544,7 +1559,7 @@ void animateBoardShopSnowflakeSlideIn(BoardShopSnowflakeAnimState *arg0) {
         arg0->y = arg0->y + 0x14;
     }
 
-    enqueueCallbackBySlotIndex(8, 0, &renderFlippedScaledSpriteFrame, arg0);
+    pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderFlippedScaledSpriteFrame, arg0);
 
     if (arg0->frameCounter == 4) {
         terminateCurrentTask();
@@ -1578,7 +1593,7 @@ void updateBoardShopTitleText(BoardShopTitleTextUpdateArg *arg0) {
         // this makes no sense but it matches
         new_var = (void *)&renderTextLayout;
         arg0->textData = D_8008F200_8FE00.unk0[allocation->titleCornersVisible];
-        enqueueCallbackBySlotIndex(9, 7, new_var, arg0);
+        pushViewportCallbackBySlot(9, VIEWPORT_CALLBACK_LAYER_FINAL, new_var, arg0);
     }
 }
 
@@ -1616,7 +1631,7 @@ void updateBoardShopTitleCorners(BoardShopTitleCornerState *arg0) {
 
     if (((BoardShopTitleCornersAllocation *)getCurrentAllocation())->titleCornersVisible != NULL) {
         for (i = 0; i < 4; i++) {
-            enqueueCallbackBySlotIndex(9, 1, &renderTextSprite, &arg0[i]);
+            pushViewportCallbackBySlot(9, VIEWPORT_CALLBACK_LAYER_OPAQUE, &renderTextSprite, &arg0[i]);
         }
     }
 }

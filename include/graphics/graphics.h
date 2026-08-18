@@ -15,6 +15,24 @@
 
 #define BUFFER_SIZE 0x10000
 
+#define VIEWPORT_CALLBACK_LAYER_COUNT 8
+
+/*
+ * Layers execute in ascending order, and entries within one layer execute
+ * LIFO. These names describe conventional use; callbacks configure their own
+ * rendering state, so the phases are not type-enforced.
+ */
+typedef enum {
+    VIEWPORT_CALLBACK_LAYER_INITIAL = 0,
+    VIEWPORT_CALLBACK_LAYER_OPAQUE = 1,
+    VIEWPORT_CALLBACK_LAYER_POST_OPAQUE = 2,
+    VIEWPORT_CALLBACK_LAYER_TRANSLUCENT = 3,
+    VIEWPORT_CALLBACK_LAYER_SPRITES = 4,
+    VIEWPORT_CALLBACK_LAYER_OVERLAY = 5,
+    VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY = 6,
+    VIEWPORT_CALLBACK_LAYER_FINAL = 7,
+} ViewportCallbackLayer;
+
 // gCallbackEntrySegment overlaps with the lower 2 bytes of gCurrentDoubleBufferIndex
 #define gCallbackEntrySegment (*(u16 *)((u8 *)&gCurrentDoubleBufferIndex + 2))
 
@@ -39,14 +57,8 @@ typedef struct CallbackEntry {
     void *callback;
     void *callbackData;
     u8 _padC[3];
-    u8 poolIndex;
+    u8 callbackLayer;
 } CallbackEntry;
-
-typedef struct {
-    u8 padding[0x8];
-    CallbackEntry *unk8;
-    s32 unkC;
-} CallbackPoolSlot;
 
 /* RSP task message sent to the scheduler for each viewport group */
 typedef struct {
@@ -125,25 +137,23 @@ typedef struct ViewportNode {
     /* 0x0C */ struct ViewportNode *list2_prev;
     /* 0x10 */ struct ViewportNode *list3_next;
     /* 0x14 */ s8 renderOrder;
-    /* 0x15 */ u8 viewportFlags;
+    /* 0x15 */ u8 uses3DRendering;
     /* 0x16 */ u16 callbackSlotIndex;
-    /* 0x18 */ CallbackEntry pool[7];
-    /* 0x88 */ void *unk88;
-    /* 0x8C */ u8 padding8C[0xC];
+    /* 0x18 */ CallbackEntry callbackLayers[VIEWPORT_CALLBACK_LAYER_COUNT];
     /* 0x98 */ void *displayListPtr;
     /* 0x9C */ FrameCallbackMsg *frameCallbackMsg;
     /* 0xA0 */ s16 originX;
     /* 0xA2 */ s16 originY;
-    /* 0xA4 */ s16 viewportLeft;
-    /* 0xA6 */ s16 viewportTop;
-    /* 0xA8 */ s16 viewportRight;
-    /* 0xAA */ s16 viewportBottom;
+    /* 0xA4 */ s16 viewportLeft;   // Center-relative extent
+    /* 0xA6 */ s16 viewportTop;    // Center-relative extent
+    /* 0xA8 */ s16 viewportRight;  // Logical boundary before clamping
+    /* 0xAA */ s16 viewportBottom; // Logical boundary before clamping
     /* 0xAC */ s16 offsetX;
     /* 0xAE */ s16 offsetY;
     /* 0xB0 */ s16 clipLeft;
     /* 0xB2 */ s16 clipTop;
-    /* 0xB4 */ s16 clipRight;
-    /* 0xB6 */ s16 clipBottom;
+    /* 0xB4 */ s16 clipRight;  // Resolved inclusive CPU clip bound
+    /* 0xB6 */ s16 clipBottom; // Resolved inclusive CPU clip bound
     /* 0xB8 */ u8 displayFlags;
     /* 0xB9 */ u8 overlayR;
     /* 0xBA */ u8 overlayG;
@@ -254,7 +264,8 @@ void setViewportFadeValue(ViewportNode *node, u8 fadeValue, u8 fadeMode);
 
 void setViewportFadeValueBySlotIndex(u16 slotIndex, u8 fadeValue, u8 fadeMode);
 
-void enqueueCallbackBySlotIndex(u16 index, u8 arg1, void *arg2, void *arg3);
+/* Pushes onto a layer head; callbacks within a layer therefore execute LIFO. */
+void pushViewportCallbackBySlot(u16 viewportSlot, u8 callbackLayer, void *callback, void *callbackData);
 
 void *arenaAlloc16(s32 size);
 
@@ -280,11 +291,24 @@ void setViewportId(ViewportNode *node, u16 viewportId);
 
 void setViewportTransformById(u16 viewportId, void *transformMatrix);
 
-void initViewportNode(ViewportNode *node, ViewportNode *parent, s32 slotIndex, s32 renderOrder, s32 viewportFlags);
+void initViewportNode(ViewportNode *node, ViewportNode *parent, s32 callbackSlot, s32 renderOrder, s32 uses3DRendering);
 
 void setViewportPerspective(ViewportNode *node, f32 fov, f32 aspect, f32 near, f32 far);
 
-void setModelCameraTransform(ViewportNode *, s16, s16, s16, s16, s16, s16);
+/*
+ * Edges are center-relative coordinates. updateViewportBounds() clamps them
+ * to inclusive clip bounds, so 320 becomes 319 at the screen edge while an
+ * interior logical boundary such as 160 remains 160.
+ */
+void setModelCameraTransform(
+    ViewportNode *node,
+    s16 originX,
+    s16 originY,
+    s16 viewportLeft,
+    s16 viewportTop,
+    s16 viewportRight,
+    s16 viewportBottom
+);
 
 void unlinkNode(ViewportNode *player);
 

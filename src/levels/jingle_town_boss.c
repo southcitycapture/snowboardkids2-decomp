@@ -904,6 +904,6 @@ void updateJingleTownBossJointPositions(Player *arg0) {
     arg0->shadowMeshNeedsUpdate = 1;
 
     for (i = 0; i < 4; i++) {
-        enqueueCallbackBySlotIndex((u16)i, 1, renderRacerProjectedShadow, arg0);
+        pushViewportCallbackBySlot((u16)i, VIEWPORT_CALLBACK_LAYER_OPAQUE, renderRacerProjectedShadow, arg0);
     }
 }

@@ -913,6 +913,11 @@ void updateIceLandBossJointPositions(Player *boss) {
     boss->shadowMeshNeedsUpdate = 1;
 
     for (jointIndex = 0; jointIndex < 4; jointIndex++) {
-        enqueueCallbackBySlotIndex(jointIndex, 1, renderRacerProjectedShadow, (void *)boss);
+        pushViewportCallbackBySlot(
+            jointIndex,
+            VIEWPORT_CALLBACK_LAYER_OPAQUE,
+            renderRacerProjectedShadow,
+            (void *)boss
+        );
     }
 }

@@ -112,8 +112,8 @@ void renderTintedSpriteGrid(
     u8 colorG,
     u8 colorB,
     u8 colorA,
-    u8 priority,
-    u8 layer
+    u8 viewportSlot,
+    u8 callbackLayer
 ) {
     s16 row;
     s16 tileX;
@@ -136,7 +136,7 @@ void renderTintedSpriteGrid(
             } else {
                 cursor->frameIndex = 6;
             }
-            enqueueCallbackBySlotIndex(priority, layer, (void *)renderSpriteFrame, cursor);
+            pushViewportCallbackBySlot(viewportSlot, callbackLayer, (void *)renderSpriteFrame, cursor);
         }
     }
 
@@ -170,7 +170,7 @@ void renderTintedSpriteGrid(
                 if ((row == rows) & (col == cols)) {
                     tile->frameIndex = 3;
                 }
-                enqueueCallbackBySlotIndex(priority, layer, (void *)renderTintedSprite, tile);
+                pushViewportCallbackBySlot(viewportSlot, callbackLayer, (void *)renderTintedSprite, tile);
             }
         }
         tileX = savedX - 8;

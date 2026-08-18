@@ -343,18 +343,23 @@ state_done:
             }
             arg0->unkAC = var_v0;
             __asm__("");
-            enqueueCallbackBySlotIndex(1, 0, &renderSpriteFrame, &arg0->unkA4);
+            pushViewportCallbackBySlot(1, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderSpriteFrame, &arg0->unkA4);
             arg0->unkB0 = (u16)(arg0->unkB0 + 1);
         } else {
             arg0->unkB0 = 0;
         }
-        enqueueCallbackBySlotIndex(1, 0, &renderTextLayoutCapped, &arg0->unk8C);
+        pushViewportCallbackBySlot(1, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderTextLayoutCapped, &arg0->unk8C);
     }
 
     if (renderSlots != 0) {
         for (i = 0; i < 4; i++) {
             if (arg0->slots[i].zoomScaleX < 0x4000U) {
-                enqueueCallbackBySlotIndex(1, 0, &renderScaledShadedSpriteFrame, &arg0->slots[i]);
+                pushViewportCallbackBySlot(
+                    1,
+                    VIEWPORT_CALLBACK_LAYER_INITIAL,
+                    &renderScaledShadedSpriteFrame,
+                    &arg0->slots[i]
+                );
             }
         }
     }

@@ -63,7 +63,7 @@ USE_OVERLAY(levels_snowboard_street_speed_cross);
 USE_OVERLAY(levels_training)
 
 typedef struct {
-    void *unk0;
+    ViewportNode *sharedRaceViewport;
     void *playerOverlayViewports;
     void *playerCameraViewports;
     void *playerRootViewports;
@@ -563,7 +563,7 @@ void initRace(void) {
         );
     }
 
-    raceState->unk0 = allocateNodeMemory(0x1D8);
+    raceState->sharedRaceViewport = allocateNodeMemory(sizeof(ViewportNode));
     raceState->playerOverlayViewports = allocateNodeMemory(472 * raceState->humanPlayerCount);
     raceState->playerCameraViewports = allocateNodeMemory(472 * raceState->humanPlayerCount);
     raceState->playerRootViewports = allocateNodeMemory(472 * raceState->humanPlayerCount);
@@ -820,13 +820,25 @@ void initRaceViewports(void) {
     gs = (GameState *)getCurrentAllocation();
     levelConfig = getLevelConfig(gs->memoryPoolId);
     setAudioDistanceLimits(0x60, 0x1400);
-    initViewportNode(gs->audioViewport, 0, 0xC, 0x1E, 0);
-    setModelCameraTransform(gs->audioViewport, 0, 0, -0xA0, -0x78, 0xA0, 0x78);
+    initViewportNode(gs->sharedRaceViewport, 0, RACE_SHARED_VIEWPORT_SLOT, 0x1E, 0);
+    setModelCameraTransform(gs->sharedRaceViewport, 0, 0, -0xA0, -0x78, 0xA0, 0x78);
 
     for (i = 0; i < gs->humanPlayerCount; i++) {
-        initViewportNode(&gs->playerRootViewports[i], 0, (u16)(i + 4), 5, 1);
-        initViewportNode(&gs->playerCameraViewports[i], &gs->playerRootViewports[i], (u16)i, 0xA, 1);
-        initViewportNode(&gs->playerOverlayViewports[i], &gs->playerCameraViewports[i], (u16)(i + 8), 0x14, 0);
+        initViewportNode(&gs->playerRootViewports[i], 0, (u16)(i + RACE_PLAYER_ROOT_VIEWPORT_SLOT_BASE), 5, 1);
+        initViewportNode(
+            &gs->playerCameraViewports[i],
+            &gs->playerRootViewports[i],
+            (u16)(i + RACE_PLAYER_CAMERA_VIEWPORT_SLOT_BASE),
+            0xA,
+            1
+        );
+        initViewportNode(
+            &gs->playerOverlayViewports[i],
+            &gs->playerCameraViewports[i],
+            (u16)(i + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE),
+            0x14,
+            0
+        );
         setViewportId(&gs->playerCameraViewports[i], (u16)(i + 0x64));
         setViewportId(&gs->playerRootViewports[i], (u16)(i + 0x64));
 
@@ -1930,10 +1942,10 @@ void cleanupGameSession(void) {
         freePlayerCharacterAssets(gameState->players + i);
     }
 
-    unlinkNode(gameState->audioViewport);
+    unlinkNode(gameState->sharedRaceViewport);
 
     freeNodeMemory(gameState->players);
-    freeNodeMemory(gameState->audioViewport);
+    freeNodeMemory(gameState->sharedRaceViewport);
     freeNodeMemory(gameState->playerOverlayViewports);
     freeNodeMemory(gameState->playerCameraViewports);
     freeNodeMemory(gameState->playerRootViewports);

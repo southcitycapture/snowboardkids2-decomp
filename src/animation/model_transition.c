@@ -271,7 +271,7 @@ void updateModelTransitionEffect(ModelTransitionEffectState *state) {
         if (state->frameIndex < 7) {
             state->n64Transform = NULL;
             state->frameData = &state->frames[frameBeforeIncrement];
-            enqueueCallbackBySlotIndex(0, 1, &renderPalettedTexture, state);
+            pushViewportCallbackBySlot(0, VIEWPORT_CALLBACK_LAYER_OPAQUE, &renderPalettedTexture, state);
             state->frameIndex++;
         }
     }

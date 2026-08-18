@@ -79,10 +79,10 @@ void initOptionsMenuTitle(OptionsMenuTitleState *arg0) {
 void updateOptionsMenuTitle(OptionsMenuTitleState *arg0) {
     s32 i;
 
-    enqueueCallbackBySlotIndex(8, 0, renderTextLayout, arg0);
+    pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderTextLayout, arg0);
 
     for (i = 0; i < 2; i++) {
-        enqueueCallbackBySlotIndex(8, 0, renderTextSprite, &(&arg0->leftIcon)[i]);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderTextSprite, &(&arg0->leftIcon)[i]);
         /* Keep the containing state live so KMC preserves the target base-plus-field-offset addressing. */
         __asm__ volatile("" : : "r"(arg0));
     }
@@ -183,7 +183,12 @@ void updateOptionsMenuToggles(OptionsMenuToggleState *arg0) {
             arg0->toggleLabels[i].shade.value = 0;
         }
 
-        enqueueCallbackBySlotIndex(8, 0, renderAlphaBlendedTextSprite, &arg0->toggleIcons[i]);
+        pushViewportCallbackBySlot(
+            8,
+            VIEWPORT_CALLBACK_LAYER_INITIAL,
+            renderAlphaBlendedTextSprite,
+            &arg0->toggleIcons[i]
+        );
 
         enqueueTextLayoutAlphaBlended(
             arg0->textRenderAsset,
@@ -277,7 +282,12 @@ void updateOptionsMenuLabels(OptionsMenuLabelsState *arg0) {
                 arg0->optionLabels[i].shade.value = 0;
             }
 
-            enqueueCallbackBySlotIndex(8, 0, renderAlphaBlendedTextSprite, &arg0->optionIcons[i]);
+            pushViewportCallbackBySlot(
+                8,
+                VIEWPORT_CALLBACK_LAYER_INITIAL,
+                renderAlphaBlendedTextSprite,
+                &arg0->optionIcons[i]
+            );
 
             enqueueTextLayoutAlphaBlended(
                 arg0->textRenderAsset,
@@ -339,7 +349,7 @@ void updateOptionsMenuCursors(TextRenderArg *arg0) {
         }
         arg0[i].y = (alloc->selectedOption * 32) - 32;
         arg0[i].color.paletteAndAlpha = alloc->highlightAlphas[alloc->selectedOption];
-        enqueueCallbackBySlotIndex(8, 0, renderAlphaBlendedTextSprite, &arg0[i]);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderAlphaBlendedTextSprite, &arg0[i]);
     }
 }
 

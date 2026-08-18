@@ -727,7 +727,7 @@ void updateGhostSlotStates(GhostManager *ghostManager) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueCallbackBySlotIndex((u16)i, 4, renderGhosts, ghostManager);
+        pushViewportCallbackBySlot((u16)i, VIEWPORT_CALLBACK_LAYER_SPRITES, renderGhosts, ghostManager);
     }
 }
 

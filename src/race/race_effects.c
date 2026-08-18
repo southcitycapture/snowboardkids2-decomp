@@ -114,7 +114,12 @@ dma_and_callbacks:
 
 void updatePlayerFinishPositionDisplay(PlayerSpriteDisplayState *state) {
     state->spriteIndex = state->player->finishPosition;
-    enqueueCallbackBySlotIndex((u16)(state->playerIndex + 8), 0, renderSpriteFrame, state);
+    pushViewportCallbackBySlot(
+        (u16)(state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE),
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderSpriteFrame,
+        state
+    );
 }
 
 void cleanupPlayerFinishPositionTask(PlayerSpriteDisplayState *state) {
@@ -187,17 +192,33 @@ void updatePlayerItemDisplaySinglePlayer(PlayerItemDisplayState *state) {
     tempValue = player->primaryItemAmmo;
     if (tempValue != 0) {
         state->itemCountValue = tempValue;
-        enqueueCallbackBySlotIndex((state->playerIndex + 8) & 0xFFFF, 0, renderSpriteFrame, &state->itemCountX);
+        pushViewportCallbackBySlot(
+            (state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE) & 0xFFFF,
+            VIEWPORT_CALLBACK_LAYER_INITIAL,
+            renderSpriteFrame,
+            &state->itemCountX
+        );
     }
 
     callback = renderSpriteFrame;
     tempValue = state->player->primaryItemId;
     state->primaryItemIndex = tempValue;
-    enqueueCallbackBySlotIndex((state->playerIndex + 8) & 0xFFFF, 0, callback, state);
+    pushViewportCallbackBySlot(
+        (state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE) & 0xFFFF,
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        callback,
+        state
+    );
 
     player = state->player;
     if ((player->itemHudNotificationFlags & 1) != 0) {
-        spawnFloatingItemSprite(state->primaryItemX - 8, state->primaryItemY - 8, 0, state->playerIndex + 8, 0);
+        spawnFloatingItemSprite(
+            state->primaryItemX - 8,
+            state->primaryItemY - 8,
+            0,
+            state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+            0
+        );
         playerRef = state->player;
         tempValue = playerRef->itemHudNotificationFlags;
         playerRef->itemHudNotificationFlags = tempValue & 0xFE;
@@ -205,11 +226,22 @@ void updatePlayerItemDisplaySinglePlayer(PlayerItemDisplayState *state) {
 
     tempValue = state->player->secondaryItemId;
     state->secondaryItemIndex = tempValue + 7;
-    enqueueCallbackBySlotIndex((state->playerIndex + 8) & 0xFFFF, 0, callback, &state->secondaryItemX);
+    pushViewportCallbackBySlot(
+        (state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE) & 0xFFFF,
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        callback,
+        &state->secondaryItemX
+    );
 
     player = state->player;
     if ((player->itemHudNotificationFlags & 2) != 0) {
-        spawnFloatingItemSprite(state->secondaryItemX - 8, state->secondaryItemY - 8, 1, state->playerIndex + 8, 0);
+        spawnFloatingItemSprite(
+            state->secondaryItemX - 8,
+            state->secondaryItemY - 8,
+            1,
+            state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+            0
+        );
         playerRef = state->player;
         tempValue = playerRef->itemHudNotificationFlags;
         playerRef->itemHudNotificationFlags = tempValue & 0xFD;
@@ -226,17 +258,33 @@ void updatePlayerItemDisplayMultiplayer(PlayerItemDisplayState *state) {
     tempValue = player->primaryItemAmmo;
     if (tempValue != 0) {
         state->charDisplayValue = tempValue + 0x30;
-        enqueueCallbackBySlotIndex((state->playerIndex + 8) & 0xFFFF, 0, renderTextPalette, &state->charDisplayX);
+        pushViewportCallbackBySlot(
+            (state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE) & 0xFFFF,
+            VIEWPORT_CALLBACK_LAYER_INITIAL,
+            renderTextPalette,
+            &state->charDisplayX
+        );
     }
 
     callback = renderSpriteFrame;
     tempValue = state->player->primaryItemId;
     state->primaryItemIndex = tempValue;
-    enqueueCallbackBySlotIndex((state->playerIndex + 8) & 0xFFFF, 0, callback, state);
+    pushViewportCallbackBySlot(
+        (state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE) & 0xFFFF,
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        callback,
+        state
+    );
 
     player = state->player;
     if ((player->itemHudNotificationFlags & 1) != 0) {
-        spawnFloatingItemSprite(state->primaryItemX - 4, state->primaryItemY - 4, 0, state->playerIndex + 8, 1);
+        spawnFloatingItemSprite(
+            state->primaryItemX - 4,
+            state->primaryItemY - 4,
+            0,
+            state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+            1
+        );
         playerRef = state->player;
         tempValue = playerRef->itemHudNotificationFlags;
         playerRef->itemHudNotificationFlags = tempValue & 0xFE;
@@ -244,11 +292,22 @@ void updatePlayerItemDisplayMultiplayer(PlayerItemDisplayState *state) {
 
     tempValue = state->player->secondaryItemId;
     state->secondaryItemIndex = tempValue + 7;
-    enqueueCallbackBySlotIndex((state->playerIndex + 8) & 0xFFFF, 0, callback, &state->secondaryItemX);
+    pushViewportCallbackBySlot(
+        (state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE) & 0xFFFF,
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        callback,
+        &state->secondaryItemX
+    );
 
     player = state->player;
     if ((player->itemHudNotificationFlags & 2) != 0) {
-        spawnFloatingItemSprite(state->secondaryItemX - 4, state->secondaryItemY - 4, 1, state->playerIndex + 8, 1);
+        spawnFloatingItemSprite(
+            state->secondaryItemX - 4,
+            state->secondaryItemY - 4,
+            1,
+            state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+            1
+        );
         playerRef = state->player;
         tempValue = playerRef->itemHudNotificationFlags;
         playerRef->itemHudNotificationFlags = tempValue & 0xFD;
@@ -325,17 +384,47 @@ void initPlayerLapCounterTask(LapCounterState *state) {
 }
 
 void updatePlayerLapCounterSinglePlayer(LapCounterState *state) {
-    enqueueCallbackBySlotIndex((u16)(state->playerIndex + 8), 0, renderSpriteFrame, state);
+    pushViewportCallbackBySlot(
+        (u16)(state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE),
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderSpriteFrame,
+        state
+    );
     state->currentLap = state->player->currentLap + 1;
-    enqueueCallbackBySlotIndex((u16)(state->playerIndex + 8), 0, renderSpriteFrameWithPalette, &state->digitX1);
-    enqueueCallbackBySlotIndex((u16)(state->playerIndex + 8), 0, renderSpriteFrame, &state->digitX2);
-    enqueueCallbackBySlotIndex((u16)(state->playerIndex + 8), 0, renderSpriteFrameWithPalette, &state->digitX3);
+    pushViewportCallbackBySlot(
+        (u16)(state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE),
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderSpriteFrameWithPalette,
+        &state->digitX1
+    );
+    pushViewportCallbackBySlot(
+        (u16)(state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE),
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderSpriteFrame,
+        &state->digitX2
+    );
+    pushViewportCallbackBySlot(
+        (u16)(state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE),
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderSpriteFrameWithPalette,
+        &state->digitX3
+    );
 }
 
 void updatePlayerLapCounterMultiplayer(LapCounterState *state) {
-    enqueueCallbackBySlotIndex((u16)(state->playerIndex + 8), 0, renderSpriteFrame, state);
+    pushViewportCallbackBySlot(
+        (u16)(state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE),
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderSpriteFrame,
+        state
+    );
     state->lapTextBuffer[0] = state->player->currentLap + 0x31;
-    enqueueCallbackBySlotIndex((u16)(state->playerIndex + 8), 0, renderTextPalette, &state->textX);
+    pushViewportCallbackBySlot(
+        (u16)(state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE),
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderTextPalette,
+        &state->textX
+    );
 }
 
 void cleanupPlayerLapCounterTask(LapCounterState *state) {
@@ -409,7 +498,15 @@ void updatePlayerGoldDisplaySinglePlayer(GoldDisplayState *state) {
         sprintf(state->goldTextBuffer, sGoldFormatLong, gold);
     }
 
-    drawNumericString(state->goldTextBuffer, state->x, state->y, 0xFF, state->digitsTexture, state->playerIndex + 8, 0);
+    drawNumericString(
+        state->goldTextBuffer,
+        state->x,
+        state->y,
+        0xFF,
+        state->digitsTexture,
+        state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+        0
+    );
 
     state->animCounter++;
     if ((s16)state->animCounter >= 12) {
@@ -418,7 +515,12 @@ void updatePlayerGoldDisplaySinglePlayer(GoldDisplayState *state) {
 
     state->animFrame = (s16)state->animCounter >> 1;
 
-    enqueueCallbackBySlotIndex((u16)(state->playerIndex + 8), 0, renderSpriteFrame, &state->iconX);
+    pushViewportCallbackBySlot(
+        (u16)(state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE),
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderSpriteFrame,
+        &state->iconX
+    );
 }
 
 void updatePlayerGoldDisplayMultiplayer(GoldDisplayState *state) {
@@ -432,7 +534,12 @@ void updatePlayerGoldDisplayMultiplayer(GoldDisplayState *state) {
 
     sprintf(state->goldTextBuffer, D_8009E880_9F480, state->player->raceGold);
 
-    enqueueCallbackBySlotIndex((u16)(state->playerIndex + 8), 0, renderTextPalette, &state->textX);
+    pushViewportCallbackBySlot(
+        (u16)(state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE),
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderTextPalette,
+        &state->textX
+    );
 
     state->animCounter++;
     if ((s16)state->animCounter >= 12) {
@@ -441,7 +548,12 @@ void updatePlayerGoldDisplayMultiplayer(GoldDisplayState *state) {
 
     state->animFrame = (s16)state->animCounter >> 1;
 
-    enqueueCallbackBySlotIndex((u16)(state->playerIndex + 8), 0, renderHalfSizeSpriteFrame, &state->iconX);
+    pushViewportCallbackBySlot(
+        (u16)(state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE),
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderHalfSizeSpriteFrame,
+        &state->iconX
+    );
 }
 
 void cleanupPlayerGoldDisplayTask(GoldDisplayState *state) {
@@ -579,13 +691,18 @@ void updatePlayerRaceProgressIndicator(RaceProgressIndicatorState *state) {
                 elem->paletteIndex = 0;
             }
 
-            enqueueCallbackBySlotIndex(0xC, 0, renderSpriteFrameWithPalette, elem);
+            pushViewportCallbackBySlot(
+                RACE_SHARED_VIEWPORT_SLOT,
+                VIEWPORT_CALLBACK_LAYER_INITIAL,
+                renderSpriteFrameWithPalette,
+                elem
+            );
             i++;
             playerCount = gameState->numPlayers;
         } while (i < playerCount);
     }
 
-    enqueueCallbackBySlotIndex(0xC, 0, renderSpriteFrame, state);
+    pushViewportCallbackBySlot(RACE_SHARED_VIEWPORT_SLOT, VIEWPORT_CALLBACK_LAYER_INITIAL, renderSpriteFrame, state);
 }
 
 void cleanupRaceProgressIndicatorTask(RaceProgressIndicatorCleanupState *state) {
@@ -619,7 +736,12 @@ void updateGoalBannerSlideIn(GoalBannerState *state) {
     if (state->animAngle == 0x800) {
         setCallback(updateGoalBannerHold);
     }
-    enqueueCallbackBySlotIndex((u16)(state->playerIndex + 8), 6, renderSpriteFrame, state);
+    pushViewportCallbackBySlot(
+        (u16)(state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE),
+        VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY,
+        renderSpriteFrame,
+        state
+    );
 }
 
 void updateGoalBannerHold(GoalBannerState *state) {
@@ -627,7 +749,12 @@ void updateGoalBannerHold(GoalBannerState *state) {
     if (state->holdFrames == 0) {
         setCallback(updateGoalBannerSlideOut);
     }
-    enqueueCallbackBySlotIndex((u16)(state->playerIndex + 8), 6, renderSpriteFrame, state);
+    pushViewportCallbackBySlot(
+        (u16)(state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE),
+        VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY,
+        renderSpriteFrame,
+        state
+    );
 }
 
 void updateGoalBannerSlideOut(GoalBannerState *state) {
@@ -641,7 +768,12 @@ void updateGoalBannerSlideOut(GoalBannerState *state) {
     if (state->animAngle == 0x1000) {
         terminateCurrentTask();
     }
-    enqueueCallbackBySlotIndex((u16)(state->playerIndex + 8), 6, renderSpriteFrame, state);
+    pushViewportCallbackBySlot(
+        (u16)(state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE),
+        VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY,
+        renderSpriteFrame,
+        state
+    );
 }
 
 void cleanupGoalBannerTask(GoalBannerState *state) {
@@ -669,7 +801,12 @@ void updateCenteredSpritePopup(CenteredSpritePopupState *state) {
     getTableEntryByU16Index(state->spriteAsset, state->spriteIndex, &output);
     state->xPos = -output.width / 2;
     state->yPos = -output.height / 2;
-    enqueueCallbackBySlotIndex((u16)(state->playerIndex + 8), 6, renderSpriteFrame, state);
+    pushViewportCallbackBySlot(
+        (u16)(state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE),
+        VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY,
+        renderSpriteFrame,
+        state
+    );
 }
 
 void cleanupCenteredSpritePopupTask(CenteredSpritePopupState *state) {
@@ -736,7 +873,12 @@ void initTrickScoreDisplayTask(TrickScoreDisplayState *state) {
 }
 
 void renderTrickScoreDisplay(TrickScoreDisplayState *state) {
-    enqueueCallbackBySlotIndex(state->playerIndex + 8, 6, renderSpriteFrame, state);
+    pushViewportCallbackBySlot(
+        state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+        VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY,
+        renderSpriteFrame,
+        state
+    );
 
     if (state->useGoldFormat == 0) {
         drawNumericString(
@@ -745,12 +887,17 @@ void renderTrickScoreDisplay(TrickScoreDisplayState *state) {
             state->yPos,
             0xFF,
             state->digitsTexture,
-            state->playerIndex + 8,
-            6
+            state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+            VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY
         );
     } else {
         state->textX = state->xPos + 0x38;
-        enqueueCallbackBySlotIndex(state->playerIndex + 8, 6, renderTextPalette, &state->textX);
+        pushViewportCallbackBySlot(
+            state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+            VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY,
+            renderTextPalette,
+            &state->textX
+        );
     }
 }
 
@@ -819,7 +966,12 @@ void initSpeedCrossFinishPositionTask(PlayerSpriteDisplayState *arg0) {
 
 void updateSpeedCrossFinishPositionDisplay(PlayerSpriteDisplayState *arg0) {
     arg0->spriteIndex = arg0->player->finishPosition;
-    enqueueCallbackBySlotIndex(8, 6, &renderSpriteFrame, arg0);
+    pushViewportCallbackBySlot(
+        RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+        VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY,
+        &renderSpriteFrame,
+        arg0
+    );
 }
 
 void cleanupSpeedCrossFinishPositionTask(PlayerSpriteDisplayState *arg0) {
@@ -918,7 +1070,12 @@ void updateGoldAwardDisplay(GoldAwardDisplayState *arg0) {
     }
 
     arg0->spriteAlpha = (u8)arg0->alpha;
-    enqueueCallbackBySlotIndex(8, 6, renderTextSpriteWithTransparency, arg0);
+    pushViewportCallbackBySlot(
+        RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+        VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY,
+        renderTextSpriteWithTransparency,
+        arg0
+    );
 
     sprintf(buf, D_8009E894_9F494, arg0->goldAmount);
 
@@ -940,7 +1097,7 @@ void updateGoldAwardDisplay(GoldAwardDisplayState *arg0) {
         (s16)arg0->alpha,
         arg0->digitAsset,
         8,
-        6
+        VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY
     );
 }
 
@@ -1000,7 +1157,12 @@ void updateTotalGoldDisplay(TotalGoldDisplayState *arg0) {
     }
 
     arg0->spriteAlpha = (u8)arg0->alpha;
-    enqueueCallbackBySlotIndex(8, 6, renderTextSpriteWithTransparency, arg0);
+    pushViewportCallbackBySlot(
+        RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+        VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY,
+        renderTextSpriteWithTransparency,
+        arg0
+    );
 
     sprintf(buf, D_8009E894_9F494, getPlayerGold());
 
@@ -1078,7 +1240,12 @@ void updateTotalLapDisplay(TotalLapDisplayState *state) {
 
     state->spriteAlpha = (u8)state->alpha;
 
-    enqueueCallbackBySlotIndex(state->player->playerIndex + 8, 6, renderTextSpriteWithTransparency, state);
+    pushViewportCallbackBySlot(
+        state->player->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+        VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY,
+        renderTextSpriteWithTransparency,
+        state
+    );
 
     drawNumericString(
         buffer,
@@ -1086,7 +1253,7 @@ void updateTotalLapDisplay(TotalLapDisplayState *state) {
         state->y,
         state->alpha,
         state->digitAsset,
-        (s16)(state->player->playerIndex + 8),
+        (s16)(state->player->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE),
         6
     );
 }
@@ -1231,7 +1398,12 @@ void renderVictorySnowflake(VictorySnowflakeState *state) {
 
     state->screenX = state->posX >> 4;
     state->screenY = state->posY >> 4;
-    enqueueCallbackBySlotIndex((u16)(state->playerIndex + 8), 0, renderSpriteFrameWithPalette, state);
+    pushViewportCallbackBySlot(
+        (u16)(state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE),
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderSpriteFrameWithPalette,
+        state
+    );
 }
 
 void renderVictorySnowflakeSmall(VictorySnowflakeState *state) {
@@ -1255,7 +1427,12 @@ void renderVictorySnowflakeSmall(VictorySnowflakeState *state) {
 
     state->screenX = state->posX >> 5;
     state->screenY = state->posY >> 5;
-    enqueueCallbackBySlotIndex((u16)(state->playerIndex + 8), 0, renderHalfSizeSpriteWithCustomPalette, state);
+    pushViewportCallbackBySlot(
+        (u16)(state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE),
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderHalfSizeSpriteWithCustomPalette,
+        state
+    );
 }
 
 void cleanupVictorySnowflake(VictorySnowflakeState *state) {
@@ -1309,10 +1486,10 @@ void initPauseMenuDisplayTask(PauseMenuDisplayState *state) {
     state->elements[2].frameIndex = 0x1D;
 
     setCleanupCallback(cleanupPauseMenuDisplayTask);
-    setCallback(renderPauseMenuDisplay);
+    setCallback(queuePauseMenuDisplayCallbacks);
 }
 
-void renderPauseMenuDisplay(PauseMenuDisplayState *state) {
+void queuePauseMenuDisplayCallbacks(PauseMenuDisplayState *state) {
     GameState *gameState;
     s32 i;
 
@@ -1325,10 +1502,29 @@ void renderPauseMenuDisplay(PauseMenuDisplayState *state) {
             } else {
                 state->elements[i].paletteIndex = 0x11;
             }
-            enqueueCallbackBySlotIndex(0xC, 6, renderSpriteFrameWithPalette, &state->elements[i]);
+            pushViewportCallbackBySlot(
+                RACE_SHARED_VIEWPORT_SLOT,
+                VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY,
+                renderSpriteFrameWithPalette,
+                &state->elements[i]
+            );
             i++;
         } while (i < 3);
-        renderTintedSpriteGrid(state->backgroundAsset, -0x20, -8, 4, 1, 0, 0x80, 0, 0, 0xFF, 0x80, 0xC, 6);
+        renderTintedSpriteGrid(
+            state->backgroundAsset,
+            -0x20,
+            -8,
+            4,
+            1,
+            0,
+            0x80,
+            0,
+            0,
+            0xFF,
+            0x80,
+            RACE_SHARED_VIEWPORT_SLOT,
+            VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY
+        );
     }
 }
 
@@ -1397,7 +1593,12 @@ void updateShotScoreDisplay(ShotScoreDisplayState *arg0) {
         arg0->elements[i].x = xPos;
         xPos -= 0x10;
 
-        enqueueCallbackBySlotIndex(8, 0, renderSpriteFrame, &arg0->elements[i]);
+        pushViewportCallbackBySlot(
+            RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+            VIEWPORT_CALLBACK_LAYER_INITIAL,
+            renderSpriteFrame,
+            &arg0->elements[i]
+        );
     }
 }
 
@@ -1424,9 +1625,27 @@ void updateShotCrossScoreDisplay(ShotCrossScoreDisplayState *arg0) {
     char buf[16];
 
     sprintf(buf, sIntegerFormat, arg0->player->primaryItemAmmo);
-    drawNumericString(buf, -0x70, -0x54, 0xFF, arg0->digitAsset, arg0->player->playerIndex + 8, 0);
-    enqueueCallbackBySlotIndex(8, 0, renderSpriteFrame, &arg0->ammoPanel);
-    enqueueCallbackBySlotIndex(8, 0, renderSpriteFrame, &arg0->ammoIcon);
+    drawNumericString(
+        buf,
+        -0x70,
+        -0x54,
+        0xFF,
+        arg0->digitAsset,
+        arg0->player->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+        0
+    );
+    pushViewportCallbackBySlot(
+        RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderSpriteFrame,
+        &arg0->ammoPanel
+    );
+    pushViewportCallbackBySlot(
+        RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderSpriteFrame,
+        &arg0->ammoIcon
+    );
 }
 
 void cleanupShotCrossScoreDisplayTask(ShotCrossScoreDisplayState *arg0) {
@@ -1467,7 +1686,12 @@ void updateShotCrossItemCountDisplay(CrossHudCounterDisplayState *arg0) {
     GameState *allocation;
 
     allocation = getCurrentAllocation();
-    enqueueCallbackBySlotIndex(8, 0, renderSpriteFrame, &arg0->sprite);
+    pushViewportCallbackBySlot(
+        RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderSpriteFrame,
+        &arg0->sprite
+    );
 
     if (arg0->cachedValue != allocation->shootCrossTargetsHit) {
         arg0->flashCounter = 9;
@@ -1558,7 +1782,12 @@ void updateShotCrossCountdownTimer(TimerDisplayState *arg0) {
         sprintf(buffer, sTimerFormatNormal, minutes, seconds, remainingTicks);
     }
 
-    enqueueCallbackBySlotIndex(8, 0, renderSpriteFrame, arg0);
+    pushViewportCallbackBySlot(
+        RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderSpriteFrame,
+        arg0
+    );
 
     drawNumericString(buffer, 0x48, 0x50, 0xFF, arg0->digitAsset, 8, 0);
 }
@@ -1591,7 +1820,12 @@ void updateSuccessMessageDisplay(SuccessMessageDisplayState *state) {
     } else {
         state->animationDelay = state->animationDelay - 1;
     }
-    enqueueCallbackBySlotIndex(8, 0, renderSpriteFrame, state);
+    pushViewportCallbackBySlot(
+        RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderSpriteFrame,
+        state
+    );
 }
 
 void cleanupSuccessMessageDisplayTask(SuccessMessageDisplayState *arg0) {
@@ -1644,7 +1878,12 @@ void updateBonusGoldDisplay(BonusGoldDisplayState *arg0) {
     }
 
     arg0->spriteAlpha = (u8)arg0->alphaValue;
-    enqueueCallbackBySlotIndex(8, 6, renderTextSpriteWithTransparency, arg0);
+    pushViewportCallbackBySlot(
+        RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+        VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY,
+        renderTextSpriteWithTransparency,
+        arg0
+    );
 
     var = 0;
     if (allocation->raceType == RACE_TYPE_SPEED_CROSS) {
@@ -1756,7 +1995,12 @@ after_7E:
         }
     }
 
-    enqueueCallbackBySlotIndex(8, 0, renderSpriteFrame, arg0);
+    pushViewportCallbackBySlot(
+        RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderSpriteFrame,
+        arg0
+    );
     drawNumericString(sp20, 0x68, 0x50, 0xFF, arg0->digitAsset, 8, 0);
 }
 
@@ -1780,10 +2024,21 @@ void initSecondaryItemDisplayTask(PlayerSpriteDisplayState *arg0) {
 
 void updateSecondaryItemDisplay(PlayerSpriteDisplayState *state) {
     state->spriteIndex = state->player->secondaryItemId + 7;
-    enqueueCallbackBySlotIndex((u16)(state->playerIndex + 8), 0, renderSpriteFrame, state);
+    pushViewportCallbackBySlot(
+        (u16)(state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE),
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderSpriteFrame,
+        state
+    );
 
     if (state->player->itemHudNotificationFlags & 2) {
-        spawnFloatingItemSprite(state->x - 8, state->y - 8, 1, state->playerIndex + 8, 0);
+        spawnFloatingItemSprite(
+            state->x - 8,
+            state->y - 8,
+            1,
+            state->playerIndex + RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+            0
+        );
         state->player->itemHudNotificationFlags &= ~2;
     }
 }
@@ -1833,7 +2088,12 @@ void updateSkillGameResultTimerDisplay(TimerDisplayState *arg0) {
         sprintf(timeString, timeFormat, minutes, seconds, frames);
     }
 
-    enqueueCallbackBySlotIndex(8, 0, renderSpriteFrame, arg0);
+    pushViewportCallbackBySlot(
+        RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderSpriteFrame,
+        arg0
+    );
     drawNumericString(timeString, -0x54, -0x28, 0xFF, arg0->digitAsset, 8, 0);
 }
 
@@ -1868,7 +2128,12 @@ void renderTrickPointsDisplay(TrickPointsDisplayState *state) {
     temp_s0 = (var_s0 * 4) + 0x10;
     state->spriteX = temp_s0 + (s16)((u16)state->animationX - 0x28);
     temp_s0 = state->animationX - temp_s0;
-    enqueueCallbackBySlotIndex(8, 6, renderSpriteFrame, state);
+    pushViewportCallbackBySlot(
+        RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+        VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY,
+        renderSpriteFrame,
+        state
+    );
     drawNumericString(state->scoreText, temp_s0, state->y, 0xFF, state->digitAsset, 8, 6);
 }
 
@@ -1948,7 +2213,12 @@ void updateShotCrossSkillMeterDisplay(CrossHudCounterDisplayState *arg0) {
     s32 x;
 
     allocation = (GameState *)getCurrentAllocation();
-    enqueueCallbackBySlotIndex(8, 0, renderSpriteFrame, &arg0->sprite);
+    pushViewportCallbackBySlot(
+        RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderSpriteFrame,
+        &arg0->sprite
+    );
 
     if (arg0->cachedValue != allocation->players->skillPoints) {
         arg0->flashCounter = 9;
@@ -2035,8 +2305,18 @@ void initCrossRaceBadgeTask(CrossRaceBadgeState *arg0) {
 }
 
 void updateCrossRaceBadgeDisplay(CrossRaceBadgeState *arg0) {
-    enqueueCallbackBySlotIndex(8, 0, renderSpriteFrame, &arg0->background);
-    enqueueCallbackBySlotIndex(8, 0, renderSpriteFrame, &arg0->foreground);
+    pushViewportCallbackBySlot(
+        RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderSpriteFrame,
+        &arg0->background
+    );
+    pushViewportCallbackBySlot(
+        RACE_PLAYER_OVERLAY_VIEWPORT_SLOT_BASE,
+        VIEWPORT_CALLBACK_LAYER_INITIAL,
+        renderSpriteFrame,
+        &arg0->foreground
+    );
 }
 
 void cleanupCrossRaceBadgeTask(void *arg0) {

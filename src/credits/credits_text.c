@@ -205,7 +205,12 @@ void updateCreditsScrollingTextEffects(CreditsState *s) {
         for (i = 0; i < 0x12; i++) {
             if (scaledAlpha != 0) {
                 s->paletteOverlaySprites[i].alpha = scaledAlpha >> 16;
-                enqueueCallbackBySlotIndex(0, 2, renderScaledAlphaSpriteFrame, &s->paletteOverlaySprites[i]);
+                pushViewportCallbackBySlot(
+                    0,
+                    VIEWPORT_CALLBACK_LAYER_POST_OPAQUE,
+                    renderScaledAlphaSpriteFrame,
+                    &s->paletteOverlaySprites[i]
+                );
             }
             if (s->paletteFadeSpeed < 0) {
                 if (s->overlayAlpha == 0xFF0000) {
@@ -214,7 +219,12 @@ void updateCreditsScrollingTextEffects(CreditsState *s) {
             }
             if (showPalette != 0) {
                 s->paletteSprites[i].alpha = s->currentPaletteAlpha >> 16;
-                enqueueCallbackBySlotIndex(0, 2, renderScaledAlphaSpriteFrame, &s->paletteSprites[i]);
+                pushViewportCallbackBySlot(
+                    0,
+                    VIEWPORT_CALLBACK_LAYER_POST_OPAQUE,
+                    renderScaledAlphaSpriteFrame,
+                    &s->paletteSprites[i]
+                );
             }
         }
     }

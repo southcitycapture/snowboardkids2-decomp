@@ -2540,7 +2540,12 @@ void updateModelGeometry(SceneModel *arg0) {
                 enqueueTranslucentSprite(arg0->viewport->callbackSlotIndex, (Node *)&arg0->shadowSprite);
                 return;
             }
-            enqueueCallbackBySlotIndex(arg0->viewport->callbackSlotIndex, 1U, &renderNonRaceShadow, arg0);
+            pushViewportCallbackBySlot(
+                arg0->viewport->callbackSlotIndex,
+                VIEWPORT_CALLBACK_LAYER_OPAQUE,
+                &renderNonRaceShadow,
+                arg0
+            );
         }
     }
 }

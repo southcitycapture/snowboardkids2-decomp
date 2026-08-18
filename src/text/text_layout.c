@@ -77,7 +77,7 @@ void enqueueTextLayout(
                 elem->x = x;
                 elem->y = y;
                 elem->frameIndex = cmd & 0xFFF;
-                enqueueCallbackBySlotIndex(priority, flags, renderTextSpriteWithTransparency, elem);
+                pushViewportCallbackBySlot(priority, flags, renderTextSpriteWithTransparency, elem);
             }
             x += width;
         }
@@ -262,7 +262,7 @@ void enqueueTextLayoutCapped(
                 elem->x = x;
                 elem->y = y;
                 elem->frameIndex = cmd & 0xFFF;
-                enqueueCallbackBySlotIndex(priority, flags, renderTextSpriteWithTransparency, elem);
+                pushViewportCallbackBySlot(priority, flags, renderTextSpriteWithTransparency, elem);
             }
             x += width;
         }
@@ -511,7 +511,7 @@ void enqueueTextLayoutAlphaBlended(
                 elem->x = x;
                 elem->y = y;
                 elem->frameIndex = cmd & 0xFFF;
-                enqueueCallbackBySlotIndex(priority, flags, renderAlphaBlendedTextSprite, elem);
+                pushViewportCallbackBySlot(priority, flags, renderAlphaBlendedTextSprite, elem);
             }
             x += width;
         }

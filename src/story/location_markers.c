@@ -474,7 +474,7 @@ void updateStoryMapLocationMarker(StoryMapLocationMarkerState *arg0) {
                 }
             }
 
-            enqueueCallbackBySlotIndex(8, temp_s5, &renderScaledShadedSpriteFrame, &arg0->entries[i]);
+            pushViewportCallbackBySlot(8, temp_s5, &renderScaledShadedSpriteFrame, &arg0->entries[i]);
         }
 
         if (arg0->unk64 >= 6) {
@@ -484,7 +484,7 @@ void updateStoryMapLocationMarker(StoryMapLocationMarkerState *arg0) {
             height = 272;
             arg0->unk50 = screenX - (((sp28 + (width / 2))));
             arg0->unk52 = screenY - (((sp2A + (height / 2))));
-            enqueueCallbackBySlotIndex(8, temp_s5 + 1, &renderTextLayout, &arg0->unk50);
+            pushViewportCallbackBySlot(8, temp_s5 + 1, &renderTextLayout, &arg0->unk50);
         }
 
         if (!allocation->locationDiscovered) {
@@ -555,7 +555,7 @@ void updateStoryMapSpecialLocationMarker(SpecialLocationMarkerUpdateState *arg0)
         return;
     }
 
-    enqueueCallbackBySlotIndex(8, 7, &renderTextSprite, arg0);
+    pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_FINAL, &renderTextSprite, arg0);
 }
 
 void cleanupTownExitMarker(void *untypedArg) {

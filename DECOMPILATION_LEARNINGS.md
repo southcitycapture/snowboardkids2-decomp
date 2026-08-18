@@ -891,3 +891,17 @@ Unlock-screen item IDs use bit `0x80` to mark purchased entries. When KMC indexe
 ID directly and loads from `paintShopItemPrices - 0x200`. A disassembler may consequently describe that base
 as an offset from an unrelated preceding symbol. Keep the real price-table symbol and express the decode with
 a named flag/index macro; this preserves the exact code while avoiding a misleading cross-symbol array access.
+
+## Model Viewport Callback Layers as Eight Linked-List Heads
+
+Each `ViewportNode` owns eight ordered callback layers at offsets `0x18` through `0x88`. The old seven-entry
+array plus `unk88`/padding was one contiguous eight-entry `CallbackEntry` array; modeling all eight entries
+directly also reveals that the slot-indexed callback table contains `ViewportNode *` values. Pushing a callback
+replaces the selected layer head, so callbacks execute LIFO within a layer while the sentinel chain executes
+layers 0 through 7 in ascending order.
+
+Viewport transform edges and resolved clip bounds use two related conventions. Transform edges are
+center-relative coordinates and may describe a logical boundary such as 320 or 160. `updateViewportBounds`
+then clamps them to inherited clip bounds, whose right and bottom values are treated as inclusive by CPU-side
+clipping. Consequently, a full-screen right edge of 320 resolves to 319, while an interior split boundary can
+remain 160; center calculations must not assume both values use the same convention.

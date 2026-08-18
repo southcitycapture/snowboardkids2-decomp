@@ -15,8 +15,8 @@ void renderTintedSpriteGrid(
     u8 colorG,
     u8 colorB,
     u8 colorA,
-    u8 priority,
-    u8 layer
+    u8 viewportSlot,
+    u8 callbackLayer
 );
 
 void renderTiledSprite3x3(

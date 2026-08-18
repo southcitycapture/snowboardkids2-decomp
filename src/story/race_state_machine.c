@@ -141,7 +141,7 @@ void storyMapLocationTextTask(func_80019CD0_1A8D0_arg *arg0) {
 }
 
 void enqueueStoryMapLocationText(TextData *arg0) {
-    enqueueCallbackBySlotIndex(0, 7, &renderTextPalette, arg0);
+    pushViewportCallbackBySlot(0, VIEWPORT_CALLBACK_LAYER_FINAL, &renderTextPalette, arg0);
 }
 
 void initStoryModeRace(void) {

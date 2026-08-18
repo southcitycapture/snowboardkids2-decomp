@@ -6048,7 +6048,12 @@ void updateRacerShadowSamplePositions(Player *player) {
 
     if (!(player->animationFlags & 0x800000)) {
         for (sampleIndex = 0; sampleIndex < 4; sampleIndex++) {
-            enqueueCallbackBySlotIndex(sampleIndex, 1, renderRacerProjectedShadow, (void *)player);
+            pushViewportCallbackBySlot(
+                sampleIndex,
+                VIEWPORT_CALLBACK_LAYER_OPAQUE,
+                renderRacerProjectedShadow,
+                (void *)player
+            );
         }
     }
 }

@@ -327,7 +327,7 @@ void renderGalleryMenu(GalleryMenuState *arg0) {
     setModelHeight(arg0->menuModel, menuTransform.translation.y);
     clearModelRotation(arg0->menuModel);
     updateModelGeometry(arg0->menuModel);
-    enqueueCallbackBySlotIndex(1, 4, renderTiledTextureMap, &arg0->backgroundTileMap);
+    pushViewportCallbackBySlot(1, VIEWPORT_CALLBACK_LAYER_SPRITES, renderTiledTextureMap, &arg0->backgroundTileMap);
     menuState = arg0->menuState;
     if (menuState <= 0) {
         goto menu_end;
@@ -411,7 +411,12 @@ menu_body: {
         alpha = (s16)(arg0->menuOptionAlpha[i] >> 16);
         arg0->menuOptionSprites[i].alpha = (s8)alpha;
         arg0->menuOptionSprites[i].shade.shadeWithPadding = alpha & 0xFF;
-        enqueueCallbackBySlotIndex(2, 4, renderScaledAlphaSpriteFrame, &arg0->menuOptionSprites[i]);
+        pushViewportCallbackBySlot(
+            2,
+            VIEWPORT_CALLBACK_LAYER_SPRITES,
+            renderScaledAlphaSpriteFrame,
+            &arg0->menuOptionSprites[i]
+        );
         arg0->menuOptionLabels[i].x = entry->x;
         arg0->menuOptionLabels[i].y = entry->y;
         arg0->menuOptionLabels[i].overridePaletteCount = 0;
@@ -419,7 +424,12 @@ menu_body: {
         arg0->menuOptionLabels[i].alpha = (s8)alpha;
         arg0->menuOptionLabels[i].shade.shadeWithPadding = alpha & 0xFF;
         arg0->menuOptionLabels[i].frameIndex = (s16)((s8)entry->labelIndex);
-        enqueueCallbackBySlotIndex(2, 5, renderScaledAlphaSpriteFrame, &arg0->menuOptionLabels[i]);
+        pushViewportCallbackBySlot(
+            2,
+            VIEWPORT_CALLBACK_LAYER_OVERLAY,
+            renderScaledAlphaSpriteFrame,
+            &arg0->menuOptionLabels[i]
+        );
     }
 menu_end:;
     ;
@@ -982,7 +992,12 @@ void renderGalleryViewerContent(GalleryViewerState *arg0) {
                     } else {
                         alloc->itemLabels[i].shade.value = 0x64;
                     }
-                    enqueueCallbackBySlotIndex(2, 4, renderTextColored, &alloc->itemLabels[i]);
+                    pushViewportCallbackBySlot(
+                        2,
+                        VIEWPORT_CALLBACK_LAYER_SPRITES,
+                        renderTextColored,
+                        &alloc->itemLabels[i]
+                    );
                 }
             }
 
@@ -996,7 +1011,12 @@ void renderGalleryViewerContent(GalleryViewerState *arg0) {
                 alloc->selectionCursor.frameIndex = 0xA;
             }
             if (arg0->navigationState == 0) {
-                enqueueCallbackBySlotIndex(2, 4, renderTextSprite, &alloc->selectionCursor);
+                pushViewportCallbackBySlot(
+                    2,
+                    VIEWPORT_CALLBACK_LAYER_SPRITES,
+                    renderTextSprite,
+                    &alloc->selectionCursor
+                );
             }
             if (alloc->selectedOption == 2) {
                 sp3C = 4;
@@ -1020,7 +1040,12 @@ void renderGalleryViewerContent(GalleryViewerState *arg0) {
                     alloc->itemSprites[i].overridePaletteCount = 0;
                     alloc->itemSprites[i].color.paletteAndAlpha = 0x64;
                 }
-                enqueueCallbackBySlotIndex(2, 4, renderTextSprite, &alloc->itemSprites[i]);
+                pushViewportCallbackBySlot(
+                    2,
+                    VIEWPORT_CALLBACK_LAYER_SPRITES,
+                    renderTextSprite,
+                    &alloc->itemSprites[i]
+                );
                 if (alloc->selectedOption == 2) {
                     alloc->boardOverlaySprites[i].x = (s8)item->x;
                     alloc->boardOverlaySprites[i].y = (s8)item->y;
@@ -1029,19 +1054,29 @@ void renderGalleryViewerContent(GalleryViewerState *arg0) {
                     } else {
                         alloc->boardOverlaySprites[i].color.paletteAndAlpha = 0x96;
                     }
-                    enqueueCallbackBySlotIndex(2, 4, renderTextSprite, &alloc->boardOverlaySprites[i]);
+                    pushViewportCallbackBySlot(
+                        2,
+                        VIEWPORT_CALLBACK_LAYER_SPRITES,
+                        renderTextSprite,
+                        &alloc->boardOverlaySprites[i]
+                    );
                 }
             }
 
             alloc->pageIndicator.color.paletteAndAlpha = (s16)(arg0->pageIndicatorAlpha >> 16);
-            enqueueCallbackBySlotIndex(2, 4, renderTextSprite, &alloc->pageIndicator);
+            pushViewportCallbackBySlot(2, VIEWPORT_CALLBACK_LAYER_SPRITES, renderTextSprite, &alloc->pageIndicator);
             item = &category->items[arg0->cursorIndex];
             if (arg0->navigationState == 0) {
                 if (isGalleryItemUnlocked(arg0->cursorIndex & 0xFF) & 0xFF) {
                     switch (alloc->selectedOption) {
                         case 0:
                             for (i = 0; i < item->numExtra; i++) {
-                                enqueueCallbackBySlotIndex(2, 4, renderTextSprite, &alloc->extraItemSprites[i]);
+                                pushViewportCallbackBySlot(
+                                    2,
+                                    VIEWPORT_CALLBACK_LAYER_SPRITES,
+                                    renderTextSprite,
+                                    &alloc->extraItemSprites[i]
+                                );
                             }
 
                             break;
@@ -1056,7 +1091,12 @@ void renderGalleryViewerContent(GalleryViewerState *arg0) {
                                 stat2,
                                 getItemStat3((s32)((u8)arg0->cursorIndex)) & 0xFF
                             );
-                            enqueueCallbackBySlotIndex(2, 4, renderTextPalette, &alloc->itemStatsText);
+                            pushViewportCallbackBySlot(
+                                2,
+                                VIEWPORT_CALLBACK_LAYER_SPRITES,
+                                renderTextPalette,
+                                &alloc->itemStatsText
+                            );
                             break;
 
                         case 3:
@@ -1065,8 +1105,18 @@ void renderGalleryViewerContent(GalleryViewerState *arg0) {
                             } else {
                                 alloc->flashingPrizeIcon.frameIndex = 0x31;
                             }
-                            enqueueCallbackBySlotIndex(2, 4, renderSpriteFrame, &alloc->flashingPrizeIcon);
-                            enqueueCallbackBySlotIndex(2, 4, renderSpriteFrame, &alloc->prizeIcon);
+                            pushViewportCallbackBySlot(
+                                2,
+                                VIEWPORT_CALLBACK_LAYER_SPRITES,
+                                renderSpriteFrame,
+                                &alloc->flashingPrizeIcon
+                            );
+                            pushViewportCallbackBySlot(
+                                2,
+                                VIEWPORT_CALLBACK_LAYER_SPRITES,
+                                renderSpriteFrame,
+                                &alloc->prizeIcon
+                            );
                             break;
                     }
 
@@ -1088,7 +1138,12 @@ void renderGalleryViewerContent(GalleryViewerState *arg0) {
                     3
                 );
             }
-            enqueueCallbackBySlotIndex(2, 3, renderTiledTextureMap, &alloc->overlayTileMap);
+            pushViewportCallbackBySlot(
+                2,
+                VIEWPORT_CALLBACK_LAYER_TRANSLUCENT,
+                renderTiledTextureMap,
+                &alloc->overlayTileMap
+            );
         }
     }
 }

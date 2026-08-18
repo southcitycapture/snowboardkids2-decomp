@@ -198,11 +198,21 @@ void updateLogoSplash(void) {
 
     state = logoScreen->phase;
     if (state == LOGO_SPLASH_PHASE_UPDATE_ATLUS_LOGO) {
-        enqueueCallbackBySlotIndex(0, 4, renderTiledTextureMap, &logoScreen->atlusLogoRenderState);
+        pushViewportCallbackBySlot(
+            0,
+            VIEWPORT_CALLBACK_LAYER_SPRITES,
+            renderTiledTextureMap,
+            &logoScreen->atlusLogoRenderState
+        );
     } else if (state >= 2) {
         if (state < LOGO_SPLASH_PHASE_CLEANUP) {
             if (state >= LOGO_SPLASH_PHASE_UPDATE_RACDYM_FADE_IN) {
-                enqueueCallbackBySlotIndex(0, 4, renderTiledTextureMap, &logoScreen->racdymLogoRenderState);
+                pushViewportCallbackBySlot(
+                    0,
+                    VIEWPORT_CALLBACK_LAYER_SPRITES,
+                    renderTiledTextureMap,
+                    &logoScreen->racdymLogoRenderState
+                );
 
                 for (i = 0; i < logoScreen->visibleFootprintCount; i++) {
                     logoScreen->footprintAlphaAccumulators[i] += 0x330000;
@@ -210,7 +220,12 @@ void updateLogoSplash(void) {
                         logoScreen->footprintAlphaAccumulators[i] = 0xFF0000;
                     }
                     logoScreen->footprintSprites[i].alpha = (s8)(logoScreen->footprintAlphaAccumulators[i] >> 16);
-                    enqueueCallbackBySlotIndex(0, 3, renderScaledAlphaSpriteFrame, &logoScreen->footprintSprites[i]);
+                    pushViewportCallbackBySlot(
+                        0,
+                        VIEWPORT_CALLBACK_LAYER_TRANSLUCENT,
+                        renderScaledAlphaSpriteFrame,
+                        &logoScreen->footprintSprites[i]
+                    );
                 }
             }
         }

@@ -186,7 +186,12 @@ void updateTiledTextureAssetDisplay(ScrollingTileGroupTaskData *taskData) {
 
         if (taskData->cutsceneManager->enableTransparency != 0) {
             if (taskData->cutsceneManager->unk10.renderModeArg.unk87 != 0) {
-                enqueueCallbackBySlotIndex(3, 2, renderTiledTextureMap, &taskData->tileMaps[i]);
+                pushViewportCallbackBySlot(
+                    3,
+                    VIEWPORT_CALLBACK_LAYER_POST_OPAQUE,
+                    renderTiledTextureMap,
+                    &taskData->tileMaps[i]
+                );
             }
         }
     }

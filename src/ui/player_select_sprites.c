@@ -216,7 +216,12 @@ void updatePlayerSelectAnim(PlayerSelectState *state) {
 
     i = 0;
     do {
-        enqueueCallbackBySlotIndex(8, 0, renderScaledShadedSpriteFrame, &state->portraits[i]);
+        pushViewportCallbackBySlot(
+            8,
+            VIEWPORT_CALLBACK_LAYER_INITIAL,
+            renderScaledShadedSpriteFrame,
+            &state->portraits[i]
+        );
         i++;
     } while (i < 2);
 }
@@ -253,7 +258,7 @@ void enqueuePlayerSelectSpritesRender(TextRenderArg *sprites) {
     s32 i;
 
     for (i = 0; i < 4; i++) {
-        enqueueCallbackBySlotIndex(8, 0, renderTextSprite, &sprites[i]);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderTextSprite, &sprites[i]);
     }
 }
 
@@ -284,7 +289,7 @@ void updatePlayerCountHeaderSprite(SpriteRenderArg *sprite) {
         sprite->x = -96;
         sprite->frameIndex = 6;
     }
-    enqueueCallbackBySlotIndex(8, 0, renderSpriteFrame, sprite);
+    pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderSpriteFrame, sprite);
 }
 
 void cleanupPlayerCountHeaderSprite(SpriteRenderArg *sprite) {
@@ -308,7 +313,7 @@ void updatePlayerIndicatorSprite(SpriteRenderArg *sprite) {
     sprite->y = gPlayerCountIndicatorPositions[allocation->playerCount.selectedOptionIndex * 2 + 1];
     sprite->frameIndex = allocation->playerCount.selectedOptionIndex + 2;
 
-    enqueueCallbackBySlotIndex(8, 7, renderSpriteFrame, sprite);
+    pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_FINAL, renderSpriteFrame, sprite);
 }
 
 void cleanupPlayerIndicatorSprite(SpriteRenderArg *sprite) {
@@ -331,7 +336,7 @@ void updateCharacterReadyIndicator(SpriteRenderArg *sprite) {
     PlayerCountSelectState *allocation = getCurrentAllocation();
 
     if (allocation->menuState == PLAYER_COUNT_MENU_CONFIRM_OK) {
-        enqueueCallbackBySlotIndex(8, 7, renderSpriteFrame, sprite);
+        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_FINAL, renderSpriteFrame, sprite);
     }
 }
 
