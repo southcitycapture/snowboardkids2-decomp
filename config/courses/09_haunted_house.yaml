@@ -1,0 +1,104 @@
+key: haunted_house
+enum: HAUNTED_HOUSE
+legacy_id: 9
+kind: standard
+behavior: haunted_house
+assets:
+  display_lists:
+    symbol: HAUNTED_HOUSE_COURSE_DISPLAY_LISTS
+    decompressed_size: '0x0'
+  model_resources:
+    symbol: HAUNTED_HOUSE_COURSE_MODEL_RESOURCES
+    decompressed_size: '0x25EA0'
+  track_mesh:
+    symbol: HAUNTED_HOUSE_COURSE_TRACK_SECTOR_MESH
+    decompressed_size: '0x59B6'
+  texture_table:
+    symbol: HAUNTED_HOUSE_COURSE_TEXTURE_TABLE
+    decompressed_size: '0x15E8'
+  gold_coins:
+    symbol: HAUNTED_HOUSE_GOLD_COIN_DATA
+    decompressed_size: '0x390'
+  item_boxes:
+    symbol: HAUNTED_HOUSE_ITEM_BOX_DATA
+    decompressed_size: '0x120'
+  scene_animation:
+    symbol: HAUNTED_HOUSE_SCENE_ANIMATION_DATA
+    decompressed_size: '0x810'
+    legacy_slot: 11
+environment:
+  shortcut_position:
+  - '0xF81F16C7'
+  - '0xF7874E40'
+  spawn_position:
+  - '0x000932B6'
+  - '0x2FFF0788'
+  - '0x305235B0'
+  yaw_offset: '0x0800'
+  light_colors:
+  - '0xC0'
+  - '0xC0'
+  - '0xC0'
+  - '0x00'
+  - '0x00'
+  - '0x50'
+  - '0x50'
+  - '0x00'
+  fog_colors:
+  - '0xA0'
+  - '0x90'
+  - '0xD0'
+  - '0x00'
+  - '0x00'
+  - '0x10'
+  - '0x20'
+  - '0x00'
+  music_track: '0x0015'
+  sky_display_lists:
+  - D_800955F0_961F0
+  - D_80095600_96200
+  - D_80095610_96210
+preview:
+  world: 2
+  duration: '0x04CE'
+  start_waypoint: '0x08'
+race:
+  cpu_characters:
+  - 0
+  - 2
+  - 4
+  - 5
+  cpu_board_model: 2
+  cpu_snowboards:
+  - - 2
+    - 7
+    - 5
+    - 5
+  - - 2
+    - 8
+    - 6
+    - 4
+  - - 2
+    - 9
+    - 5
+    - 4
+  - - 5
+    - 10
+    - 6
+    - 4
+  - - 5
+    - 11
+    - 5
+    - 4
+  - - 2
+    - 12
+    - 6
+    - 5
+  expert_snowboard: 12
+  rewards:
+  - 60000
+  - 12000
+  - 6000
+overlay:
+  symbol: levels_haunted_house
+  data_end: DATA_END

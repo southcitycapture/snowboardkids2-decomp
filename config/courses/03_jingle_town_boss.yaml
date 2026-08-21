@@ -1,0 +1,104 @@
+key: jingle_town_boss
+enum: JINGLE_TOWN_BOSS
+legacy_id: 3
+kind: boss
+behavior: jingle_town_boss
+assets:
+  display_lists:
+    symbol: JINGLE_TOWN_BOSS_COURSE_DISPLAY_LISTS
+    decompressed_size: '0x0'
+  model_resources:
+    symbol: JINGLE_TOWN_BOSS_COURSE_MODEL_RESOURCES
+    decompressed_size: '0x181D0'
+  track_mesh:
+    symbol: JINGLE_TOWN_BOSS_COURSE_TRACK_SECTOR_MESH
+    decompressed_size: '0x342A'
+  texture_table:
+    symbol: JINGLE_TOWN_BOSS_COURSE_TEXTURE_TABLE
+    decompressed_size: '0x2A58'
+  gold_coins:
+    symbol: JINGLE_TOWN_BOSS_GOLD_COIN_DATA
+    decompressed_size: '0x370'
+  item_boxes:
+    symbol: JINGLE_TOWN_BOSS_ITEM_BOX_DATA
+    decompressed_size: '0xF0'
+  scene_animation:
+    symbol: JINGLE_TOWN_BOSS_SCENE_ANIMATION_DATA
+    decompressed_size: '0x3E0'
+    legacy_slot: 5
+environment:
+  shortcut_position:
+  - '0xC509752E'
+  - '0xD846D91D'
+  spawn_position:
+  - '0x0005E526'
+  - '0x3000B20C'
+  - '0x304DA3E1'
+  yaw_offset: '0xF800'
+  light_colors:
+  - '0xFF'
+  - '0xFF'
+  - '0x80'
+  - '0x00'
+  - '0x00'
+  - '0x50'
+  - '0x50'
+  - '0x00'
+  fog_colors:
+  - '0x40'
+  - '0x60'
+  - '0xA0'
+  - '0x00'
+  - '0x00'
+  - '0x00'
+  - '0x40'
+  - '0x00'
+  music_track: '0x001F'
+  sky_display_lists:
+  - D_80094FB0_95BB0
+  - D_80094FE0_95BE0
+  - D_80094FF0_95BF0
+preview:
+  world: 0
+  duration: '0x03DE'
+  start_waypoint: '0x4B'
+race:
+  cpu_characters:
+  - 0
+  - 2
+  - 1
+  - 4
+  cpu_board_model: 0
+  cpu_snowboards:
+  - - 0
+    - 7
+    - 3
+    - 3
+  - - 0
+    - 8
+    - 4
+    - 2
+  - - 0
+    - 9
+    - 3
+    - 3
+  - - 0
+    - 10
+    - 3
+    - 3
+  - - 0
+    - 11
+    - 4
+    - 2
+  - - 6
+    - 12
+    - 4
+    - 2
+  expert_snowboard: 11
+  rewards:
+  - 0
+  - 0
+  - 0
+overlay:
+  symbol: levels_jingle_town_boss
+  data_end: RODATA_END

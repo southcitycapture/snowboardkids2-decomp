@@ -1,0 +1,104 @@
+key: wendys_house
+enum: WENDYS_HOUSE
+legacy_id: 4
+kind: standard
+behavior: wendys_house
+assets:
+  display_lists:
+    symbol: WENDYS_HOUSE_COURSE_DISPLAY_LISTS
+    decompressed_size: '0x0'
+  model_resources:
+    symbol: WENDYS_HOUSE_COURSE_MODEL_RESOURCES
+    decompressed_size: '0x1C6C0'
+  track_mesh:
+    symbol: WENDYS_HOUSE_COURSE_TRACK_SECTOR_MESH
+    decompressed_size: '0x4A9A'
+  texture_table:
+    symbol: WENDYS_HOUSE_COURSE_TEXTURE_TABLE
+    decompressed_size: '0x918'
+  gold_coins:
+    symbol: WENDYS_HOUSE_GOLD_COIN_DATA
+    decompressed_size: '0x310'
+  item_boxes:
+    symbol: WENDYS_HOUSE_ITEM_BOX_DATA
+    decompressed_size: '0x110'
+  scene_animation:
+    symbol: WENDYS_HOUSE_SCENE_ANIMATION_DATA
+    decompressed_size: '0xB0'
+    legacy_slot: 10
+environment:
+  shortcut_position:
+  - '0xED1B13F8'
+  - '0xCADE7A1A'
+  spawn_position:
+  - '0x004D695A'
+  - '0x300018E6'
+  - '0x304430A2'
+  yaw_offset: '0xF800'
+  light_colors:
+  - '0xFF'
+  - '0xFF'
+  - '0xFF'
+  - '0x00'
+  - '0x00'
+  - '0x50'
+  - '0x50'
+  - '0x00'
+  fog_colors:
+  - '0xC0'
+  - '0x80'
+  - '0x60'
+  - '0x00'
+  - '0xA0'
+  - '0x70'
+  - '0x40'
+  - '0x00'
+  music_track: '0x000E'
+  sky_display_lists:
+  - D_80095090_95C90
+  - D_800950A0_95CA0
+  - D_800950C0_95CC0
+preview:
+  world: 1
+  duration: '0x0708'
+  start_waypoint: '0x0B'
+race:
+  cpu_characters:
+  - 0
+  - 4
+  - 1
+  - 5
+  cpu_board_model: 1
+  cpu_snowboards:
+  - - 1
+    - 7
+    - 3
+    - 2
+  - - 1
+    - 8
+    - 2
+    - 3
+  - - 1
+    - 9
+    - 2
+    - 2
+  - - 1
+    - 10
+    - 3
+    - 3
+  - - 4
+    - 11
+    - 2
+    - 2
+  - - 1
+    - 12
+    - 3
+    - 3
+  expert_snowboard: 9
+  rewards:
+  - 40000
+  - 8000
+  - 4000
+overlay:
+  symbol: levels_wendys_house
+  data_end: DATA_END

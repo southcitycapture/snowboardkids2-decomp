@@ -1,0 +1,104 @@
+key: sunny_mountain
+enum: SUNNY_MOUNTAIN
+legacy_id: 0
+kind: standard
+behavior: sunny_mountain
+assets:
+  display_lists:
+    symbol: SUNNY_MOUNTAIN_COURSE_DISPLAY_LISTS
+    decompressed_size: '0x0'
+  model_resources:
+    symbol: SUNNY_MOUNTAIN_COURSE_MODEL_RESOURCES
+    decompressed_size: '0x14CB0'
+  track_mesh:
+    symbol: SUNNY_MOUNTAIN_COURSE_TRACK_SECTOR_MESH
+    decompressed_size: '0x24A8'
+  texture_table:
+    symbol: SUNNY_MOUNTAIN_COURSE_TEXTURE_TABLE
+    decompressed_size: '0x2208'
+  gold_coins:
+    symbol: SUNNY_MOUNTAIN_GOLD_COIN_DATA
+    decompressed_size: '0x200'
+  item_boxes:
+    symbol: SUNNY_MOUNTAIN_ITEM_BOX_DATA
+    decompressed_size: '0xC0'
+  scene_animation:
+    symbol: SUNNY_MOUNTAIN_SCENE_ANIMATION_DATA
+    decompressed_size: '0x3A0'
+    legacy_slot: 0
+environment:
+  shortcut_position:
+  - '0x19654B2B'
+  - '0x03439FEC'
+  spawn_position:
+  - '0xFFFF538C'
+  - '0x2FFFEC47'
+  - '0x304EFAA0'
+  yaw_offset: '0x0000'
+  light_colors:
+  - '0xFF'
+  - '0xFF'
+  - '0xFF'
+  - '0x00'
+  - '0x00'
+  - '0x50'
+  - '0x50'
+  - '0x00'
+  fog_colors:
+  - '0x8A'
+  - '0x70'
+  - '0xEA'
+  - '0x00'
+  - '0x50'
+  - '0x70'
+  - '0xF0'
+  - '0x00'
+  music_track: '0x000C'
+  sky_display_lists:
+  - D_80094CC0_958C0
+  - D_80094CD0_958D0
+  - D_80094CE0_958E0
+preview:
+  world: 0
+  duration: '0x0618'
+  start_waypoint: '0x18'
+race:
+  cpu_characters:
+  - 1
+  - 4
+  - 5
+  - 0
+  cpu_board_model: 0
+  cpu_snowboards:
+  - - 0
+    - 7
+    - 0
+    - 0
+  - - 0
+    - 8
+    - 0
+    - 0
+  - - 0
+    - 9
+    - 0
+    - 0
+  - - 0
+    - 10
+    - 0
+    - 0
+  - - 0
+    - 11
+    - 0
+    - 0
+  - - 6
+    - 12
+    - 0
+    - 0
+  expert_snowboard: 13
+  rewards:
+  - 10000
+  - 2000
+  - 1000
+overlay:
+  symbol: levels_sunny_mountain
+  data_end: RODATA_END

@@ -539,32 +539,7 @@ extern DisplayLists D_8009A690_9B290;
 extern DisplayLists D_8009A6A0_9B2A0;
 
 CompressedAsset gSceneAnimationDataAssets[] = {
-    { (void *)&SUNNY_MOUNTAIN_SCENE_ANIMATION_DATA_ROM_START,
-     (void *)&SUNNY_MOUNTAIN_SCENE_ANIMATION_DATA_ROM_END,
-     0x3A0                                                                                                                 },
-    { (void *)&CRAZY_JUNGLE_SCENE_ANIMATION_DATA_ROM_START,      (void *)&CRAZY_JUNGLE_SCENE_ANIMATION_DATA_ROM_END, 0x340 },
-    { (void *)&CRAZY_JUNGLE_BOSS_SCENE_ANIMATION_DATA_ROM_START,
-     (void *)&CRAZY_JUNGLE_BOSS_SCENE_ANIMATION_DATA_ROM_END,
-     0x330                                                                                                                 },
-    { (void *)&JINGLE_TOWN_SCENE_ANIMATION_DATA_ROM_START,       (void *)&JINGLE_TOWN_SCENE_ANIMATION_DATA_ROM_END,  0x510 },
-    { (void *)&TURTLE_ISLAND_SCENE_ANIMATION_DATA_ROM_START,
-     (void *)&TURTLE_ISLAND_SCENE_ANIMATION_DATA_ROM_END,
-     0x3B0                                                                                                                 },
-    { (void *)&JINGLE_TOWN_BOSS_SCENE_ANIMATION_DATA_ROM_START,
-     (void *)&JINGLE_TOWN_BOSS_SCENE_ANIMATION_DATA_ROM_END,
-     0x3E0                                                                                                                 },
-    { (void *)&LINDAS_CASTLE_SCENE_ANIMATION_DATA_ROM_START,
-     (void *)&LINDAS_CASTLE_SCENE_ANIMATION_DATA_ROM_END,
-     0x270                                                                                                                 },
-    { (void *)&X_CROSS_SCENE_ANIMATION_DATA_ROM_START,           (void *)&X_CROSS_SCENE_ANIMATION_DATA_ROM_END,      0x0B0 },
-    { (void *)&ICE_LAND_SCENE_ANIMATION_DATA_ROM_START,          (void *)&ICE_LAND_SCENE_ANIMATION_DATA_ROM_END,     0x280 },
-    { (void *)&ICE_LAND_BOSS_SCENE_ANIMATION_DATA_ROM_START,
-     (void *)&ICE_LAND_BOSS_SCENE_ANIMATION_DATA_ROM_END,
-     0x090                                                                                                                 },
-    { (void *)&WENDYS_HOUSE_SCENE_ANIMATION_DATA_ROM_START,      (void *)&WENDYS_HOUSE_SCENE_ANIMATION_DATA_ROM_END, 0x0B0 },
-    { (void *)&HAUNTED_HOUSE_SCENE_ANIMATION_DATA_ROM_START,
-     (void *)&HAUNTED_HOUSE_SCENE_ANIMATION_DATA_ROM_END,
-     0x810                                                                                                                 },
+#include "generated/course_definitions/scene_animation_assets.inc"
 };
 s32 gCourseSceneryOffset[3] = { 0x00B90000, 0x00000000, 0xFF8D4000 };
 s32 gFlyingSceneryInitOffset[3] = { 0x009A8000, 0x00000000, 0xFF880000 };
@@ -574,26 +549,7 @@ s32 D_80090BB0_917B0[3] = { 0x00000000, 0x00000000, 0x00030000 };
 s32 D_80090BBC_917BC[3] = { 0x00000000, 0xFFFE8000, 0x00030000 };
 s32 D_80090BC8_917C8[3] = { 0xFFE20000, 0xFFB50000, 0xFF1E0000 };
 CompressedAsset gGoldCoinDataAssets[] = {
-    { (void *)&SUNNY_MOUNTAIN_GOLD_COIN_DATA_ROM_START,               (void *)&SUNNY_MOUNTAIN_GOLD_COIN_DATA_ROM_END,    0x200 },
-    { (void *)&TURTLE_ISLAND_GOLD_COIN_DATA_ROM_START,                (void *)&TURTLE_ISLAND_GOLD_COIN_DATA_ROM_END,     0x370 },
-    { (void *)&JINGLE_TOWN_GOLD_COIN_DATA_ROM_START,                  (void *)&JINGLE_TOWN_GOLD_COIN_DATA_ROM_END,       0x370 },
-    { (void *)&JINGLE_TOWN_BOSS_GOLD_COIN_DATA_ROM_START,             (void *)&JINGLE_TOWN_BOSS_GOLD_COIN_DATA_ROM_END,  0x370 },
-    { (void *)&WENDYS_HOUSE_GOLD_COIN_DATA_ROM_START,                 (void *)&WENDYS_HOUSE_GOLD_COIN_DATA_ROM_END,      0x310 },
-    { (void *)&LINDAS_CASTLE_GOLD_COIN_DATA_ROM_START,                (void *)&LINDAS_CASTLE_GOLD_COIN_DATA_ROM_END,     0x3A0 },
-    { (void *)&CRAZY_JUNGLE_GOLD_COIN_DATA_ROM_START,                 (void *)&CRAZY_JUNGLE_GOLD_COIN_DATA_ROM_END,      0x3A0 },
-    { (void *)&CRAZY_JUNGLE_BOSS_GOLD_COIN_DATA_ROM_START,            (void *)&CRAZY_JUNGLE_BOSS_GOLD_COIN_DATA_ROM_END, 0x380 },
-    { (void *)&STARLIGHT_HIGHWAY_GOLD_COIN_DATA_ROM_START,            (void *)&STARLIGHT_HIGHWAY_GOLD_COIN_DATA_ROM_END, 0x3D0 },
-    { (void *)&HAUNTED_HOUSE_GOLD_COIN_DATA_ROM_START,                (void *)&HAUNTED_HOUSE_GOLD_COIN_DATA_ROM_END,     0x390 },
-    { (void *)&ICE_LAND_GOLD_COIN_DATA_ROM_START,                     (void *)&ICE_LAND_GOLD_COIN_DATA_ROM_END,          0x3E0 },
-    { (void *)&ICE_LAND_BOSS_GOLD_COIN_DATA_ROM_START,                (void *)&ICE_LAND_BOSS_GOLD_COIN_DATA_ROM_END,     0x3E0 },
-    { (void *)&SNOWBOARD_STREET_SPEED_CROSS_GOLD_COIN_DATA_ROM_START,
-     (void *)&SNOWBOARD_STREET_SPEED_CROSS_GOLD_COIN_DATA_ROM_END,
-     0x340                                                                                                                     },
-    { (void *)&SNOWBOARD_STREET_SHOT_CROSS_GOLD_COIN_DATA_ROM_START,
-     (void *)&SNOWBOARD_STREET_SHOT_CROSS_GOLD_COIN_DATA_ROM_END,
-     0x340                                                                                                                     },
-    { (void *)&X_CROSS_GOLD_COIN_DATA_ROM_START,                      (void *)&X_CROSS_GOLD_COIN_DATA_ROM_END,           0x200 },
-    { (void *)&TRAINING_GOLD_COIN_DATA_ROM_START,                     (void *)&TRAINING_GOLD_COIN_DATA_ROM_END,          0x280 },
+#include "generated/course_definitions/gold_coin_assets.inc"
 };
 s8 D_80090C94_91894[20] = {
     0x02, 0x06, 0x02, 0x07, 0x02, 0x08, 0x14, 0x09, 0x02, 0x06,
@@ -616,26 +572,7 @@ u8 D_80090CE0_918E0[] = {
     0x7F, 0xB4, 0xF5, 0xF8, 0xFA, 0xFA, 0xFA, 0xFD, 0xFF, 0x00, 0x00, 0x00,
 };
 CompressedAsset gItemBoxPositionDataAssets[] = {
-    { (void *)&SUNNY_MOUNTAIN_ITEM_BOX_DATA_ROM_START,               (void *)&SUNNY_MOUNTAIN_ITEM_BOX_DATA_ROM_END,    0x0C0 },
-    { (void *)&TURTLE_ISLAND_ITEM_BOX_DATA_ROM_START,                (void *)&TURTLE_ISLAND_ITEM_BOX_DATA_ROM_END,     0x0F0 },
-    { (void *)&JINGLE_TOWN_ITEM_BOX_DATA_ROM_START,                  (void *)&JINGLE_TOWN_ITEM_BOX_DATA_ROM_END,       0x0F0 },
-    { (void *)&JINGLE_TOWN_BOSS_ITEM_BOX_DATA_ROM_START,             (void *)&JINGLE_TOWN_BOSS_ITEM_BOX_DATA_ROM_END,  0x0F0 },
-    { (void *)&WENDYS_HOUSE_ITEM_BOX_DATA_ROM_START,                 (void *)&WENDYS_HOUSE_ITEM_BOX_DATA_ROM_END,      0x110 },
-    { (void *)&LINDAS_CASTLE_ITEM_BOX_DATA_ROM_START,                (void *)&LINDAS_CASTLE_ITEM_BOX_DATA_ROM_END,     0x100 },
-    { (void *)&CRAZY_JUNGLE_ITEM_BOX_DATA_ROM_START,                 (void *)&CRAZY_JUNGLE_ITEM_BOX_DATA_ROM_END,      0x100 },
-    { (void *)&CRAZY_JUNGLE_BOSS_ITEM_BOX_DATA_ROM_START,            (void *)&CRAZY_JUNGLE_BOSS_ITEM_BOX_DATA_ROM_END, 0x140 },
-    { (void *)&STARLIGHT_HIGHWAY_ITEM_BOX_DATA_ROM_START,            (void *)&STARLIGHT_HIGHWAY_ITEM_BOX_DATA_ROM_END, 0x130 },
-    { (void *)&HAUNTED_HOUSE_ITEM_BOX_DATA_ROM_START,                (void *)&HAUNTED_HOUSE_ITEM_BOX_DATA_ROM_END,     0x120 },
-    { (void *)&ICE_LAND_ITEM_BOX_DATA_ROM_START,                     (void *)&ICE_LAND_ITEM_BOX_DATA_ROM_END,          0x130 },
-    { (void *)&ICE_LAND_BOSS_ITEM_BOX_DATA_ROM_START,                (void *)&ICE_LAND_BOSS_ITEM_BOX_DATA_ROM_END,     0x170 },
-    { (void *)&SNOWBOARD_STREET_SPEED_CROSS_ITEM_BOX_DATA_ROM_START,
-     (void *)&SNOWBOARD_STREET_SPEED_CROSS_ITEM_BOX_DATA_ROM_END,
-     0x110                                                                                                                   },
-    { (void *)&SNOWBOARD_STREET_SHOT_CROSS_ITEM_BOX_DATA_ROM_START,
-     (void *)&SNOWBOARD_STREET_SHOT_CROSS_ITEM_BOX_DATA_ROM_END,
-     0x0E0                                                                                                                   },
-    { (void *)&X_CROSS_ITEM_BOX_DATA_ROM_START,                      (void *)&X_CROSS_ITEM_BOX_DATA_ROM_END,           0x0C0 },
-    { (void *)&TRAINING_ITEM_BOX_DATA_ROM_START,                     (void *)&TRAINING_ITEM_BOX_DATA_ROM_END,          0x0E0 },
+#include "generated/course_definitions/item_box_assets.inc"
 };
 Gfx gItemBoxBurstEffectDisplayList[] = {
     gsSPClearGeometryMode(

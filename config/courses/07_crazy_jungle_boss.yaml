@@ -1,0 +1,104 @@
+key: crazy_jungle_boss
+enum: CRAZY_JUNGLE_BOSS
+legacy_id: 7
+kind: boss
+behavior: crazy_jungle_boss
+assets:
+  display_lists:
+    symbol: CRAZY_JUNGLE_BOSS_COURSE_DISPLAY_LISTS
+    decompressed_size: '0x0'
+  model_resources:
+    symbol: CRAZY_JUNGLE_BOSS_COURSE_MODEL_RESOURCES
+    decompressed_size: '0x19040'
+  track_mesh:
+    symbol: CRAZY_JUNGLE_BOSS_COURSE_TRACK_SECTOR_MESH
+    decompressed_size: '0x2E50'
+  texture_table:
+    symbol: CRAZY_JUNGLE_BOSS_COURSE_TEXTURE_TABLE
+    decompressed_size: '0x1298'
+  gold_coins:
+    symbol: CRAZY_JUNGLE_BOSS_GOLD_COIN_DATA
+    decompressed_size: '0x380'
+  item_boxes:
+    symbol: CRAZY_JUNGLE_BOSS_ITEM_BOX_DATA
+    decompressed_size: '0x140'
+  scene_animation:
+    symbol: CRAZY_JUNGLE_BOSS_SCENE_ANIMATION_DATA
+    decompressed_size: '0x330'
+    legacy_slot: 2
+environment:
+  shortcut_position:
+  - '0xC53CE61C'
+  - '0xD80C3DED'
+  spawn_position:
+  - '0xFFF1E7C2'
+  - '0x300146B4'
+  - '0x30451B0B'
+  yaw_offset: '0xF800'
+  light_colors:
+  - '0xFA'
+  - '0xFA'
+  - '0xA7'
+  - '0x00'
+  - '0x00'
+  - '0x50'
+  - '0x50'
+  - '0x00'
+  fog_colors:
+  - '0x4A'
+  - '0x40'
+  - '0xBF'
+  - '0x00'
+  - '0x20'
+  - '0x1A'
+  - '0x45'
+  - '0x00'
+  music_track: '0x001F'
+  sky_display_lists:
+  - D_80095390_95F90
+  - D_800953A0_95FA0
+  - D_800953B0_95FB0
+preview:
+  world: 1
+  duration: '0x0708'
+  start_waypoint: '0x52'
+race:
+  cpu_characters:
+  - 0
+  - 3
+  - 5
+  - 2
+  cpu_board_model: 1
+  cpu_snowboards:
+  - - 1
+    - 7
+    - 5
+    - 5
+  - - 1
+    - 8
+    - 6
+    - 4
+  - - 1
+    - 9
+    - 6
+    - 4
+  - - 1
+    - 10
+    - 5
+    - 5
+  - - 4
+    - 11
+    - 6
+    - 4
+  - - 1
+    - 12
+    - 5
+    - 5
+  expert_snowboard: 17
+  rewards:
+  - 0
+  - 0
+  - 0
+overlay:
+  symbol: levels_crazy_jungle_boss
+  data_end: DATA_END

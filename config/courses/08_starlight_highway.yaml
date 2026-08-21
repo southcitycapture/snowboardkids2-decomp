@@ -1,0 +1,101 @@
+key: starlight_highway
+enum: STARLIGHT_HIGHWAY
+legacy_id: 8
+kind: standard
+behavior: starlight_highway
+assets:
+  display_lists:
+    symbol: STARLIGHT_HIGHWAY_COURSE_DISPLAY_LISTS
+    decompressed_size: '0x0'
+  model_resources:
+    symbol: STARLIGHT_HIGHWAY_COURSE_MODEL_RESOURCES
+    decompressed_size: '0x27BE0'
+  track_mesh:
+    symbol: STARLIGHT_HIGHWAY_COURSE_TRACK_SECTOR_MESH
+    decompressed_size: '0x4742'
+  texture_table:
+    symbol: STARLIGHT_HIGHWAY_COURSE_TEXTURE_TABLE
+    decompressed_size: '0xBC8'
+  gold_coins:
+    symbol: STARLIGHT_HIGHWAY_GOLD_COIN_DATA
+    decompressed_size: '0x3D0'
+  item_boxes:
+    symbol: STARLIGHT_HIGHWAY_ITEM_BOX_DATA
+    decompressed_size: '0x130'
+  scene_animation: null
+environment:
+  shortcut_position:
+  - '0x13A2B2B2'
+  - '0x0D88B1D8'
+  spawn_position:
+  - '0x00000000'
+  - '0x30000000'
+  - '0x30458CB2'
+  yaw_offset: '0x0000'
+  light_colors:
+  - '0xC0'
+  - '0xD0'
+  - '0xFF'
+  - '0x00'
+  - '0x00'
+  - '0x50'
+  - '0x50'
+  - '0x00'
+  fog_colors:
+  - '0x40'
+  - '0x30'
+  - '0x20'
+  - '0x00'
+  - '0x07'
+  - '0x00'
+  - '0x20'
+  - '0x00'
+  music_track: '0x0012'
+  sky_display_lists:
+  - D_80095490_96090
+  - D_800954A0_960A0
+  - D_800954B0_960B0
+preview:
+  world: 3
+  duration: '0x0546'
+  start_waypoint: '0x16'
+race:
+  cpu_characters:
+  - 0
+  - 3
+  - 1
+  - 5
+  cpu_board_model: 3
+  cpu_snowboards:
+  - - 2
+    - 7
+    - 5
+    - 4
+  - - 2
+    - 8
+    - 6
+    - 3
+  - - 2
+    - 9
+    - 6
+    - 3
+  - - 5
+    - 10
+    - 5
+    - 4
+  - - 5
+    - 11
+    - 6
+    - 3
+  - - 2
+    - 12
+    - 5
+    - 4
+  expert_snowboard: 15
+  rewards:
+  - 60000
+  - 12000
+  - 6000
+overlay:
+  symbol: levels_starlight_highway
+  data_end: RODATA_END

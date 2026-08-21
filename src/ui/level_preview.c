@@ -25,11 +25,13 @@ void moveCharacterToStartWaypoint(LevelPreviewCharacterState *state);
 void updateLevelPreviewCharacterAndCamera(LevelPreviewCharacterState *state);
 void holdLevelPreviewCamera(LevelPreviewCharacterState *state);
 
-u16 sLevelPreviewDurations[] = { 0x0618, 0x0672, 0x03DE, 0x03DE, 0x0708, 0x01E0, 0x0708, 0x0708,
-                                 0x0546, 0x04CE, 0x04B0, 0x04B0, 0x04B0, 0x04B0, 0x0564, 0x0564 };
+u16 sLevelPreviewDurations[] = {
+#include "generated/course_definitions/preview_durations.inc"
+};
 
-u8 characterStartWaypoints[] = { 0x18, 0x0C, 0x4B, 0x4B, 0x0B, 0x43, 0x52, 0x52,
-                                 0x16, 0x08, 0x23, 0x23, 0x62, 0x62, 0x12, 0x12 };
+u8 characterStartWaypoints[] = {
+#include "generated/course_definitions/preview_start_waypoints.inc"
+};
 
 s16 characterSelectIconPositions[] = { 0xFFE0, 0xFF98, 0xFF80, 0xFFA8, 0xFF80, 0xFFB8, 0xFF80, 0xFFC8, 0xFF80, 0xFFD8,
                                        0xFF90, 0xFFE8, 0x0058, 0xFFE8, 0xFF90, 0x0048, 0xFF90, 0x0058, 0x0000, 0x0048 };

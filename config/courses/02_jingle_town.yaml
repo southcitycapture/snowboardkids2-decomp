@@ -1,0 +1,104 @@
+key: jingle_town
+enum: JINGLE_TOWN
+legacy_id: 2
+kind: standard
+behavior: jingle_town
+assets:
+  display_lists:
+    symbol: JINGLE_TOWN_COURSE_DISPLAY_LISTS
+    decompressed_size: '0x0'
+  model_resources:
+    symbol: JINGLE_TOWN_COURSE_MODEL_RESOURCES
+    decompressed_size: '0x182B0'
+  track_mesh:
+    symbol: JINGLE_TOWN_COURSE_TRACK_SECTOR_MESH
+    decompressed_size: '0x342A'
+  texture_table:
+    symbol: JINGLE_TOWN_COURSE_TEXTURE_TABLE
+    decompressed_size: '0x2A58'
+  gold_coins:
+    symbol: JINGLE_TOWN_GOLD_COIN_DATA
+    decompressed_size: '0x370'
+  item_boxes:
+    symbol: JINGLE_TOWN_ITEM_BOX_DATA
+    decompressed_size: '0xF0'
+  scene_animation:
+    symbol: JINGLE_TOWN_SCENE_ANIMATION_DATA
+    decompressed_size: '0x510'
+    legacy_slot: 3
+environment:
+  shortcut_position:
+  - '0xC509752E'
+  - '0xD846D91D'
+  spawn_position:
+  - '0x0005E526'
+  - '0x3000B20C'
+  - '0x304DA3E1'
+  yaw_offset: '0xF800'
+  light_colors:
+  - '0xFF'
+  - '0xFF'
+  - '0xFF'
+  - '0x00'
+  - '0x00'
+  - '0x50'
+  - '0x50'
+  - '0x00'
+  fog_colors:
+  - '0x60'
+  - '0x70'
+  - '0x80'
+  - '0x00'
+  - '0x00'
+  - '0x80'
+  - '0xFF'
+  - '0x00'
+  music_track: '0x0011'
+  sky_display_lists:
+  - D_80094ED0_95AD0
+  - D_80094F00_95B00
+  - D_80094F10_95B10
+preview:
+  world: 0
+  duration: '0x03DE'
+  start_waypoint: '0x4B'
+race:
+  cpu_characters:
+  - 1
+  - 5
+  - 0
+  - 3
+  cpu_board_model: 0
+  cpu_snowboards:
+  - - 0
+    - 7
+    - 2
+    - 2
+  - - 0
+    - 8
+    - 1
+    - 1
+  - - 0
+    - 9
+    - 2
+    - 2
+  - - 0
+    - 10
+    - 1
+    - 1
+  - - 0
+    - 11
+    - 2
+    - 1
+  - - 6
+    - 12
+    - 1
+    - 2
+  expert_snowboard: 2
+  rewards:
+  - 20000
+  - 4000
+  - 2000
+overlay:
+  symbol: levels_jingle_town
+  data_end: DATA_END

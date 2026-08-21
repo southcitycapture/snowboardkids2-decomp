@@ -1,0 +1,59 @@
+import tempfile
+import unittest
+from pathlib import Path
+
+import yaml
+
+from tools.generate_course_definitions import generate_matched, generate_recomp, load_courses
+
+
+ROOT = Path(__file__).resolve().parents[2]
+DEFINITIONS = ROOT / "config/courses"
+
+
+class CourseDefinitionsTest(unittest.TestCase):
+    def test_stock_definitions_are_complete_and_ordered(self):
+        courses = load_courses(DEFINITIONS)
+
+        self.assertEqual([course["legacy_id"] for course in courses], list(range(16)))
+        self.assertEqual(courses[0]["key"], "sunny_mountain")
+        self.assertEqual(courses[-1]["key"], "training")
+
+    def test_training_explicitly_reuses_x_cross_assets(self):
+        courses = load_courses(DEFINITIONS)
+        x_cross = courses[14]
+        training = courses[15]
+
+        for field in ("display_lists", "model_resources", "track_mesh", "texture_table", "scene_animation"):
+            self.assertEqual(training["assets"][field]["symbol"], x_cross["assets"][field]["symbol"])
+        self.assertNotEqual(training["assets"]["gold_coins"]["symbol"], x_cross["assets"]["gold_coins"]["symbol"])
+
+    def test_generation_is_deterministic(self):
+        courses = load_courses(DEFINITIONS)
+        with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:
+            for output in (Path(first), Path(second)):
+                generate_matched(courses, output)
+                generate_recomp(courses, output)
+            first_files = {path.name: path.read_text() for path in Path(first).iterdir()}
+            second_files = {path.name: path.read_text() for path in Path(second).iterdir()}
+
+        self.assertEqual(first_files, second_files)
+        self.assertIn("recomp_course_definitions.inc", first_files)
+        self.assertIn("recomp_course_definitions.c", first_files)
+        self.assertEqual(len(first_files), 25)
+
+    def test_duplicate_legacy_id_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            temporary_path = Path(temporary)
+            for source in DEFINITIONS.glob("*.yaml"):
+                data = yaml.safe_load(source.read_text())
+                if data["legacy_id"] == 15:
+                    data["legacy_id"] = 14
+                (temporary_path / source.name).write_text(yaml.safe_dump(data, sort_keys=False))
+
+            with self.assertRaisesRegex(ValueError, "legacy_id values"):
+                load_courses(temporary_path)
+
+
+if __name__ == "__main__":
+    unittest.main()

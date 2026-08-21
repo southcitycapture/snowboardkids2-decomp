@@ -32,6 +32,9 @@ SRC_DIRS  = src src/core src/system src/audio src/graphics src/text src/math src
 BUILD_LOG = $(BUILD_DIR)/build.log
 COURSE_GENERATED_DIR = assets/courses/generated
 COURSE_ASSET_SIZE_HEADER = $(COURSE_GENERATED_DIR)/course_asset_sizes.h
+COURSE_DEFINITION_DIR = config/courses
+COURSE_DEFINITION_GENERATED_DIR = $(BUILD_DIR)/include/generated/course_definitions
+COURSE_DEFINITION_STAMP = $(COURSE_DEFINITION_GENERATED_DIR)/.stamp
 MODELPAYLOAD_GENERATED_DIR = assets/modelpayload/generated
 MODELPAYLOAD_ASSET_SIZE_HEADER = $(MODELPAYLOAD_GENERATED_DIR)/modelpayload_asset_sizes.h
 ANIMATIONDATA_GENERATED_DIR = assets/animationdata/generated
@@ -201,6 +204,7 @@ GOLD_COIN_POSITIONS_PACK = $(PYTHON) $(TOOLS_DIR)/gold_coin_positions_pack.py
 ITEM_BOX_POSITIONS_PACK = $(PYTHON) $(TOOLS_DIR)/item_box_positions_pack.py
 SPRITE_SHEET_PACK = $(PYTHON) $(TOOLS_DIR)/sprite_sheet_pack.py
 COURSE_ASSET_SIZES = $(PYTHON) $(TOOLS_DIR)/course_asset_sizes.py
+COURSE_DEFINITIONS = $(PYTHON) $(TOOLS_DIR)/generate_course_definitions.py
 MODELPAYLOAD_ASSET_SIZES = $(PYTHON) $(TOOLS_DIR)/modelpayload_asset_sizes.py
 ANIMATIONDATA_ASSET_SIZES = $(PYTHON) $(TOOLS_DIR)/animationdata_asset_sizes.py
 
@@ -208,6 +212,12 @@ $(COURSE_ASSET_SIZE_HEADER): $(COURSE_ASSET_SOURCES) snowboardkids2.yaml $(TOOLS
 	@mkdir -p $(shell dirname $@)
 	$(PRINTF) "[$(GREEN) course  $(NO_COL)]  $@\n"
 	$(V)$(COURSE_ASSET_SIZES) --out $@
+
+$(COURSE_DEFINITION_STAMP): $(COURSE_DEFINITION_DIR) $(shell find $(COURSE_DEFINITION_DIR) -name '*.yaml' 2>/dev/null) $(TOOLS_DIR)/generate_course_definitions.py
+	@mkdir -p $(COURSE_DEFINITION_GENERATED_DIR)
+	$(PRINTF) "[$(GREEN) course  $(NO_COL)]  course definitions\n"
+	$(V)$(COURSE_DEFINITIONS) --definitions $(COURSE_DEFINITION_DIR) --out $(COURSE_DEFINITION_GENERATED_DIR)
+	@touch $@
 
 $(MODELPAYLOAD_ASSET_SIZE_HEADER): $(MODELPAYLOAD_SOURCES) $(TOOLS_DIR)/modelpayload_asset_sizes.py $(TOOLS_DIR)/course_assets_common.py
 	@mkdir -p $(shell dirname $@)
@@ -220,6 +230,8 @@ $(ANIMATIONDATA_ASSET_SIZE_HEADER): $(ANIMATIONDATA_SOURCES) $(TOOLS_DIR)/animat
 	$(V)$(ANIMATIONDATA_ASSET_SIZES) --out $@
 
 $(BUILD_DIR)/src/data/course_data.o: $(COURSE_ASSET_SIZE_HEADER)
+COURSE_DEFINITION_C_OBJECTS := $(patsubst src/%.c,$(BUILD_DIR)/src/%.o,$(C_FILES))
+$(COURSE_DEFINITION_C_OBJECTS): $(COURSE_DEFINITION_STAMP)
 $(BUILD_DIR)/src/effects/fan_effect.o: $(MODELPAYLOAD_ASSET_SIZE_HEADER)
 $(BUILD_DIR)/src/effects/rocket_boost.o: $(MODELPAYLOAD_ASSET_SIZE_HEADER)
 
