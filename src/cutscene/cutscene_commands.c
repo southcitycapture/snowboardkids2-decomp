@@ -1,4 +1,4 @@
-#include "cutscene/1DD170.h"
+#include "cutscene/cutscene_commands.h"
 
 #include "common.h"
 #include "cutscene/cutscene_bgm.h"

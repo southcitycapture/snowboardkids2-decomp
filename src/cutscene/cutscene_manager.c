@@ -3,7 +3,7 @@
 #include "animation/slot_animation.h"
 #include "core/main.h"
 #include "core/stubs.h"
-#include "cutscene/1DD170.h"
+#include "cutscene/cutscene_commands.h"
 #include "effects/transparent_render.h"
 #include "graphics/graphics.h"
 #include "graphics/model_loader.h"
