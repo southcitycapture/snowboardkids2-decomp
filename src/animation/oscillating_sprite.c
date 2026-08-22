@@ -86,7 +86,7 @@ void updateQuadDisplayList(QuadDisplayListState *state) {
     negative:
         createCombinedRotationMatrix(&rotationMatrix, -state->rotationAngle, 0x1000);
     applyRotation:
-        memcpy(&rotationMatrix.translation, &D_8008C120_8CD20[i], sizeof(Vec3i));
+        memcpy(&rotationMatrix.translation, &creditsQuadElementOffsets[i], sizeof(Vec3i));
         element = &state->elements[i];
         composeTransform3D(&rotationMatrix, &state->model->transform, (Transform3D *)element);
         enqueueModelDisplayList(state->model, (DisplayListObject *)element);

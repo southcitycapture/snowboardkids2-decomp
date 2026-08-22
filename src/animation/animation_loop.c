@@ -110,7 +110,7 @@ void freeAnimationLoopState(void *arg0) {
     freeNodeMemory(arg0);
 }
 
-void finalizeAnimationLoop(AnimationLoopArg *arg0) {
+void finalizeAnimationLoop(CutsceneCameraState *arg0) {
     Transform3D sp10;
     Transform3D sp30;
     Transform3D sp50;

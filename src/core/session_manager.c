@@ -1,5 +1,6 @@
 #include "core/session_manager.h"
 #include "common.h"
+#include "credits/credits_controller.h"
 #include "effects/cutscene_keyframes.h"
 #include "gamestate.h"
 #include "graphics/graphics.h"

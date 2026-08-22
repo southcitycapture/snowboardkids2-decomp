@@ -17,6 +17,41 @@
 
 USE_OVERLAY(credits)
 
+typedef struct {
+    /* 0x00 */ s16 modelId;
+    /* 0x02 */ s16 animationIndex;
+    /* 0x04 */ u8 padding04;
+    /* 0x05 */ s8 actionMode;
+    /* 0x06 */ u16 initialYaw;
+    /* 0x08 */ u16 padding08;
+    /* 0x0A */ s16 scale;
+    /* 0x0C */ s32 verticalOffset;
+} CreditsCharacterConfig;
+
+typedef union {
+    s16 laneIndex;
+    struct {
+        u8 padding;
+        s8 assetPairIndex;
+    } parts;
+} CreditsAssetPair;
+
+typedef struct {
+    /* 0x00 */ SceneModel *model;
+    /* 0x04 */ s16 animationPhase;
+    /* 0x06 */ s16 configIndex;
+    /* 0x08 */ CreditsAssetPair assetPair;
+    /* 0x0A */ s16 modelCleanedUp;
+} CreditsCharacter;
+
+typedef struct {
+    /* 0x00 */ s32 depth;
+    /* 0x04 */ s16 padding04;
+    /* 0x06 */ s16 pitch;
+    /* 0x08 */ s16 padding08;
+    /* 0x0A */ s16 yaw;
+} CreditsCameraConfig;
+
 static CompressedAssetMeta D_8008BFA0_8CBA0[6] = {
     { &CREDITS_TEXT_PALETTE_DATA_00_ROM_START, &CREDITS_TEXT_PALETTE_DATA_00_ROM_END, 0x9578 },
     { &CREDITS_TEXT_PALETTE_DATA_01_ROM_START, &CREDITS_TEXT_PALETTE_DATA_01_ROM_END, 0x9578 },
@@ -63,9 +98,9 @@ CreditsCharacterConfig creditsCharacterConfigs[] = {
     { 0x72, 0xE,  0, 0, 0xF800, 0, 0x2000, 0x00199999 }
 };
 
-CreditsCharacterConfigHeader D_8008C11C_8CD1C = { 0x11, 0 };
+s16 creditsCharacterConfigCount = ARRAY_SIZE(creditsCharacterConfigs);
 
-Vec3i D_8008C120_8CD20[] = {
+Vec3i creditsQuadElementOffsets[4] = {
     { 0x001428F5, 0x00099999, 0x00266666 },
     { 0xFFEBD70B, 0x00099999, 0x00266666 },
     { 0x001428F5, 0x00099999, 0xFFE2E148 },
@@ -257,7 +292,7 @@ void spawnCreditsCharacter(CreditsState *arg0) {
         return;
     }
     if ((s16)temp_a0 == arg0->nextCharacterSpawnFrame) {
-        if (arg0->nextCharacterConfigIndex >= (s16)D_8008C11C_8CD1C.configCount) {
+        if (arg0->nextCharacterConfigIndex >= creditsCharacterConfigCount) {
             temp_a0_2 = arg0->characterLaneIndex;
             arg0->nextCharacterConfigIndex = 0;
             temp_v1 = temp_a0_2 + 1;
@@ -270,7 +305,7 @@ void spawnCreditsCharacter(CreditsState *arg0) {
         temp_v0 = scheduleTask(initCreditsCharacter, 0, 0, 0);
         if (temp_v0 != NULL) {
             temp_v0->configIndex = arg0->nextCharacterConfigIndex;
-            temp_v0->assetPair.selection = arg0->characterLaneIndex;
+            temp_v0->assetPair.laneIndex = arg0->characterLaneIndex;
         }
         arg0->nextCharacterConfigIndex = arg0->nextCharacterConfigIndex + 1;
         arg0->nextCharacterSpawnFrame = arg0->frameCounter + 0x3D;
@@ -294,7 +329,7 @@ void initCreditsCharacter(CreditsCharacter *character) {
         character->model,
         config->modelId,
         &creditsState->characterViewport,
-        character->assetPair.parts.index,
+        character->assetPair.parts.assetPairIndex,
         -1,
         -1,
         -1

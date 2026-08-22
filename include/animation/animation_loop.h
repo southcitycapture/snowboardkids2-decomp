@@ -37,8 +37,6 @@ typedef struct {
     s8 inputMode;
 } CutsceneCameraState;
 
-typedef CutsceneCameraState AnimationLoopArg;
-
 typedef struct {
     u8 _pad[0x68];
     s32 shakeAmplitude;
@@ -62,5 +60,5 @@ void animateCameraRotationYContinuous(CutsceneCameraState *camera, s16 step, s16
 s16 advanceCameraRotationYContinuous(CutsceneCameraState *camera);
 s16 advanceCameraAnimation(CutsceneCameraState *arg0);
 void initCameraShake(CutsceneCameraShakeState *cameraShake, s32 amplitude, s16 duration);
-void finalizeAnimationLoop(AnimationLoopArg *arg0);
+void finalizeAnimationLoop(CutsceneCameraState *arg0);
 s16 advanceSceneManager(CutsceneCameraState *arg0);

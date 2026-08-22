@@ -45,7 +45,6 @@ void initCharacterSelectScreen(void);
 void initStoryMapState(void);
 void storyMapLocationTextTask(func_80019CD0_1A8D0_arg *arg0);
 void initSaveSlotScreen(void);
-void initCreditsController(void);
 void initLevelSelectWithDetail(void);
 void initLevelSelectBasic(void);
 void enqueueTextLayout(
