@@ -122,26 +122,26 @@ void renderStarlightHighwayBuildings(StarlightBuildingTaskState *arg0) {
 
     if (gameState->fadeInPlayerCount != 0) {
         if (gFrameCounter & 1) {
-            displayListResult = getSkyDisplayLists3ByIndex(8);
+            displayListResult = getDisplayListTableForCourse(8);
             arg0->building1.displayLists = (DisplayLists *)((u32)displayListResult + 0x10);
         } else {
-            displayListResult = getSkyDisplayLists3ByIndex(8);
+            displayListResult = getDisplayListTableForCourse(8);
             arg0->building1.displayLists = (DisplayLists *)((u32)displayListResult + 0x20);
         }
     } else {
-        arg0->building1.displayLists = (DisplayLists *)getSkyDisplayLists3ByIndex(8);
+        arg0->building1.displayLists = (DisplayLists *)getDisplayListTableForCourse(8);
     }
 
     if (gameState->shortcutWarpPlayerCount != 0) {
         if (gFrameCounter & 1) {
-            displayListResult = getSkyDisplayLists3ByIndex(8);
+            displayListResult = getDisplayListTableForCourse(8);
             arg0->building2.displayLists = (DisplayLists *)((u32)displayListResult + 0x10);
         } else {
-            displayListResult = getSkyDisplayLists3ByIndex(8);
+            displayListResult = getDisplayListTableForCourse(8);
             arg0->building2.displayLists = (DisplayLists *)((u32)displayListResult + 0x20);
         }
     } else {
-        arg0->building2.displayLists = (DisplayLists *)getSkyDisplayLists3ByIndex(8);
+        arg0->building2.displayLists = (DisplayLists *)getDisplayListTableForCourse(8);
     }
 
     for (i = 0; i < 4; i++) {
@@ -542,15 +542,15 @@ void updateStarlightItemTask(StarlightItemTaskState *arg0) {
     }
     // Full-size display lists (normal state)
     arg0->shadow.displayLists =
-        (DisplayLists *)((arg0->item.displayLists = (DisplayLists *)((s32)getSkyDisplayLists3ByIndex(8) + 0xD0)),
-                         (s32)getSkyDisplayLists3ByIndex(8) + 0xE0);
+        (DisplayLists *)((arg0->item.displayLists = (DisplayLists *)((s32)getDisplayListTableForCourse(8) + 0xD0)),
+                         (s32)getDisplayListTableForCourse(8) + 0xE0);
     goto render;
 
 shrinking_animation:
     // Shrinking display lists (collected state)
     arg0->shadow.displayLists =
-        (DisplayLists *)((arg0->item.displayLists = (DisplayLists *)((s32)getSkyDisplayLists3ByIndex(8) + 0xC0)),
-                         (s32)getSkyDisplayLists3ByIndex(8) + 0xF0);
+        (DisplayLists *)((arg0->item.displayLists = (DisplayLists *)((s32)getDisplayListTableForCourse(8) + 0xC0)),
+                         (s32)getDisplayListTableForCourse(8) + 0xF0);
 
 render:
     playersChecked = 0;
@@ -588,7 +588,7 @@ void initStarlightFireworkTask(StarlightFireworkTaskState *arg0) {
     arg0->displayObject.segment1 = loadUncompressedAssetByIndex(8);
     arg0->displayObject.segment2 = loadCompressedSegment2AssetByIndex(8);
     arg0->displayObject.segment3 = 0;
-    arg0->displayObject.displayLists = (DisplayLists *)((u32)getSkyDisplayLists3ByIndex(8) + 0x90);
+    arg0->displayObject.displayLists = (DisplayLists *)((u32)getDisplayListTableForCourse(8) + 0x90);
     memcpy(&arg0->displayObject.transform.translation, &gStarlightFireworkPositions[arg0->type], sizeof(Vec3i));
     rotPtr = stack.rotation;
     createXRotationMatrix(rotPtr, gStarlightFireworkXRotations[arg0->type]);
@@ -803,12 +803,12 @@ void initStarlightBarrierTask(StarlightBarrierTaskState *arg0) {
     arg0->leftGate.segment1 = loadUncompressedAssetByIndex(8);
     arg0->leftGate.segment2 = loadCompressedSegment2AssetByIndex(8);
     arg0->leftGate.segment3 = 0;
-    temp = getSkyDisplayLists3ByIndex(8);
+    temp = getDisplayListTableForCourse(8);
     arg0->leftGate.displayLists = (DisplayLists *)((u32)temp + 0xA0);
     arg0->rightGate.segment3 = 0;
     arg0->rightGate.segment1 = arg0->leftGate.segment1;
     arg0->rightGate.segment2 = arg0->leftGate.segment2;
-    temp = getSkyDisplayLists3ByIndex(8);
+    temp = getDisplayListTableForCourse(8);
     arg0->rightGate.displayLists = (DisplayLists *)((u32)temp + 0xB0);
     createYRotationMatrix(&arg0->leftGate.transform, 0x1BEC);
     createYRotationMatrix(&arg0->rightGate.transform, 0x1BEC);

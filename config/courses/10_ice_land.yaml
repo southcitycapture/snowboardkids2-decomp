@@ -54,10 +54,10 @@ environment:
   - '0xA0'
   - '0x00'
   music_track: '0x0016'
-  sky_display_lists:
-  - D_800956C0_962C0
-  - D_80095780_96380
-  - D_800956D0_962D0
+render:
+  sky_display_lists: gIceLandSkyDisplayLists
+  fog_display_lists: gIceLandFogDisplayLists
+  display_list_table: gIceLandDisplayListTable
 preview:
   world: 0
   duration: '0x04B0'

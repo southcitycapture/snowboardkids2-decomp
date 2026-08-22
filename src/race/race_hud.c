@@ -508,31 +508,9 @@ typedef struct {
     /* 0x08 */ s32 decompressedSize;
 } CompressedAsset;
 
-extern void *D_80094DA0_959A0;
-extern void *D_80094DE0_959E0;
-extern void *D_80094DF0_959F0;
-extern void *D_80094E00_95A00;
-extern void *D_80094E10_95A10;
-extern void *D_80094EE0_95AE0;
-extern void *D_80094EF0_95AF0;
-extern void *D_80094FC0_95BC0;
-extern void *D_80094FD0_95BD0;
-extern void *D_800950B0_95CB0;
-extern void *D_80095360_95F60;
-extern void *D_80095370_95F70;
-extern void *D_80095380_95F80;
-extern void *D_80095460_96060;
-extern void *D_80095470_96070;
-extern void *D_80095480_96080;
-extern void *D_800955C0_961C0;
-extern void *D_800955D0_961D0;
-extern void *D_800955E0_961E0;
-extern void *D_80095860_96460;
-extern void *D_80095930_96530;
 extern Gfx D_8009A780_9B380[];
 extern s32 gLookAtPtr;
 extern Gfx *gDisplayListAllocPtr;
-extern void *D_80094DD0_959D0;
 extern DisplayLists D_8009A670_9B270;
 extern DisplayLists D_8009A680_9B280;
 extern DisplayLists D_8009A690_9B290;
@@ -684,21 +662,21 @@ void initSkyRenderTask(SkyRenderTaskState *state) {
 
     memcpy(&state->transform, identity, sizeof(Transform3D));
 
-    state->displayListData1 = getSkyDisplayLists1ByIndex(state->skyType);
+    state->skyDisplayLists = getSkyDisplayListsForCourse(state->skyType);
     state->skyAsset1 = loadUncompressedAssetByIndex(state->skyType);
     state->skyAsset2 = loadCompressedSegment2AssetByIndex(state->skyType);
     state->unk2C = 0;
 
     memcpy(&state->courseFogTransform, identity, sizeof(Transform3D));
 
-    state->displayListData2 = getSkyDisplayLists2ByIndex(state->skyType);
+    state->fogDisplayLists = getFogDisplayListsForCourse(state->skyType);
     state->unk68 = 0;
     state->skyAsset1Copy = state->skyAsset1;
     state->skyAsset2Copy = state->skyAsset2;
 
     memcpy(&state->defaultFogTransform, identity, sizeof(Transform3D));
 
-    state->unk98 = &D_80094DD0_959D0;
+    state->defaultFogDisplayLists = gTurtleIslandDefaultFogDisplayLists;
     state->unkA4 = 0;
     state->unk9C = state->skyAsset1;
     state->unkA0 = state->skyAsset2;
@@ -724,7 +702,7 @@ void renderSkyDisplayLists(SkyRenderTaskState *arg0) {
         enqueueDisplayListObjectWithFullRenderState(i, arg0);
     }
 
-    if (arg0->displayListData2 != 0) {
+    if (arg0->fogDisplayLists != 0) {
         for (i = 0; i < 4; i++) {
             enqueueCameraRelativeDisplayList(i + 4, (DisplayListObject *)&arg0->courseFogTransform);
         }
@@ -812,7 +790,7 @@ void initPlayerRenderTask(PlayerRenderTaskState *state) {
     allocation = (GameState_46080 *)getCurrentAllocation();
     rotation = getTrackEndInfo(&allocation->unk30, &state->position);
     createYRotationMatrix((Transform3D *)state, rotation);
-    state->displayListData3 = (void *)((u32)getSkyDisplayLists3ByIndex(allocation->unk5C) + 0x30);
+    state->displayListData3 = (void *)((u32)getDisplayListTableForCourse(allocation->unk5C) + 0x30);
     state->skyAsset1 = loadUncompressedAssetByIndex(allocation->unk5C);
     state->skyAsset2 = loadCompressedSegment2AssetByIndex(allocation->unk5C);
     state->reserved = NULL;
@@ -848,7 +826,7 @@ void enqueuePlayerDisplayList(PlayerDisplayListState *state) {
 
         if (playerSyncValue == expectedSyncValue) {
             state->pendingSyncFrames = pendingFrames - 1;
-            result = getSkyDisplayLists3ByIndex(gameState->memoryPoolId);
+            result = getDisplayListTableForCourse(gameState->memoryPoolId);
             state->displayLists = &result->finalLapDisplayLists;
         }
     }
@@ -1341,7 +1319,7 @@ void initCourseSceneryTask(CourseSceneryTaskState *arg0) {
     rotation = getTrackEndInfo(&allocation->unk30, &sp10) + 0x800;
     levelData = getLevelConfig(allocation->unk5C);
 
-    arg0->displayListData3 = getSkyDisplayLists3ByIndex(allocation->unk5C);
+    arg0->displayListData3 = getDisplayListTableForCourse(allocation->unk5C);
     arg0->skyAsset1 = loadUncompressedAssetByIndex(allocation->unk5C);
     arg0->skyAsset2 = loadCompressedSegment2AssetByIndex(allocation->unk5C);
     arg0->reserved = NULL;
@@ -1356,7 +1334,7 @@ void initCourseSceneryTask(CourseSceneryTaskState *arg0) {
 
     memcpy(arg0->unk3C, arg0, 0x3C);
 
-    displayLists = getSkyDisplayLists3ByIndex(allocation->unk5C);
+    displayLists = getDisplayListTableForCourse(allocation->unk5C);
     arg0->unk5C = (void *)((u32)displayLists + 0x20);
     createYRotationMatrix((Transform3D *)arg0->unk3C, 0x1000);
 
@@ -1366,7 +1344,7 @@ void initCourseSceneryTask(CourseSceneryTaskState *arg0) {
 
     if (allocation->unk5C == 4) {
         memcpy(arg0->unk78, arg0, 0x3C);
-        displayLists = getSkyDisplayLists3ByIndex(allocation->unk5C);
+        displayLists = getDisplayListTableForCourse(allocation->unk5C);
         arg0->unk98 = (void *)((u32)displayLists + 0x90);
         arg0->unk90 = arg0->unk90 + 0xAB0000;
     }
@@ -1413,7 +1391,7 @@ void initFlyingSceneryTask(FlyingSceneryState *arg0) {
     rotation = getTrackEndInfo(&allocation->unk30, &position) + 0x800;
     levelData = getLevelConfig(allocation->unk5C);
 
-    arg0->displayListObject.displayLists = (void *)((u32)getSkyDisplayLists3ByIndex(allocation->unk5C) + 0x10);
+    arg0->displayListObject.displayLists = (void *)((u32)getDisplayListTableForCourse(allocation->unk5C) + 0x10);
     arg0->displayListObject.segment1 = loadUncompressedAssetByIndex(allocation->unk5C);
     arg0->displayListObject.segment2 = loadCompressedSegment2AssetByIndex(allocation->unk5C);
     arg0->displayListObject.segment3 = 0;
@@ -2771,55 +2749,55 @@ void scheduleLevelEnvironmentTasks(s32 poolId) {
     switch (poolId) {
         case SUNNY_MOUNTAIN:
             scheduleSkyRenderTask(poolId);
-            scheduleScrollingSceneryTask(&D_80094DA0_959A0, poolId, 0, 4, 0x12, 0);
+            scheduleScrollingSceneryTask(gSunnyMountainScrollingSceneryDisplayLists, poolId, 0, 4, 0x12, 0);
             scheduleSceneAnimationTask(poolId, 0);
             break;
         case TURTLE_ISLAND:
             scheduleSkyRenderTask(poolId);
-            scheduleScrollingSceneryTask(&D_80094DE0_959E0, poolId, 4, 0, 0, 0);
+            scheduleScrollingSceneryTask(gTurtleIslandScrollingSceneryDisplayLists1, poolId, 4, 0, 0, 0);
             temp = 1;
-            scheduleScrollingSceneryTask(&D_80094DF0_959F0, poolId, 4, 0, temp, 0);
-            scheduleScrollingSceneryTask(&D_80094E00_95A00, poolId, 4, 0, 0, 0);
-            scheduleScrollingSceneryTask(&D_80094E10_95A10, poolId, 0, 1, 2, temp);
+            scheduleScrollingSceneryTask(gTurtleIslandScrollingSceneryDisplayLists2, poolId, 4, 0, temp, 0);
+            scheduleScrollingSceneryTask(gTurtleIslandScrollingSceneryDisplayLists3, poolId, 4, 0, 0, 0);
+            scheduleScrollingSceneryTask(gTurtleIslandScrollingSceneryDisplayLists4, poolId, 0, 1, 2, temp);
             break;
         case JINGLE_TOWN:
             scheduleSkyRenderTask(poolId);
-            scheduleScrollingSceneryTask(&D_80094EE0_95AE0, poolId, 0, 4, 0, 0);
-            scheduleScrollingSceneryTask(&D_80094EF0_95AF0, poolId, 1, 0, 2, 0);
+            scheduleScrollingSceneryTask(gJingleTownScrollingSceneryDisplayLists1, poolId, 0, 4, 0, 0);
+            scheduleScrollingSceneryTask(gJingleTownScrollingSceneryDisplayLists2, poolId, 1, 0, 2, 0);
             break;
         case JINGLE_TOWN_BOSS:
             scheduleSkyRenderTask(poolId);
-            scheduleScrollingSceneryTask(&D_80094FC0_95BC0, poolId, 0, 4, 0, 0);
-            scheduleScrollingSceneryTask(&D_80094FD0_95BD0, poolId, 1, 0, 2, 0);
+            scheduleScrollingSceneryTask(gJingleTownBossScrollingSceneryDisplayLists1, poolId, 0, 4, 0, 0);
+            scheduleScrollingSceneryTask(gJingleTownBossScrollingSceneryDisplayLists2, poolId, 1, 0, 2, 0);
             scheduleSceneAnimationTask(poolId, 5);
             break;
         case WENDYS_HOUSE:
             scheduleSkyRenderTask(poolId);
-            scheduleScrollingSceneryTask(&D_800950B0_95CB0, poolId, -4, 0, 0, 0);
+            scheduleScrollingSceneryTask(gWendysHouseScrollingSceneryDisplayLists, poolId, -4, 0, 0, 0);
             scheduleSceneAnimationTask(poolId, 0xA);
             break;
         case LINDAS_CASTLE:
             scheduleSkyRenderTask(poolId);
             break;
         case CRAZY_JUNGLE:
-            scheduleScrollingSceneryTask(&D_80095360_95F60, poolId, 0, 4, 0, 0);
-            scheduleScrollingSceneryTask(&D_80095370_95F70, poolId, 0, 4, 1, 0);
-            scheduleScrollingSceneryTask(&D_80095380_95F80, poolId, 4, 0, 2, 0);
+            scheduleScrollingSceneryTask(gCrazyJungleScrollingSceneryDisplayLists1, poolId, 0, 4, 0, 0);
+            scheduleScrollingSceneryTask(gCrazyJungleScrollingSceneryDisplayLists2, poolId, 0, 4, 1, 0);
+            scheduleScrollingSceneryTask(gCrazyJungleScrollingSceneryDisplayLists3, poolId, 4, 0, 2, 0);
             scheduleSkyRenderTask(poolId);
             scheduleSceneAnimationTask(poolId, 1);
             break;
         case CRAZY_JUNGLE_BOSS:
-            scheduleScrollingSceneryTask(&D_80095460_96060, poolId, 0, 4, 0, 0);
-            scheduleScrollingSceneryTask(&D_80095470_96070, poolId, 0, 4, 1, 0);
-            scheduleScrollingSceneryTask(&D_80095480_96080, poolId, 4, 0, 2, 0);
+            scheduleScrollingSceneryTask(gCrazyJungleBossScrollingSceneryDisplayLists1, poolId, 0, 4, 0, 0);
+            scheduleScrollingSceneryTask(gCrazyJungleBossScrollingSceneryDisplayLists2, poolId, 0, 4, 1, 0);
+            scheduleScrollingSceneryTask(gCrazyJungleBossScrollingSceneryDisplayLists3, poolId, 4, 0, 2, 0);
             scheduleSkyRenderTask(poolId);
             scheduleSceneAnimationTask(poolId, 2);
             break;
         case STARLIGHT_HIGHWAY:
             scheduleSkyRenderTask(poolId);
-            scheduleScrollingSceneryTask(&D_800955C0_961C0, poolId, 4, 0, 1, 0);
-            scheduleScrollingSceneryTask(&D_800955D0_961D0, poolId, 0, 4, 2, 0);
-            scheduleScrollingSceneryTask(&D_800955E0_961E0, poolId, 4, 0, 3, 0);
+            scheduleScrollingSceneryTask(gStarlightHighwayScrollingSceneryDisplayLists1, poolId, 4, 0, 1, 0);
+            scheduleScrollingSceneryTask(gStarlightHighwayScrollingSceneryDisplayLists2, poolId, 0, 4, 2, 0);
+            scheduleScrollingSceneryTask(gStarlightHighwayScrollingSceneryDisplayLists3, poolId, 4, 0, 3, 0);
             break;
         case HAUNTED_HOUSE:
             scheduleSkyRenderTask(poolId);
@@ -2835,11 +2813,11 @@ void scheduleLevelEnvironmentTasks(s32 poolId) {
             break;
         case SNOWBOARD_STREET_SPEED_CROSS:
             scheduleSkyRenderTask(poolId);
-            scheduleScrollingSceneryTask(&D_80095860_96460, poolId, 0, -4, 0, 0);
+            scheduleScrollingSceneryTask(gSnowboardStreetSpeedCrossScrollingSceneryDisplayLists, poolId, 0, -4, 0, 0);
             break;
         case SNOWBOARD_STREET_SHOT_CROSS:
             scheduleSkyRenderTask(poolId);
-            scheduleScrollingSceneryTask(&D_80095930_96530, poolId, 0, -4, 0, 0);
+            scheduleScrollingSceneryTask(gSnowboardStreetShotCrossScrollingSceneryDisplayLists, poolId, 0, -4, 0, 0);
             break;
         case X_CROSS:
         case TRAINING:

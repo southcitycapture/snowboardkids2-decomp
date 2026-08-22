@@ -51,10 +51,10 @@ environment:
   - '0x20'
   - '0x00'
   music_track: '0x0012'
-  sky_display_lists:
-  - D_80095490_96090
-  - D_800954A0_960A0
-  - D_800954B0_960B0
+render:
+  sky_display_lists: gStarlightHighwaySkyDisplayLists
+  fog_display_lists: gStarlightHighwayFogDisplayLists
+  display_list_table: gStarlightHighwayDisplayListTable
 preview:
   world: 3
   duration: '0x0546'

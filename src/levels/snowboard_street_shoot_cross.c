@@ -240,7 +240,7 @@ void initRotatingSky(SnowboardStreetRotatingSky *rotatingSky) {
 
     gameState = (GameState *)getCurrentAllocation();
     displayObject = &rotatingSky->displayObject;
-    displayObject->displayLists = &getSkyDisplayLists3ByIndex(gameState->memoryPoolId)->sceneryDisplayLists1;
+    displayObject->displayLists = &getDisplayListTableForCourse(gameState->memoryPoolId)->sceneryDisplayLists1;
     displayObject->segment1 = loadUncompressedAssetByIndex(0xD);
     displayObject->segment2 = loadCompressedSegment2AssetByIndex(0xD);
     displayObject->transform.translation.x = 0x25990000;

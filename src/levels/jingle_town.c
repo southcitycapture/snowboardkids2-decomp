@@ -69,7 +69,7 @@ void initJingleTownTrain(JingleTownTrain *train) {
     s16 temp4;
 
     gameState = getCurrentAllocation();
-    temp = getSkyDisplayLists3ByIndex(gameState->memoryPoolId);
+    temp = getDisplayListTableForCourse(gameState->memoryPoolId);
     train->displayObject.displayLists = &temp->sceneryDisplayLists1;
     train->displayObject.segment1 = loadUncompressedAssetByIndex(gameState->memoryPoolId);
     train->displayObject.segment2 = loadCompressedSegment2AssetByIndex(gameState->memoryPoolId);

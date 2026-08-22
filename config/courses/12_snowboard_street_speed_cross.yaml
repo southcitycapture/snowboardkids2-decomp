@@ -51,10 +51,10 @@ environment:
   - '0xFF'
   - '0x00'
   music_track: '0x000D'
-  sky_display_lists:
-  - D_80095850_96450
-  - D_80095870_96470
-  - D_80095880_96480
+render:
+  sky_display_lists: gSnowboardStreetSpeedCrossSkyDisplayLists
+  fog_display_lists: gSnowboardStreetSpeedCrossFogDisplayLists
+  display_list_table: gSnowboardStreetSpeedCrossDisplayListTable
 preview:
   world: 0
   duration: '0x04B0'

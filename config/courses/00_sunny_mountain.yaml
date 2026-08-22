@@ -54,10 +54,10 @@ environment:
   - '0xF0'
   - '0x00'
   music_track: '0x000C'
-  sky_display_lists:
-  - D_80094CC0_958C0
-  - D_80094CD0_958D0
-  - D_80094CE0_958E0
+render:
+  sky_display_lists: gSunnyMountainSkyDisplayLists
+  fog_display_lists: gSunnyMountainFogDisplayLists
+  display_list_table: gSunnyMountainDisplayListTable
 preview:
   world: 0
   duration: '0x0618'

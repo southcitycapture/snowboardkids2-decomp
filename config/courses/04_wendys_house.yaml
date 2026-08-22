@@ -54,10 +54,10 @@ environment:
   - '0x40'
   - '0x00'
   music_track: '0x000E'
-  sky_display_lists:
-  - D_80095090_95C90
-  - D_800950A0_95CA0
-  - D_800950C0_95CC0
+render:
+  sky_display_lists: gWendysHouseSkyDisplayLists
+  fog_display_lists: gWendysHouseFogDisplayLists
+  display_list_table: gWendysHouseDisplayListTable
 preview:
   world: 1
   duration: '0x0708'

@@ -54,10 +54,10 @@ environment:
   - '0x20'
   - '0x00'
   music_track: '0x0015'
-  sky_display_lists:
-  - D_800955F0_961F0
-  - D_80095600_96200
-  - D_80095610_96210
+render:
+  sky_display_lists: gHauntedHouseSkyDisplayLists
+  fog_display_lists: gHauntedHouseFogDisplayLists
+  display_list_table: gHauntedHouseDisplayListTable
 preview:
   world: 2
   duration: '0x04CE'

@@ -29,16 +29,16 @@ CompressedAssetMeta gCompressedSegment2Assets[] = {
 #include "generated/course_definitions/model_resource_assets.inc"
 };
 
-s32 gSkyDisplayLists1[] = {
-#include "generated/course_definitions/sky_display_lists_1.inc"
+DisplayLists *gSkyDisplayListsByCourse[] = {
+#include "generated/course_definitions/course_sky_display_lists.inc"
 };
 
-s32 gSkyDisplayLists2[] = {
-#include "generated/course_definitions/sky_display_lists_2.inc"
+DisplayLists *gFogDisplayListsByCourse[] = {
+#include "generated/course_definitions/course_fog_display_lists.inc"
 };
 
-LevelDisplayLists *gSkyDisplayLists3[] = {
-#include "generated/course_definitions/sky_display_lists_3.inc"
+LevelDisplayLists *gDisplayListTablesByCourse[] = {
+#include "generated/course_definitions/course_display_list_tables.inc"
 };
 
 LevelConfig *getLevelConfig(s32 index) {
@@ -73,16 +73,16 @@ void *loadCompressedSegment2AssetByIndex(s32 index) {
     );
 }
 
-s32 getSkyDisplayLists1ByIndex(s32 arg0) {
-    return gSkyDisplayLists1[arg0];
+DisplayLists *getSkyDisplayListsForCourse(s32 courseId) {
+    return gSkyDisplayListsByCourse[courseId];
 }
 
-s32 getSkyDisplayLists2ByIndex(s32 arg0) {
-    return gSkyDisplayLists2[arg0];
+DisplayLists *getFogDisplayListsForCourse(s32 courseId) {
+    return gFogDisplayListsByCourse[courseId];
 }
 
-LevelDisplayLists *getSkyDisplayLists3ByIndex(s32 index) {
-    return gSkyDisplayLists3[index];
+LevelDisplayLists *getDisplayListTableForCourse(s32 courseId) {
+    return gDisplayListTablesByCourse[courseId];
 }
 
 void *loadAsset_B7E70(void) {

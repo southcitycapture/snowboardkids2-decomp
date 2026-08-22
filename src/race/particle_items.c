@@ -2049,18 +2049,18 @@ void initChairliftEffect(ChairliftEffectState *arg0) {
     rotation = getTrackEndInfo(&allocation->unk30, &posOutput) + 0x800;
     item = getLevelConfig(allocation->unk5C);
 
-    arg0->unk20 = (u8 *)getSkyDisplayLists3ByIndex(allocation->unk5C) + 0x10;
+    arg0->unk20 = (u8 *)getDisplayListTableForCourse(allocation->unk5C) + 0x10;
 
     arg0->unk24 = loadUncompressedAssetByIndex(allocation->unk5C);
     arg0->unk28 = loadCompressedSegment2AssetByIndex(allocation->unk5C);
     arg0->unk2C = 0;
 
-    arg0->leftFlipper.displayLists = (DisplayLists *)((u8 *)getSkyDisplayLists3ByIndex(allocation->unk5C) + 0x90);
+    arg0->leftFlipper.displayLists = (DisplayLists *)((u8 *)getDisplayListTableForCourse(allocation->unk5C) + 0x90);
     arg0->leftFlipper.segment3 = 0;
     arg0->leftFlipper.segment1 = arg0->unk24;
     arg0->leftFlipper.segment2 = arg0->unk28;
 
-    arg0->rightFlipper.displayLists = (DisplayLists *)((u8 *)getSkyDisplayLists3ByIndex(allocation->unk5C) + 0xA0);
+    arg0->rightFlipper.displayLists = (DisplayLists *)((u8 *)getDisplayListTableForCourse(allocation->unk5C) + 0xA0);
     arg0->rightFlipper.segment3 = 0;
     arg0->rightFlipper.segment1 = arg0->unk24;
     arg0->rightFlipper.segment2 = arg0->unk28;

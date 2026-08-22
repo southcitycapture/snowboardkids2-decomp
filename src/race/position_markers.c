@@ -169,7 +169,7 @@ void initStartGate(StartGate *gate) {
 
     gameState = (GameState *)getCurrentAllocation();
     levelConfig = getLevelConfig(gameState->memoryPoolId);
-    gate->mainGateDisplayLists = (DisplayLists *)((u8 *)getSkyDisplayLists3ByIndex(gameState->memoryPoolId) + 0x50);
+    gate->mainGateDisplayLists = (DisplayLists *)((u8 *)getDisplayListTableForCourse(gameState->memoryPoolId) + 0x50);
     gate->mainGateSegment1 = loadUncompressedAssetByIndex(gameState->memoryPoolId);
     gate->mainGateSegment2 = loadCompressedSegment2AssetByIndex(gameState->memoryPoolId);
     gate->mainGateSegment3 = 0;
@@ -179,7 +179,7 @@ void initStartGate(StartGate *gate) {
     gate->rotationMatrix.translation.x = gate->rotationMatrix.translation.x + levelConfig->shortcutPosX;
     gate->rotationMatrix.translation.z = gate->rotationMatrix.translation.z + levelConfig->shortcutPosZ;
     gate->rotationMatrix.translation.y = trackEndPos.y;
-    gate->leftDoorDisplayLists = (DisplayLists *)((u8 *)getSkyDisplayLists3ByIndex(gameState->memoryPoolId) + 0x60);
+    gate->leftDoorDisplayLists = (DisplayLists *)((u8 *)getDisplayListTableForCourse(gameState->memoryPoolId) + 0x60);
     transformMatrix = doorOffsetMatrix;
     gate->leftDoorSegment1 = gate->mainGateSegment1;
     gate->leftDoorSegment2 = gate->mainGateSegment2;
@@ -260,10 +260,12 @@ void updateStartGate(StartGate *gate) {
     }
 
     if (gameState->shortcutGateState == 3) {
-        gate->rightDoorDisplayLists = (DisplayLists *)((s32)getSkyDisplayLists3ByIndex(gameState->memoryPoolId) + 0x70);
+        gate->rightDoorDisplayLists =
+            (DisplayLists *)((s32)getDisplayListTableForCourse(gameState->memoryPoolId) + 0x70);
     } else {
     block_else:
-        gate->rightDoorDisplayLists = (DisplayLists *)((s32)getSkyDisplayLists3ByIndex(gameState->memoryPoolId) + 0x80);
+        gate->rightDoorDisplayLists =
+            (DisplayLists *)((s32)getDisplayListTableForCourse(gameState->memoryPoolId) + 0x80);
     }
 
     for (i = 0; i < 4; i++) {

@@ -54,10 +54,10 @@ environment:
   - '0xFF'
   - '0x00'
   music_track: '0x000F'
-  sky_display_lists:
-  - D_80095190_95D90
-  - D_800951A0_95DA0
-  - D_800951B0_95DB0
+render:
+  sky_display_lists: gLindasCastleSkyDisplayLists
+  fog_display_lists: gLindasCastleFogDisplayLists
+  display_list_table: gLindasCastleDisplayListTable
 preview:
   world: 0
   duration: '0x01E0'

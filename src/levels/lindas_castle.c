@@ -68,7 +68,7 @@ void initFlyingEnemyTask(FlyingEnemyTask *task) {
 
     gamestate = (GameState *)getCurrentAllocation();
 
-    temp = getSkyDisplayLists3ByIndex(gamestate->memoryPoolId);
+    temp = getDisplayListTableForCourse(gamestate->memoryPoolId);
     task->displayObject.displayLists = &temp->sceneryDisplayLists1;
     task->displayObject.segment1 = loadUncompressedAssetByIndex(gamestate->memoryPoolId);
     task->displayObject.segment2 = loadCompressedSegment2AssetByIndex(gamestate->memoryPoolId);

@@ -45,7 +45,7 @@ def load_courses(definitions_dir: Path) -> list[dict]:
     if sorted(ids) != list(range(COURSE_COUNT)):
         raise ValueError(f"legacy_id values must be contiguous from 0 to {COURSE_COUNT - 1}")
 
-    required_sections = {"assets", "environment", "preview", "race"}
+    required_sections = {"assets", "environment", "render", "preview", "race"}
     required_assets = {
         "display_lists",
         "model_resources",
@@ -83,8 +83,12 @@ def load_courses(definitions_dir: Path) -> list[dict]:
             raise ValueError(f"{path}: light_colors must contain eight values")
         if len(course["environment"]["fog_colors"]) != 8:
             raise ValueError(f"{path}: fog_colors must contain eight values")
-        if len(course["environment"]["sky_display_lists"]) != 3:
-            raise ValueError(f"{path}: sky_display_lists must contain three symbols")
+        required_render_fields = {"sky_display_lists", "fog_display_lists", "display_list_table"}
+        if set(course["render"]) != required_render_fields:
+            raise ValueError(f"{path}: render must define sky, fog, and course display lists")
+        for field, symbol in course["render"].items():
+            if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", str(symbol)) is None:
+                raise ValueError(f"{path}: render field {field} has an invalid symbol")
         if len(course["race"]["cpu_characters"]) != 4:
             raise ValueError(f"{path}: cpu_characters must contain four values")
         if len(course["race"]["cpu_snowboards"]) != 6:
@@ -205,17 +209,21 @@ def generate_matched(courses: list[dict], out_dir: Path) -> None:
     scenes = [scenes_by_slot[slot] for slot in sorted(scenes_by_slot)]
     write_fragment(out_dir, "scene_animation_assets.inc", [asset_initializer(scene) for scene in scenes])
 
-    for index, filename in enumerate(("sky_display_lists_1.inc", "sky_display_lists_2.inc")):
-        write_fragment(
-            out_dir,
-            filename,
-            [f"    (s32){course['environment']['sky_display_lists'][index]}," for course in courses],
-        )
     write_fragment(
         out_dir,
-        "sky_display_lists_3.inc",
+        "course_sky_display_lists.inc",
+        [f"    {course['render']['sky_display_lists']}," for course in courses],
+    )
+    write_fragment(
+        out_dir,
+        "course_fog_display_lists.inc",
+        [f"    {course['render']['fog_display_lists']}," for course in courses],
+    )
+    write_fragment(
+        out_dir,
+        "course_display_list_tables.inc",
         [
-            f"    (LevelDisplayLists *){course['environment']['sky_display_lists'][2]},"
+            f"    (LevelDisplayLists *){course['render']['display_list_table']},"
             for course in courses
         ],
     )
@@ -275,7 +283,7 @@ def generate_recomp(courses: list[dict], out_dir: Path) -> None:
         cpu_snowboards = ", ".join(
             "{ " + ", ".join(c_int(value) for value in entry) + " }" for entry in race["cpu_snowboards"]
         )
-        sky = ", ".join(f"(const void *){symbol}" for symbol in env["sky_display_lists"])
+        render = course["render"]
         spawn = ", ".join(c_int(value) for value in env["spawn_position"])
         light = ", ".join(c_int(value) for value in env["light_colors"])
         fog = ", ".join(c_int(value) for value in env["fog_colors"])
@@ -305,7 +313,11 @@ def generate_recomp(courses: list[dict], out_dir: Path) -> None:
                 f"            .musicTrack = {c_int(env['music_track'])},",
                 "            .padding2 = { 0 },",
                 "        },",
-                f"        {{ {sky} }},",
+                "        {",
+                f"            {render['sky_display_lists']},",
+                f"            {render['fog_display_lists']},",
+                f"            (const LevelDisplayLists *){render['display_list_table']},",
+                "        },",
                 f"        {{ {c_int(course['preview']['world'])}, {c_int(course['preview']['duration'])}, {c_int(course['preview']['start_waypoint'])} }},",
                 f"        {{ {{ {cpu_characters} }}, {c_int(race['cpu_board_model'])}, {c_int(race['expert_snowboard'])}, {{ {rewards} }}, {{ {cpu_snowboards} }} }},",
                 f"        \"{course.get('overlay', {}).get('symbol', '') if course.get('overlay') else ''}\",",
@@ -329,7 +341,6 @@ def generate_recomp(courses: list[dict], out_dir: Path) -> None:
     source_lines = [
         "/* Auto-generated recomp-only course registry. */",
         '#include "assets.h"',
-        '#include "data/asset_metadata.h"',
         '#include "race/course_definition.h"',
         "",
     ]

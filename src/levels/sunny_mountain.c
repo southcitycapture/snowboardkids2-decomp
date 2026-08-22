@@ -60,7 +60,7 @@ void initSunnyMountainChairLiftTask(SunnyMountainChairLiftTask *taskState) {
     gameState = (GameState *)getCurrentAllocation();
 
     i = 0;
-    displayLists = getSkyDisplayLists3ByIndex(gameState->memoryPoolId);
+    displayLists = getDisplayListTableForCourse(gameState->memoryPoolId);
     taskState->liftDisplayObject.displayLists = &displayLists->sceneryDisplayLists1;
 
     srcPositionOffset = 0;
@@ -76,7 +76,7 @@ void initSunnyMountainChairLiftTask(SunnyMountainChairLiftTask *taskState) {
 
     do {
         i++;
-        displayLists = getSkyDisplayLists3ByIndex(gameState->memoryPoolId);
+        displayLists = getDisplayListTableForCourse(gameState->memoryPoolId);
         ((DisplayListObject *)(displayObjectOffset + (s32)taskState->chairDisplayObjects))->displayLists =
             &displayLists->sceneryDisplayLists2;
         ((DisplayListObject *)(displayObjectOffset + (s32)taskState->chairDisplayObjects))->segment1 =
@@ -209,7 +209,7 @@ void cleanupSunnyMountainChairLiftTask(SunnyMountainChairLiftTask *arg0) {
 void initSunnyMountainFlyingBirdTask(SunnyMountainFlyingBirdTask *arg0) {
     GameState *state = (GameState *)getCurrentAllocation();
 
-    arg0->displayObject.displayLists = &getSkyDisplayLists3ByIndex(state->memoryPoolId)->sceneryDisplayLists3;
+    arg0->displayObject.displayLists = &getDisplayListTableForCourse(state->memoryPoolId)->sceneryDisplayLists3;
     arg0->displayObject.segment1 = loadUncompressedAssetByIndex(state->memoryPoolId);
     arg0->displayObject.segment2 = loadCompressedSegment2AssetByIndex(state->memoryPoolId);
     arg0->displayObject.segment3 = NULL;

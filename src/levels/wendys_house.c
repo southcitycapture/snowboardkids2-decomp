@@ -79,7 +79,7 @@ void initRotatingPlatformTask(RotatingPlatformTaskState *arg0) {
     s32 pad[3];
     GameState *gameState = getCurrentAllocation();
 
-    arg0->displayLists = (void *)((u32)getSkyDisplayLists3ByIndex(gameState->memoryPoolId) + 0xA0);
+    arg0->displayLists = (void *)((u32)getDisplayListTableForCourse(gameState->memoryPoolId) + 0xA0);
     arg0->uncompressedAsset = loadUncompressedAssetByIndex(gameState->memoryPoolId);
     arg0->compressedAsset = loadCompressedSegment2AssetByIndex(gameState->memoryPoolId);
     arg0->posX = 0x03E90000;
@@ -132,7 +132,7 @@ void initWendysHouseProjectileTask(WendysHouseProjectileTaskState *arg0) {
     arg0->uncompressedAsset = loadUncompressedAssetByIndex(gameState->memoryPoolId);
     arg0->compressedAsset = loadCompressedSegment2AssetByIndex(gameState->memoryPoolId);
     arg0->animTimer = 0;
-    temp = getSkyDisplayLists3ByIndex(gameState->memoryPoolId);
+    temp = getDisplayListTableForCourse(gameState->memoryPoolId);
     randVal = (randA() & 1) << 4;
     arg0->displayLists = temp + ((randVal) + 0xB0);
     arg0->position.x = 0x225BCB0C;

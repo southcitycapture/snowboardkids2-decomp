@@ -2,23 +2,24 @@
 
 #include "common.h"
 #include "gamestate.h"
+#include "graphics/displaylist.h"
 #include "math/geometry.h"
 
 typedef struct {
     Transform3D transform;
-    s32 displayListData1;
+    DisplayLists *skyDisplayLists;
     void *skyAsset1;
     void *skyAsset2;
     s32 unk2C;
     u8 _pad30[0xC];
     Transform3D courseFogTransform;
-    s32 displayListData2;
+    DisplayLists *fogDisplayLists;
     void *skyAsset1Copy;
     void *skyAsset2Copy;
     s32 unk68;
     u8 _pad6C[0xC];
     Transform3D defaultFogTransform;
-    void *unk98;
+    DisplayLists *defaultFogDisplayLists;
     void *unk9C;
     void *unkA0;
     s32 unkA4;

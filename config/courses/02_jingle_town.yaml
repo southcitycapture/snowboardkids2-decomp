@@ -54,10 +54,10 @@ environment:
   - '0xFF'
   - '0x00'
   music_track: '0x0011'
-  sky_display_lists:
-  - D_80094ED0_95AD0
-  - D_80094F00_95B00
-  - D_80094F10_95B10
+render:
+  sky_display_lists: gJingleTownSkyDisplayLists
+  fog_display_lists: gJingleTownFogDisplayLists
+  display_list_table: gJingleTownDisplayListTable
 preview:
   world: 0
   duration: '0x03DE'

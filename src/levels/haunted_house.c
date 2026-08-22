@@ -388,7 +388,7 @@ void initSwingingPendulumTrap(SwingingPendulumTrap *arg0) {
     arg0->renderObject.segment2 = loadCompressedSegment2AssetByIndex(9);
     arg0->renderObject.segment3 = NULL;
 
-    temp_v0_3 = getSkyDisplayLists3ByIndex(9);
+    temp_v0_3 = getDisplayListTableForCourse(9);
     arg0->renderObject.displayLists = &temp_v0_3->sceneryDisplayLists1;
 
     arg0->phaseTimer = 0xF;

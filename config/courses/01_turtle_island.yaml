@@ -54,10 +54,10 @@ environment:
   - '0xAA'
   - '0x00'
   music_track: '0x0013'
-  sky_display_lists:
-  - D_80094DB0_959B0
-  - D_80094DC0_959C0
-  - D_80094E20_95A20
+render:
+  sky_display_lists: gTurtleIslandSkyDisplayLists
+  fog_display_lists: gTurtleIslandFogDisplayLists
+  display_list_table: gTurtleIslandDisplayListTable
 preview:
   world: 1
   duration: '0x0672'

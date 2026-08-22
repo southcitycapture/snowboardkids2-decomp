@@ -26,7 +26,18 @@ class CourseDefinitionsTest(unittest.TestCase):
 
         for field in ("display_lists", "model_resources", "track_mesh", "texture_table", "scene_animation"):
             self.assertEqual(training["assets"][field]["symbol"], x_cross["assets"][field]["symbol"])
+        self.assertEqual(training["render"], x_cross["render"])
         self.assertNotEqual(training["assets"]["gold_coins"]["symbol"], x_cross["assets"]["gold_coins"]["symbol"])
+
+    def test_render_records_use_named_fields(self):
+        courses = load_courses(DEFINITIONS)
+
+        for course in courses:
+            self.assertEqual(
+                set(course["render"]),
+                {"sky_display_lists", "fog_display_lists", "display_list_table"},
+            )
+            self.assertNotIn("sky_display_lists", course["environment"])
 
     def test_generation_is_deterministic(self):
         courses = load_courses(DEFINITIONS)
@@ -40,6 +51,10 @@ class CourseDefinitionsTest(unittest.TestCase):
         self.assertEqual(first_files, second_files)
         self.assertIn("recomp_course_definitions.inc", first_files)
         self.assertIn("recomp_course_definitions.c", first_files)
+        self.assertIn("course_sky_display_lists.inc", first_files)
+        self.assertIn("course_fog_display_lists.inc", first_files)
+        self.assertIn("course_display_list_tables.inc", first_files)
+        self.assertNotIn("course_sky_display_lists_1.inc", first_files)
         self.assertEqual(len(first_files), 25)
 
     def test_duplicate_legacy_id_is_rejected(self):

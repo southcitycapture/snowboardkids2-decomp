@@ -38,7 +38,9 @@ typedef struct {
 } CourseAssetBundle;
 
 typedef struct {
-    const void *displayLists[3];
+    const DisplayLists *skyDisplayLists;
+    const DisplayLists *fogDisplayLists;
+    const LevelDisplayLists *displayListTable;
 } CourseRenderDefinition;
 
 typedef struct {

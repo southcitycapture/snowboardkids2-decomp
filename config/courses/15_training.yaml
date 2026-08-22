@@ -54,10 +54,10 @@ environment:
   - '0xFF'
   - '0x00'
   music_track: '0x0014'
-  sky_display_lists:
-  - D_800959F0_965F0
-  - D_80095A00_96600
-  - D_80095A10_96610
+render:
+  sky_display_lists: gXCrossSkyDisplayLists
+  fog_display_lists: gXCrossFogDisplayLists
+  display_list_table: gXCrossDisplayListTable
 preview:
   world: 0
   duration: '0x0564'

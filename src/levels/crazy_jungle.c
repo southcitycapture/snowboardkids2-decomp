@@ -62,9 +62,9 @@ void initFallingRockHazard(FallingRockHazard *rock) {
     randVal = randA();
 
     rock->positionIndex += (randVal & 1);
-    result = getSkyDisplayLists3ByIndex(gameState->memoryPoolId);
+    result = getDisplayListTableForCourse(gameState->memoryPoolId);
     rock->baseObject.displayLists = &result->sceneryDisplayLists1;
-    result = getSkyDisplayLists3ByIndex(gameState->memoryPoolId);
+    result = getDisplayListTableForCourse(gameState->memoryPoolId);
     rock->fallingObject.displayLists = &result->sceneryDisplayLists2;
     rock->baseObject.segment1 = loadUncompressedAssetByIndex(gameState->memoryPoolId);
     rock->baseObject.segment2 = loadCompressedSegment2AssetByIndex(gameState->memoryPoolId);
@@ -236,7 +236,7 @@ void initStarLauncherTask(StarLauncherTask *task) {
     task->launcherObject.transform.translation.z = 0xE270649E;
     task->stateTimer = 0x12C;
     task->launchState = 0;
-    task->launcherObject.displayLists = &getSkyDisplayLists3ByIndex(gs->memoryPoolId)->sceneryDisplayLists3;
+    task->launcherObject.displayLists = &getDisplayListTableForCourse(gs->memoryPoolId)->sceneryDisplayLists3;
     setCleanupCallback(&cleanupStarLauncherTask);
     setCallback(&updateStarLauncherTask);
 }
@@ -267,7 +267,7 @@ void updateStarLauncherTask(StarLauncherTask *task) {
                 for (i = 0; i < numPlayers; i++) {
                     if ((u32)gameState->players[i].sectorIndex - 0x60 < 6) {
                         task->launcherObject.displayLists =
-                            &getSkyDisplayLists3ByIndex(gameState->memoryPoolId)->sceneryDisplayLists4;
+                            &getDisplayListTableForCourse(gameState->memoryPoolId)->sceneryDisplayLists4;
                         randVal = randA();
                         randVal = randVal - 0x60;
                         i = randVal << 1;
@@ -288,7 +288,7 @@ void updateStarLauncherTask(StarLauncherTask *task) {
                 if ((task->stateTimer << 16) == 0) {
                     task->launchState = 0;
                     task->launcherObject.displayLists =
-                        &getSkyDisplayLists3ByIndex(gameState->memoryPoolId)->sceneryDisplayLists3;
+                        &getDisplayListTableForCourse(gameState->memoryPoolId)->sceneryDisplayLists3;
                     task->stateTimer = 0x14;
                 }
             }

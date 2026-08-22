@@ -124,7 +124,7 @@ typedef struct {
 } IntroFrameData2;
 
 // Data
-u8 D_80090280_90E80[16][4] = {
+u8 gCpuCharacterIdsByCourse[16][4] = {
 #include "generated/course_definitions/cpu_characters.inc"
 };
 
@@ -436,7 +436,7 @@ void initRace(void) {
     }
 
     for (i = raceState->activePlayerCount; i < raceState->totalRacers; i++) {
-        raceState->racers[i].characterId = D_80090280_90E80[raceState->currentLevel][i];
+        raceState->racers[i].characterId = gCpuCharacterIdsByCourse[raceState->currentLevel][i];
         raceState->racers[i].boardModelId = gCpuBoardModelIdsByCourse[raceState->currentLevel];
         raceState->racers[i].isBossRacer = 1;
         raceState->racers[i].isCpuControlled = 1;

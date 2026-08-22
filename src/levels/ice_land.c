@@ -99,7 +99,7 @@ void initIceLandMovingPlatform(IceLandMovingPlatformTask *platform) {
     unsigned int angle;
 
     allocation = getCurrentAllocation();
-    platform->displayLists = &getSkyDisplayLists3ByIndex(allocation->memoryPoolId)->sceneryDisplayLists1;
+    platform->displayLists = &getDisplayListTableForCourse(allocation->memoryPoolId)->sceneryDisplayLists1;
     platform->segment1 = loadUncompressedAssetByIndex(allocation->memoryPoolId);
     platform->segment2 = loadCompressedSegment2AssetByIndex(allocation->memoryPoolId);
     platform->currentWaypointIndex = 0;

@@ -54,10 +54,10 @@ environment:
   - '0x40'
   - '0x00'
   music_track: '0x0010'
-  sky_display_lists:
-  - D_80095250_95E50
-  - D_80095260_95E60
-  - D_80095270_95E70
+render:
+  sky_display_lists: gCrazyJungleSkyDisplayLists
+  fog_display_lists: gCrazyJungleFogDisplayLists
+  display_list_table: gCrazyJungleDisplayListTable
 preview:
   world: 1
   duration: '0x0708'
