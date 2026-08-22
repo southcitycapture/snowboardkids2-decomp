@@ -5,15 +5,6 @@
 #include "system/task_scheduler.h"
 #include "ui/level_preview_3d.h"
 
-struct ModelScaleAnimationState {
-    SceneModel *model;
-    Transform3D transformMatrix;
-    s32 velocity;
-    s16 rotationAngle;
-    s16 delayTimer;
-    s16 bounceCount;
-};
-
 void cleanupModelScaleAnimation(void);
 void updateModelScaleAnimation(ModelScaleAnimationState *state);
 

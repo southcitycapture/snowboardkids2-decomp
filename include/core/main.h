@@ -28,10 +28,6 @@ typedef struct {
     u8 isVisible;
 } ModelEntity;
 
-void setupModelEntityLighting(ModelEntity *entity, ColorData *lightColors, ColorData *ambientColor);
-
-s32 initModelEntity(ModelEntity *entity, s16 index, void *arg2);
-
 typedef struct {
     struct {
         u8 padding[0x16];
@@ -46,10 +42,7 @@ typedef struct {
     s8 isVisible;
 } ModelEntityRenderState;
 
-void renderModelEntity(ModelEntityRenderState *);
-
 struct CutsceneManager;
-void scheduleTransparentModelRender(struct CutsceneManager *cutsceneManager, ModelEntityRenderState *renderState);
 
 typedef struct {
     s32 unk0;
@@ -59,13 +52,21 @@ typedef struct {
     s8 isDisposed;
 } EffectState;
 
-void freeEffectResources(EffectState *);
-
 typedef struct {
     u8 padding[0x6];
     u16 unk6;
     s8 padding2[0x7F];
     s8 unk87;
 } setModelRenderMode_arg;
+
+void setupModelEntityLighting(ModelEntity *entity, ColorData *lightColors, ColorData *ambientColor);
+
+s32 initModelEntity(ModelEntity *entity, s16 index, void *arg2);
+
+void renderModelEntity(ModelEntityRenderState *);
+
+void scheduleTransparentModelRender(struct CutsceneManager *cutsceneManager, ModelEntityRenderState *renderState);
+
+void freeEffectResources(EffectState *);
 
 void setModelRenderMode(setModelRenderMode_arg *arg0, s8 arg1);

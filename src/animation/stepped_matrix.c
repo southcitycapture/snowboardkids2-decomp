@@ -3,22 +3,6 @@
 #include "math/geometry.h"
 #include "system/task_scheduler.h"
 
-typedef struct {
-    u8 padding[0x3C];
-    s8 isDestroyed;
-    s8 actionMode;
-    u8 padding2[0xB2];
-    u8 transformMatrix[0x20];
-} SteppedMatrixOwner;
-
-struct SteppedMatrixState {
-    SteppedMatrixOwner *owner;
-    Transform3D matrix;
-    s16 frameDelay;
-    u8 padding[0x2];
-    s16 stepIndex;
-};
-
 s32 gSteppedMatrixTranslations = 0x00033333;
 
 u16 gSteppedMatrixAngles[] = {
