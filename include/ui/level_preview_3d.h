@@ -108,7 +108,9 @@ typedef struct {
     s16 itemAssetIndex;
     s8 itemDisplayEnabled;
     s8 shadowScale;
-    u8 padding2[0x38];
+    u8 padding2[0x30];
+    Vtx *shadowVertices;
+    Mtx *shadowMatrix;
     s8 visibilityEnabled;
     s8 flags;
     s16 animFrameCount;

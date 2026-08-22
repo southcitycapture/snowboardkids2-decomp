@@ -905,3 +905,11 @@ center-relative coordinates and may describe a logical boundary such as 320 or 1
 then clamps them to inherited clip bounds, whose right and bottom values are treated as inclusive by CPU-side
 clipping. Consequently, a full-screen right edge of 320 resolves to 319, while an interior split boundary can
 remain 160; center calculations must not assume both values use the same convention.
+
+## Use SceneModel Directly for Non-Race Shadows
+
+The non-race shadow callback receives a `SceneModel *`, not a separate shadow entity. Its transform at offset
+`0x18`, shadow scale at `0x4F`, alpha at `0x96`, and optional bone display objects at offset `0x00` all belong
+to the canonical model layout. The per-frame shadow vertex and matrix pointers at offsets `0x80` and `0x84`
+were hidden inside `SceneModel.padding2`; exposing them there removes the padded local alias while preserving
+the complete model size and all generated accesses.
