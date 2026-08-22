@@ -77,8 +77,8 @@ typedef struct {
     /* 0x1C */ u8 pauseWhenPaused;
 } ConfettiEffectTask;
 
-void updateStartGate(StartGate *);
-void cleanupStartGate(StartGate *);
+void updateLiftGate(LiftGate *);
+void cleanupLiftGate(LiftGate *);
 void updatePushStartText(PushStartPromptTask *);
 void updatePushStartGraphic(PushStartPromptTask *);
 void cleanupPushStartPrompt(PushStartPromptTask *);
@@ -159,7 +159,7 @@ void spawnPlayerIndicatorTask(void *cleanupArg) {
     }
 }
 
-void initStartGate(StartGate *gate) {
+void initLiftGate(LiftGate *gate) {
     s32 doorOffsetMatrix[8];
     Vec3i trackEndPos;
     s32 *transformMatrix;
@@ -174,10 +174,10 @@ void initStartGate(StartGate *gate) {
     gate->mainGateSegment2 = loadCompressedSegment2AssetByIndex(gameState->memoryPoolId);
     gate->mainGateSegment3 = 0;
     trackAngle = getTrackEndInfo(&gameState->gameData, &trackEndPos);
-    createYRotationMatrix(&gate->rotationMatrix, (trackAngle + levelConfig->yawOffset) & 0xFFFF);
-    rotateVectorY(&D_800907EC_913EC, trackAngle + levelConfig->yawOffset, &gate->rotationMatrix.translation);
-    gate->rotationMatrix.translation.x = gate->rotationMatrix.translation.x + levelConfig->shortcutPosX;
-    gate->rotationMatrix.translation.z = gate->rotationMatrix.translation.z + levelConfig->shortcutPosZ;
+    createYRotationMatrix(&gate->rotationMatrix, (trackAngle + levelConfig->liftEntryYawOffset) & 0xFFFF);
+    rotateVectorY(&D_800907EC_913EC, trackAngle + levelConfig->liftEntryYawOffset, &gate->rotationMatrix.translation);
+    gate->rotationMatrix.translation.x = gate->rotationMatrix.translation.x + levelConfig->liftEntryPosX;
+    gate->rotationMatrix.translation.z = gate->rotationMatrix.translation.z + levelConfig->liftEntryPosZ;
     gate->rotationMatrix.translation.y = trackEndPos.y;
     gate->leftDoorDisplayLists = (DisplayLists *)((u8 *)getDisplayListTableForCourse(gameState->memoryPoolId) + 0x60);
     transformMatrix = doorOffsetMatrix;
@@ -195,11 +195,11 @@ void initStartGate(StartGate *gate) {
     composeTransform3D((Transform3D *)transformMatrix, (Transform3D *)gate, &gate->rightDoorTransform);
     gate->gateRotation = 0;
     gate->animationState = 0;
-    setCleanupCallback(cleanupStartGate);
-    setCallback(updateStartGate);
+    setCleanupCallback(cleanupLiftGate);
+    setCallback(updateLiftGate);
 }
 
-void updateStartGate(StartGate *gate) {
+void updateLiftGate(LiftGate *gate) {
     Transform3D localRotation;
     Transform3D *doorTransform;
     GameState *gameState;
@@ -209,7 +209,7 @@ void updateStartGate(StartGate *gate) {
 
     switch (gate->animationState) {
         case 0:
-            if (gameState->shortcutGateState != 3) {
+            if (gameState->liftGateState != LIFT_GATE_ACTIVE) {
                 goto block_else;
             }
             gate->animationState++;
@@ -253,13 +253,13 @@ void updateStartGate(StartGate *gate) {
             composeTransform3D(&localRotation, (Transform3D *)gate, doorTransform);
             break;
         case 4:
-            if (gameState->shortcutGateState != 3) {
+            if (gameState->liftGateState != LIFT_GATE_ACTIVE) {
                 gate->animationState = 0;
             }
             break;
     }
 
-    if (gameState->shortcutGateState == 3) {
+    if (gameState->liftGateState == LIFT_GATE_ACTIVE) {
         gate->rightDoorDisplayLists =
             (DisplayLists *)((s32)getDisplayListTableForCourse(gameState->memoryPoolId) + 0x70);
     } else {
@@ -275,7 +275,7 @@ void updateStartGate(StartGate *gate) {
     }
 }
 
-void cleanupStartGate(StartGate *gate) {
+void cleanupLiftGate(LiftGate *gate) {
     gate->mainGateSegment1 = freeNodeMemory(gate->mainGateSegment1);
     gate->mainGateSegment2 = freeNodeMemory(gate->mainGateSegment2);
 }

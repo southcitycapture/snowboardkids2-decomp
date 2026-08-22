@@ -9,6 +9,12 @@
 
 struct ShootCrossTargets;
 
+typedef enum {
+    LIFT_GATE_READY = 0,
+    LIFT_GATE_RESET_PENDING = 2,
+    LIFT_GATE_ACTIVE = 3,
+} LiftGateState;
+
 typedef struct ListNode_5AA90 {
     /* 0x00 */ struct ListNode_5AA90 *next;
     /* 0x04 */ Vec3i *posPtr;
@@ -248,7 +254,7 @@ typedef struct {
     /* 0xB96 */ s16 segmentProgress;
     /* 0xB98 */ s16 lapProgressRemaining;
     /* 0xB9A */ s16 boostTimer;
-    /* 0xB9C */ u16 shortcutActivationSnapshot;
+    /* 0xB9C */ u16 liftEntryOrder;
     /* 0xB9E */ u16 squashStretchScale;
     /* 0xBA0 */ u16 characterScaleXZ;
     /* 0xBA2 */ s16 characterScaleY;
@@ -399,7 +405,7 @@ typedef struct {
     /* 0x4C */ s32 stateDelayTimer;
     /* 0x50 */ u32 raceFrameCounter;
     /* 0x54 */ s32 raceTimerElapsedTicks;
-    /* 0x58 */ u16 shortcutActivationCounter;
+    /* 0x58 */ u16 liftEntryOrderCounter;
     /* 0x5A */ u8 shootCrossTargetsHit;
     /* 0x5B */ u8 availableHomingProjectileSlots;
     /* 0x5C */ u8 memoryPoolId;
@@ -409,7 +415,7 @@ typedef struct {
     /* 0x60 */ u8 pendingPlayerRenderTasks;
     /* 0x61 */ u8 introSkipState;
     /* 0x62 */ u8 unk62;
-    /* 0x63 */ u8 shortcutGateState;
+    /* 0x63 */ u8 liftGateState;
     /* 0x64 */ u8 rankOrder[0x10];
     /* 0x74 */ u8 finalLapNumber;
     /* 0x75 */ u8 unk6B;
@@ -424,7 +430,7 @@ typedef struct {
     /* 0x7E */ u8 bestBoardBonus;
     /* 0x7F */ u8 introCutsceneVariant;
     /* 0x80 */ u8 fadeInPlayerCount;
-    /* 0x81 */ u8 shortcutWarpPlayerCount;
+    /* 0x81 */ u8 liftTransitionPlayerCount;
     /* 0x82 */ u8 introFrameEventIndex;
     /* 0x83 */ u8 unk83;
     /* 0x84 */ u8 itemBoxesDisabled;

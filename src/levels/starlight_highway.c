@@ -132,7 +132,7 @@ void renderStarlightHighwayBuildings(StarlightBuildingTaskState *arg0) {
         arg0->building1.displayLists = (DisplayLists *)getDisplayListTableForCourse(8);
     }
 
-    if (gameState->shortcutWarpPlayerCount != 0) {
+    if (gameState->liftTransitionPlayerCount != 0) {
         if (gFrameCounter & 1) {
             displayListResult = getDisplayListTableForCourse(8);
             arg0->building2.displayLists = (DisplayLists *)((u32)displayListResult + 0x10);

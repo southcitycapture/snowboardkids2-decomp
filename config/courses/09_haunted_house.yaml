@@ -27,14 +27,14 @@ assets:
     decompressed_size: '0x810'
     legacy_slot: 11
 environment:
-  shortcut_position:
+  lift_entry_position:
   - '0xF81F16C7'
   - '0xF7874E40'
-  spawn_position:
+  course_start_position:
   - '0x000932B6'
   - '0x2FFF0788'
   - '0x305235B0'
-  yaw_offset: '0x0800'
+  lift_entry_yaw_offset: '0x0800'
   light_colors:
   - '0xC0'
   - '0xC0'

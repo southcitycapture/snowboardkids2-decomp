@@ -5,13 +5,13 @@
 #include "math/geometry.h"
 
 void updatePlayerSectorAndClampYToTrack(Player *player);
-s32 isPlayerNearShortcut(Player *player);
+s32 isPlayerNearLiftEntry(Player *player);
 void handlePlayerToPlayerCollision(Player *player);
 void handleCollisionWithTargetPlayer(Player *player);
 void addCollisionSectorNodeToList(ListNode_5AA90 *arg0);
 Player *findPlayerNearPosition(Vec3i *position, s32 excludePlayerIndex, s32 searchRadius);
 Player *findVulnerablePlayerNearPosition(void *position, s32 excludePlayerIndex, s32 searchRadius);
-s32 tryActivateShortcut(Player *player);
+s32 tryEnterLift(Player *player);
 s32 isPointInPlayerCollisionSphere(Player *player, Vec3i *point, s32 extraRadius);
 s32 checkPositionPlayerCollisionWithKnockback(Vec3i *pos, s32 extraRadius, s32 maxHeight, s16 excludePlayerIdx);
 s32 checkPositionPlayerCollisionWithPull(void *pos, s32 extraRadius, s32 maxHeight);

@@ -4,7 +4,7 @@
 #include "graphics/displaylist.h"
 #include "math/geometry.h"
 
-// Start gate display object structure (3 parts: main gate, left door, right door)
+// Lift gate display object structure (3 parts: main gate, left door, right door)
 // Each part is a DisplayListObject with transform, display lists, and segment pointers
 typedef struct {
     /* Main gate structure (offset 0x00) */
@@ -31,9 +31,9 @@ typedef struct {
     s16 gateRotation;   // 0xB4
     s16 animationState; // 0xB6
     s16 pauseTimer;     // 0xB8
-} StartGate;
+} LiftGate;
 
 void spawnPushStartPrompt(s32, s16, u8, u8, s16, s16);
-void initStartGate(StartGate *gate);
+void initLiftGate(LiftGate *gate);
 
 void spawnPlayerIndicatorTask(void *cleanupArg);

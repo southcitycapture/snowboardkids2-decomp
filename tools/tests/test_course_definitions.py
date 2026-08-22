@@ -39,6 +39,26 @@ class CourseDefinitionsTest(unittest.TestCase):
             )
             self.assertNotIn("sky_display_lists", course["environment"])
 
+    def test_environment_uses_lift_and_course_start_fields(self):
+        courses = load_courses(DEFINITIONS)
+
+        for course in courses:
+            environment = course["environment"]
+            self.assertIn("lift_entry_position", environment)
+            self.assertIn("course_start_position", environment)
+            self.assertIn("lift_entry_yaw_offset", environment)
+            self.assertNotIn("shortcut_position", environment)
+            self.assertNotIn("spawn_position", environment)
+            self.assertNotIn("yaw_offset", environment)
+
+        with tempfile.TemporaryDirectory() as output:
+            generate_matched(courses, Path(output))
+            generated = (Path(output) / "level_configs.inc").read_text()
+
+        self.assertIn(".liftEntryPosX", generated)
+        self.assertIn(".courseStartPos", generated)
+        self.assertNotIn("shortcut", generated.lower())
+
     def test_generation_is_deterministic(self):
         courses = load_courses(DEFINITIONS)
         with tempfile.TemporaryDirectory() as first, tempfile.TemporaryDirectory() as second:
@@ -67,6 +87,19 @@ class CourseDefinitionsTest(unittest.TestCase):
                 (temporary_path / source.name).write_text(yaml.safe_dump(data, sort_keys=False))
 
             with self.assertRaisesRegex(ValueError, "legacy_id values"):
+                load_courses(temporary_path)
+
+    def test_legacy_lift_environment_keys_are_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            temporary_path = Path(temporary)
+            for source in DEFINITIONS.glob("*.yaml"):
+                data = yaml.safe_load(source.read_text())
+                if data["legacy_id"] == 0:
+                    environment = data["environment"]
+                    environment["shortcut_position"] = environment.pop("lift_entry_position")
+                (temporary_path / source.name).write_text(yaml.safe_dump(data, sort_keys=False))
+
+            with self.assertRaisesRegex(ValueError, "environment must define"):
                 load_courses(temporary_path)
 
 

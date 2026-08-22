@@ -24,14 +24,14 @@ assets:
     decompressed_size: '0x130'
   scene_animation: null
 environment:
-  shortcut_position:
+  lift_entry_position:
   - '0x13A2B2B2'
   - '0x0D88B1D8'
-  spawn_position:
+  course_start_position:
   - '0x00000000'
   - '0x30000000'
   - '0x30458CB2'
-  yaw_offset: '0x0000'
+  lift_entry_yaw_offset: '0x0000'
   light_colors:
   - '0xC0'
   - '0xD0'

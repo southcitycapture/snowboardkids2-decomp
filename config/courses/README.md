@@ -32,5 +32,10 @@ must still produce the exact target ROM.
 - `overlay` and `scene_animation` may be null.
 - `behavior` identifies course-specific code to recomp hooks. Behavior remains
   ordinary matched C and is not generated from YAML.
+- `lift_entry_position` and `lift_entry_yaw_offset` place the gate at the
+  bottom of the course. Racers enter the lift there after boarding downhill.
+- `course_start_position` is the top-of-course anchor near both the initial
+  player start and the lift exit. Lift transport returns racers there for the
+  next lap, although individual courses use different transport animations.
 - Training deliberately reuses X Cross's render records as well as its shared
   course assets.

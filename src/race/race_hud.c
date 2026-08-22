@@ -1324,13 +1324,13 @@ void initCourseSceneryTask(CourseSceneryTaskState *arg0) {
     arg0->skyAsset2 = loadCompressedSegment2AssetByIndex(allocation->unk5C);
     arg0->reserved = NULL;
 
-    createYRotationMatrix((Transform3D *)arg0, (u16)(rotation + levelData->yawOffset));
+    createYRotationMatrix((Transform3D *)arg0, (u16)(rotation + levelData->liftEntryYawOffset));
 
     arg0->unk18 = sp10.y;
     transformVector2(&gCourseSceneryOffset, arg0, &sp10);
 
-    arg0->unk14 = levelData->shortcutPosX + sp10.x;
-    arg0->unk1C = levelData->shortcutPosZ + sp10.z;
+    arg0->unk14 = levelData->liftEntryPosX + sp10.x;
+    arg0->unk1C = levelData->liftEntryPosZ + sp10.z;
 
     memcpy(arg0->unk3C, arg0, 0x3C);
 
@@ -1338,9 +1338,9 @@ void initCourseSceneryTask(CourseSceneryTaskState *arg0) {
     arg0->unk5C = (void *)((u32)displayLists + 0x20);
     createYRotationMatrix((Transform3D *)arg0->unk3C, 0x1000);
 
-    arg0->unk50 = levelData->spawnPos.x;
-    arg0->unk54 = levelData->spawnPos.y;
-    arg0->unk58 = levelData->spawnPos.z;
+    arg0->unk50 = levelData->courseStartPos.x;
+    arg0->unk54 = levelData->courseStartPos.y;
+    arg0->unk58 = levelData->courseStartPos.z;
 
     if (allocation->unk5C == 4) {
         memcpy(arg0->unk78, arg0, 0x3C);
@@ -1396,13 +1396,13 @@ void initFlyingSceneryTask(FlyingSceneryState *arg0) {
     arg0->displayListObject.segment2 = loadCompressedSegment2AssetByIndex(allocation->unk5C);
     arg0->displayListObject.segment3 = 0;
 
-    createYRotationMatrix((Transform3D *)arg0, rotation + levelData->yawOffset);
+    createYRotationMatrix((Transform3D *)arg0, rotation + levelData->liftEntryYawOffset);
     arg0->displayListObject.transform.translation.y = position.y;
 
     transformVector2(&gFlyingSceneryInitOffset, arg0, &position);
 
-    arg0->displayListObject.transform.translation.x = levelData->shortcutPosX + position.x;
-    arg0->displayListObject.transform.translation.z = levelData->shortcutPosZ + position.z;
+    arg0->displayListObject.transform.translation.x = levelData->liftEntryPosX + position.x;
+    arg0->displayListObject.transform.translation.z = levelData->liftEntryPosZ + position.z;
     arg0->frameCounter = 0x30;
 
     setCleanupCallback(&cleanupFlyingSceneryTask);
@@ -1471,9 +1471,9 @@ void resetFlyingSceneryPosition(FlyingSceneryState *state) {
     matrix = getLevelConfig(alloc->unk5C);
     transformVector2(D_80090BC8_917C8, &state->displayListObject.transform, &vec);
 
-    state->displayListObject.transform.translation.x = matrix->spawnPos.x + vec.x;
-    state->displayListObject.transform.translation.y = matrix->spawnPos.y + vec.y;
-    state->displayListObject.transform.translation.z = matrix->spawnPos.z + vec.z;
+    state->displayListObject.transform.translation.x = matrix->courseStartPos.x + vec.x;
+    state->displayListObject.transform.translation.y = matrix->courseStartPos.y + vec.y;
+    state->displayListObject.transform.translation.z = matrix->courseStartPos.z + vec.z;
     state->frameCounter = 0x32;
 
     setCallbackWithContinue(updateFlyingSceneryAscendingStep);
@@ -2874,7 +2874,7 @@ void scheduleCourseTasks(s32 courseId, s32 playerCount) {
             scheduleTask(&renderFlyingEnemy, 0, 0, 0xD3);
             scheduleTask(&initSunnyMountainFlyingBirdTask, 0, 0, 0xD3);
             scheduleTask(initCourseSceneryTask, 0, 0, 0xD3);
-            scheduleTask(&initStartGate, 0, 0, 0xD3);
+            scheduleTask(&initLiftGate, 0, 0, 0xD3);
             scheduleGoldCoinsIfEnabled(courseId);
             scheduleItemBoxSystemTaskIfEnabled(courseId);
             break;
@@ -2887,7 +2887,7 @@ void scheduleCourseTasks(s32 courseId, s32 playerCount) {
             scheduleGoldCoinsIfEnabled(courseId);
             scheduleItemBoxSystemTaskIfEnabled(courseId);
             scheduleTask(initCourseSceneryTask, 0, 0, 0xD3);
-            scheduleTask(&initStartGate, 0, 0, 0xD3);
+            scheduleTask(&initLiftGate, 0, 0, 0xD3);
             scheduleSceneAnimationTask(courseId, 4);
             schedulePlayerSparkleTask();
             break;
@@ -2905,7 +2905,7 @@ void scheduleCourseTasks(s32 courseId, s32 playerCount) {
             }
             scheduleSceneAnimationTask(courseId, 3);
             scheduleTask(initCourseSceneryTask, 0, 0, 0xD3);
-            scheduleTask(&initStartGate, 0, 0, 0xD3);
+            scheduleTask(&initLiftGate, 0, 0, 0xD3);
             break;
 
         case JINGLE_TOWN_BOSS:
@@ -2920,7 +2920,7 @@ void scheduleCourseTasks(s32 courseId, s32 playerCount) {
             } else {
                 spawnItemTriggerTask(1);
             }
-            scheduleTask(&initStartGate, 0, 0, 0xD3);
+            scheduleTask(&initLiftGate, 0, 0, 0xD3);
             break;
 
         case WENDYS_HOUSE:
@@ -2933,7 +2933,7 @@ void scheduleCourseTasks(s32 courseId, s32 playerCount) {
             scheduleTask(&initWendysHouseProjectileSpawner, 0, 0, 0x5E);
             scheduleGoldCoinsIfEnabled(courseId);
             scheduleItemBoxSystemTaskIfEnabled(courseId);
-            scheduleTask(&initStartGate, 0, 0, 0xD3);
+            scheduleTask(&initLiftGate, 0, 0, 0xD3);
             break;
 
         case LINDAS_CASTLE:
@@ -2945,7 +2945,7 @@ void scheduleCourseTasks(s32 courseId, s32 playerCount) {
             scheduleItemBoxSystemTaskIfEnabled(courseId);
             scheduleTask(initCourseSceneryTask, 0, 0, 0xD3);
             scheduleSceneAnimationTask(courseId, 6);
-            scheduleTask(&initStartGate, 0, 0, 0xD3);
+            scheduleTask(&initLiftGate, 0, 0, 0xD3);
             scheduleTask(&initFlyingEnemySpawner, 0, 0, 0x31);
             scheduleTask(&initLindasCastleLapCounter, 0, 0, 0xF0);
             schedulePlayerSparkleTask();
@@ -2963,7 +2963,7 @@ void scheduleCourseTasks(s32 courseId, s32 playerCount) {
             scheduleTask(initCourseSceneryTask, 0, 0, 0xD3);
             initCrazyJungleHazards();
             schedulePlayerSparkleTask();
-            scheduleTask(&initStartGate, 0, 0, 0xD3);
+            scheduleTask(&initLiftGate, 0, 0, 0xD3);
             break;
 
         case CRAZY_JUNGLE_BOSS:
@@ -2976,7 +2976,7 @@ void scheduleCourseTasks(s32 courseId, s32 playerCount) {
                 scheduleItemBoxSystemTaskIfEnabled(courseId);
             }
             scheduleTask(initCourseSceneryTask, 0, 0, 0xD3);
-            scheduleTask(&initStartGate, 0, 0, 0xD3);
+            scheduleTask(&initLiftGate, 0, 0, 0xD3);
             break;
 
         case STARLIGHT_HIGHWAY:
@@ -2986,7 +2986,7 @@ void scheduleCourseTasks(s32 courseId, s32 playerCount) {
             }
             scheduleGoldCoinsIfEnabled(courseId);
             scheduleItemBoxSystemTaskIfEnabled(courseId);
-            scheduleTask(&initStartGate, 0, 0, 0xD3);
+            scheduleTask(&initLiftGate, 0, 0, 0xD3);
             scheduleTask(&initStarlightHighwayBuildingTask, 0, 0, 0xD3);
             spawnStarlightItems();
             scheduleTask(&initFireworkShowTimer, 0, 0, 0xC7);
@@ -3003,7 +3003,7 @@ void scheduleCourseTasks(s32 courseId, s32 playerCount) {
             scheduleItemBoxSystemTaskIfEnabled(courseId);
             scheduleTask(&initGhostSpawnerTask, 0, 0, 0xC8);
             scheduleTask(initCourseSceneryTask, 0, 0, 0xD3);
-            scheduleTask(&initStartGate, 0, 0, 0xD3);
+            scheduleTask(&initLiftGate, 0, 0, 0xD3);
             scheduleTask(&initSwingingPendulumTrap, 0, 0, 0x32);
             scheduleTask(&initFloatingBillboardSpawner, 0, 0, 0x32);
             spawnPushZone(6);
@@ -3025,7 +3025,7 @@ void scheduleCourseTasks(s32 courseId, s32 playerCount) {
             }
             spawnPushZone(4);
             scheduleTask(initCourseSceneryTask, 0, 0, 0xD3);
-            scheduleTask(&initStartGate, 0, 0, 0xD3);
+            scheduleTask(&initLiftGate, 0, 0, 0xD3);
             scheduleTask(&initIceLandMovingPlatformScheduler, 0, 0, 0xD3);
             scheduleGoldCoinsIfEnabled(courseId);
             scheduleItemBoxSystemTaskIfEnabled(courseId);
@@ -3043,7 +3043,7 @@ void scheduleCourseTasks(s32 courseId, s32 playerCount) {
                 spawnItemTriggerTask(2);
             }
             scheduleTask(initCourseSceneryTask, 0, 0, 0xD3);
-            scheduleTask(&initStartGate, 0, 0, 0xD3);
+            scheduleTask(&initLiftGate, 0, 0, 0xD3);
             spawnConfettiEffectForAllPlayers();
             spawnPushZone(5);
             break;
@@ -3060,7 +3060,7 @@ void scheduleCourseTasks(s32 courseId, s32 playerCount) {
                 spawnItemTriggerTask(3);
             }
             scheduleTask(initCourseSceneryTask, 0, 0, 0xD3);
-            scheduleTask(&initStartGate, 0, 0, 0xD3);
+            scheduleTask(&initLiftGate, 0, 0, 0xD3);
             scheduleTask(&renderFlyingEnemy, 0, 0, 0xD3);
             break;
 
@@ -3076,7 +3076,7 @@ void scheduleCourseTasks(s32 courseId, s32 playerCount) {
                 scheduleShootCrossTargetsTask(courseId);
             }
             scheduleTask(initCourseSceneryTask, 0, 0, 0xD3);
-            scheduleTask(&initStartGate, 0, 0, 0xD3);
+            scheduleTask(&initLiftGate, 0, 0, 0xD3);
             scheduleTask(&initRotatingSky, 0, 0, 0xD3);
             break;
 
@@ -3090,7 +3090,7 @@ void scheduleCourseTasks(s32 courseId, s32 playerCount) {
                 scheduleItemBoxSystemTaskIfEnabled(courseId);
             }
             scheduleTask(initCourseSceneryTask, 0, 0, 0xD3);
-            scheduleTask(&initStartGate, 0, 0, 0xD3);
+            scheduleTask(&initLiftGate, 0, 0, 0xD3);
             break;
 
         case TRAINING:
@@ -3101,7 +3101,7 @@ void scheduleCourseTasks(s32 courseId, s32 playerCount) {
             scheduleGoldCoinsIfEnabled(courseId);
             scheduleItemBoxSystemTaskIfEnabled(courseId);
             scheduleTask(initCourseSceneryTask, 0, 0, 0xD3);
-            scheduleTask(&initStartGate, 0, 0, 0xD3);
+            scheduleTask(&initLiftGate, 0, 0, 0xD3);
             break;
     }
 }

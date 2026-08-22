@@ -77,8 +77,20 @@ def load_courses(definitions_dir: Path) -> list[dict]:
                 raise ValueError(f"{path}: asset {asset_name} requires symbol and decompressed_size")
             if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", str(asset["symbol"])) is None:
                 raise ValueError(f"{path}: asset {asset_name} has an invalid symbol")
-        if len(course["environment"]["spawn_position"]) != 3:
-            raise ValueError(f"{path}: spawn_position must contain three values")
+        required_environment = {
+            "lift_entry_position",
+            "course_start_position",
+            "lift_entry_yaw_offset",
+            "light_colors",
+            "fog_colors",
+            "music_track",
+        }
+        if set(course["environment"]) != required_environment:
+            raise ValueError(f"{path}: environment must define the lift, course start, lighting, and music fields")
+        if len(course["environment"]["lift_entry_position"]) != 2:
+            raise ValueError(f"{path}: lift_entry_position must contain two values")
+        if len(course["environment"]["course_start_position"]) != 3:
+            raise ValueError(f"{path}: course_start_position must contain three values")
         if len(course["environment"]["light_colors"]) != 8:
             raise ValueError(f"{path}: light_colors must contain eight values")
         if len(course["environment"]["fog_colors"]) != 8:
@@ -128,16 +140,16 @@ def asset_initializer(asset: dict, compressed: bool = True) -> str:
 
 def render_level_config(course: dict) -> list[str]:
     env = course["environment"]
-    spawn = ", ".join(c_int(value) for value in env["spawn_position"])
+    course_start = ", ".join(c_int(value) for value in env["course_start_position"])
     light = ", ".join(c_int(value) for value in env["light_colors"])
     fog = ", ".join(c_int(value) for value in env["fog_colors"])
     return [
         "    {",
-        f"        .shortcutPosX = {c_int(env['shortcut_position'][0])},",
-        f"        .shortcutPosZ = {c_int(env['shortcut_position'][1])},",
-        f"        .yawOffset = {c_int(env['yaw_offset'])},",
+        f"        .liftEntryPosX = {c_int(env['lift_entry_position'][0])},",
+        f"        .liftEntryPosZ = {c_int(env['lift_entry_position'][1])},",
+        f"        .liftEntryYawOffset = {c_int(env['lift_entry_yaw_offset'])},",
         "        .padding = 0,",
-        f"        .spawnPos = {{ {spawn} }},",
+        f"        .courseStartPos = {{ {course_start} }},",
         f"        .lightColors = {{ {light} }},",
         f"        .fogColors = {{ {fog} }},",
         f"        .musicTrack = {c_int(env['music_track'])},",
@@ -284,7 +296,7 @@ def generate_recomp(courses: list[dict], out_dir: Path) -> None:
             "{ " + ", ".join(c_int(value) for value in entry) + " }" for entry in race["cpu_snowboards"]
         )
         render = course["render"]
-        spawn = ", ".join(c_int(value) for value in env["spawn_position"])
+        course_start = ", ".join(c_int(value) for value in env["course_start_position"])
         light = ", ".join(c_int(value) for value in env["light_colors"])
         fog = ", ".join(c_int(value) for value in env["fog_colors"])
         lines.extend(
@@ -303,11 +315,11 @@ def generate_recomp(courses: list[dict], out_dir: Path) -> None:
                 f"            {recomp_asset(assets.get('scene_animation'), 'COURSE_ASSET_SNO')},",
                 "        },",
                 "        {",
-                f"            .shortcutPosX = {c_int(env['shortcut_position'][0])},",
-                f"            .shortcutPosZ = {c_int(env['shortcut_position'][1])},",
-                f"            .yawOffset = {c_int(env['yaw_offset'])},",
+                f"            .liftEntryPosX = {c_int(env['lift_entry_position'][0])},",
+                f"            .liftEntryPosZ = {c_int(env['lift_entry_position'][1])},",
+                f"            .liftEntryYawOffset = {c_int(env['lift_entry_yaw_offset'])},",
                 "            .padding = 0,",
-                f"            .spawnPos = {{ {spawn} }},",
+                f"            .courseStartPos = {{ {course_start} }},",
                 f"            .lightColors = {{ {light} }},",
                 f"            .fogColors = {{ {fog} }},",
                 f"            .musicTrack = {c_int(env['music_track'])},",

@@ -112,8 +112,8 @@ void calculateAITargetPosition(Player *player) {
     currentSectorIndex = player->sectorIndex;
     if (courseData->waypoints[currentSectorIndex].next < 0) {
         levelConfig = getLevelConfig(courseData->defaultPosIndex);
-        player->aiTarget.x = levelConfig->shortcutPosX;
-        player->aiTarget.z = levelConfig->shortcutPosZ;
+        player->aiTarget.x = levelConfig->liftEntryPosX;
+        player->aiTarget.z = levelConfig->liftEntryPosZ;
         return;
     }
     computeAIWaypointLateralPosition(player, courseData, (s16)currentSectorIndex, &currentWaypointPos);

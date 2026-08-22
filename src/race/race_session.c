@@ -867,7 +867,7 @@ void scheduleRaceTasks(void) {
     gameState = (GameState *)getCurrentAllocation();
     gameState->pendingPlayerRenderTasks = 0;
 
-    scheduleTask(&renderPlayersByShortcutDistance, 0, 0, 1);
+    scheduleTask(&updateAndRenderPlayersByLiftEntryDistance, 0, 0, 1);
     scheduleTask(&updateAndRenderRaceCharacters, 0, 0, 0x64);
     scheduleTask(&initPauseMenuDisplayTask, 0, 0, 0xC8);
 

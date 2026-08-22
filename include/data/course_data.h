@@ -7,11 +7,11 @@
 #include "math/geometry.h"
 
 typedef struct {
-    /* 0x0 */ s32 shortcutPosX;
-    /* 0x4 */ s32 shortcutPosZ;
-    /* 0x8 */ u16 yawOffset;
+    /* 0x0 */ s32 liftEntryPosX;
+    /* 0x4 */ s32 liftEntryPosZ;
+    /* 0x8 */ u16 liftEntryYawOffset;
     /* 0xA */ s16 padding;
-    /* 0xC */ Vec3i spawnPos;
+    /* 0xC */ Vec3i courseStartPos;
     /* 0x18 */ ColorData lightColors;
     /* 0x20 */ ColorData fogColors;
     /* 0x28 */ s16 musicTrack;

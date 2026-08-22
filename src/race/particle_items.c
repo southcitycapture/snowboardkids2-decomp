@@ -2065,14 +2065,14 @@ void initChairliftEffect(ChairliftEffectState *arg0) {
     arg0->rightFlipper.segment1 = arg0->unk24;
     arg0->rightFlipper.segment2 = arg0->unk28;
 
-    arg0->baseRotation = rotation + item->yawOffset;
+    arg0->baseRotation = rotation + item->liftEntryYawOffset;
     createYRotationMatrix(&arg0->transform, arg0->baseRotation);
 
     arg0->yRotation = 0;
     transformVector2(&D_80090AA0_916A0, &arg0->transform, &transformOutput);
 
-    arg0->transform.translation.x = item->shortcutPosX + transformOutput.x;
-    arg0->transform.translation.z = item->shortcutPosZ + transformOutput.z;
+    arg0->transform.translation.x = item->liftEntryPosX + transformOutput.x;
+    arg0->transform.translation.z = item->liftEntryPosZ + transformOutput.z;
     temp_unk18 = posOutput.y + transformOutput.y;
     arg0->phaseTimer = 0x30;
     arg0->transform.translation.y = temp_unk18;
@@ -2152,7 +2152,7 @@ void setupChairliftDeparture(ChairliftEffectState *arg0) {
     Vec3i output;
     Vec3i input;
     s32 i;
-    s32 tempSpawnZ;
+    s32 courseStartZ;
 
     temp_v0 = getLevelConfig(((EffectTaskState *)getCurrentAllocation())->unk5C);
     temp_a1 = arg0->target;
@@ -2161,14 +2161,14 @@ void setupChairliftDeparture(ChairliftEffectState *arg0) {
     arg0->phaseTimer = 0x5A;
     arg0->baseRotation = 0x1000;
     createCombinedRotationMatrix(&arg0->transform, (u16)arg0->yRotation, 0x1000);
-    arg0->transform.translation.x = temp_v0->spawnPos.x + 0xFFD00000;
-    arg0->transform.translation.y = temp_v0->spawnPos.y;
-    tempSpawnZ = temp_v0->spawnPos.z;
+    arg0->transform.translation.x = temp_v0->courseStartPos.x + 0xFFD00000;
+    arg0->transform.translation.y = temp_v0->courseStartPos.y;
+    courseStartZ = temp_v0->courseStartPos.z;
     i = 0;
     arg0->flyAwayDistance = 0;
     arg0->fallVelocity = 0;
     arg0->movementOffset = 0;
-    arg0->transform.translation.z = tempSpawnZ + 0x200000;
+    arg0->transform.translation.z = courseStartZ + 0x200000;
     input.x = 0;
     input.y = 0;
     input.z = 0;

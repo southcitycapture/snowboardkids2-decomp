@@ -130,10 +130,10 @@ void dispatchKnockbackBehaviorStep(BehaviorState *);
 s32 beginKnockbackRecoveryStep(Player *);
 s32 updateKnockbackRecoveryStep(Player *);
 s32 fallToTrackCenterStep(Player *);
-s32 fallTowardShortcutWarpStep(Player *);
+s32 approachLiftEntranceStep(Player *);
 s32 slideDuringKnockbackRecoveryStep(Player *);
 s32 slideDiagonallyDuringKnockbackRecoveryStep(Player *);
-s32 respawnAtFinishLineAndSlideStep(Player *);
+s32 resumeAtCourseStartAndSlideStep(Player *);
 s32 slideForwardAndResetStep(Player *);
 s32 dropDownwardStep(Player *);
 s32 jumpUpwardStep(Player *);
@@ -143,14 +143,14 @@ s32 handleUfoAbductionRecoveryStep(Player *);
 s32 waitAtStoredPositionStep(Player *);
 s32 handleFallFromUfoStep(Player *);
 s32 dropAfterUfoReleaseStep(Player *);
-s32 spinRampUpStep(Player *);
-s32 maintainMaxSpinStep(Player *);
-s32 spinRampDownStep(Player *);
-s32 spinFadeInWaitStep(Player *);
-s32 warpToShortcutSpinUpStep(Player *);
-s32 shortcutSpinDownStep(Player *);
-s32 shortcutPostSpinWaitStep(Player *);
-s32 shortcutLaunchStep(Player *);
+s32 liftEntrySpinRampUpStep(Player *);
+s32 liftEntryMaxSpinStep(Player *);
+s32 liftEntrySpinRampDownStep(Player *);
+s32 liftTransportWaitStep(Player *);
+s32 appearAtLiftExitSpinUpStep(Player *);
+s32 liftExitSpinDownStep(Player *);
+s32 liftExitWaitStep(Player *);
+s32 launchFromLiftExitStep(Player *);
 s32 tryFinalizeTrickLanding(Player *);
 void handlePlayerPositionAndTrackCollision(Player *);
 void renderPlayerModel(Player *);
@@ -310,10 +310,10 @@ KnockbackBehaviorStepHandler knockbackBehaviorStepHandlers[] = {
     (KnockbackBehaviorStepHandler)beginKnockbackRecoveryStep,
     (KnockbackBehaviorStepHandler)updateKnockbackRecoveryStep,
     (KnockbackBehaviorStepHandler)fallToTrackCenterStep,
-    (KnockbackBehaviorStepHandler)fallTowardShortcutWarpStep,
+    (KnockbackBehaviorStepHandler)approachLiftEntranceStep,
     (KnockbackBehaviorStepHandler)slideDuringKnockbackRecoveryStep,
     (KnockbackBehaviorStepHandler)slideDiagonallyDuringKnockbackRecoveryStep,
-    (KnockbackBehaviorStepHandler)respawnAtFinishLineAndSlideStep,
+    (KnockbackBehaviorStepHandler)resumeAtCourseStartAndSlideStep,
     (KnockbackBehaviorStepHandler)slideForwardAndResetStep,
     (KnockbackBehaviorStepHandler)dropDownwardStep,
     (KnockbackBehaviorStepHandler)jumpUpwardStep,
@@ -323,23 +323,23 @@ KnockbackBehaviorStepHandler knockbackBehaviorStepHandlers[] = {
     (KnockbackBehaviorStepHandler)waitAtStoredPositionStep,
     (KnockbackBehaviorStepHandler)handleFallFromUfoStep,
     (KnockbackBehaviorStepHandler)dropAfterUfoReleaseStep,
-    (KnockbackBehaviorStepHandler)spinRampUpStep,
-    (KnockbackBehaviorStepHandler)maintainMaxSpinStep,
-    (KnockbackBehaviorStepHandler)spinRampDownStep,
-    (KnockbackBehaviorStepHandler)spinFadeInWaitStep,
-    (KnockbackBehaviorStepHandler)warpToShortcutSpinUpStep,
-    (KnockbackBehaviorStepHandler)shortcutSpinDownStep,
-    (KnockbackBehaviorStepHandler)shortcutPostSpinWaitStep,
-    (KnockbackBehaviorStepHandler)shortcutLaunchStep,
+    (KnockbackBehaviorStepHandler)liftEntrySpinRampUpStep,
+    (KnockbackBehaviorStepHandler)liftEntryMaxSpinStep,
+    (KnockbackBehaviorStepHandler)liftEntrySpinRampDownStep,
+    (KnockbackBehaviorStepHandler)liftTransportWaitStep,
+    (KnockbackBehaviorStepHandler)appearAtLiftExitSpinUpStep,
+    (KnockbackBehaviorStepHandler)liftExitSpinDownStep,
+    (KnockbackBehaviorStepHandler)liftExitWaitStep,
+    (KnockbackBehaviorStepHandler)launchFromLiftExitStep,
 };
 
-Vec3i gShortcutWarpForwardOffset = { 0x009A8000, 0x00000000, 0x00000000 };
+Vec3i gLiftEntranceApproachOffset = { 0x009A8000, 0x00000000, 0x00000000 };
 
 Vec3i g_KnockbackRecoveryForwardVelocity = { 0x00000000, 0x00000000, 0x00040000 };
 
 Vec3i g_KnockbackDiagonalSlideVelocity = { 0x00000000, 0x00018000, 0x00030000 };
 
-Vec3i g_FinishLineRespawnOffset = { 0xFFE20000, 0xFFB50000, 0xFF1E0000 };
+Vec3i gCourseStartSlideOffset = { 0xFFE20000, 0xFFB50000, 0xFF1E0000 };
 
 u16 gRumblePatterns[] = {
     0x0009, 0x000F, 0x07BB, 0x003F, 0x000B, 0x07BF, 0x04CF, 0x3333, 0x1249, 0x36DB, 0xFFFF, 0x0000,
@@ -637,7 +637,7 @@ void applyVelocityToPosition(Player *player) {
     player->worldPos.z = player->worldPos.z + player->velocity.z;
 }
 
-void renderPlayersByShortcutDistance(void) {
+void updateAndRenderPlayersByLiftEntryDistance(void) {
     s32 distances[4];
     s8 order[4];
     GameState *gameState;
@@ -648,8 +648,8 @@ void renderPlayersByShortcutDistance(void) {
     s32 j;
 
     gameState = getCurrentAllocation();
-    if (gameState->shortcutGateState == 2) {
-        gameState->shortcutGateState = 0;
+    if (gameState->liftGateState == LIFT_GATE_RESET_PENDING) {
+        gameState->liftGateState = LIFT_GATE_READY;
     }
     if (gameState->gamePaused != 0) {
         return;
@@ -664,8 +664,8 @@ void renderPlayersByShortcutDistance(void) {
             distances[i] = 0x7FFFFFFF;
             if ((getTrackSegmentFinishZoneFlag(&gameState->gameData, gameState->players[i].sectorIndex) << 16) == 0) {
                 distances[i] = distance_2d(
-                    gameState->players[i].worldPos.x - levelConfig->shortcutPosX,
-                    gameState->players[i].worldPos.z - levelConfig->shortcutPosZ
+                    gameState->players[i].worldPos.x - levelConfig->liftEntryPosX,
+                    gameState->players[i].worldPos.z - levelConfig->liftEntryPosZ
                 );
             }
             i++;
@@ -1318,7 +1318,7 @@ s32 updatePlayerNormalDriving(Player *player) {
         }
         if ((speed <= 0x5FFFF && player->snowboardId < SNOWBOARD_HIGH_TECH) ||
             (gameState->memoryPoolId == 5 && player->sectorIndex == 0 && player->snowboardId == SNOWBOARD_DRAGON)) {
-            if (isPlayerNearShortcut(player) == 0) {
+            if (isPlayerNearLiftEntry(player) == 0) {
                 player->cpuInputFlags = 0;
                 setPlayerBehaviorPhase(player, 4);
                 return 1;
@@ -1331,7 +1331,7 @@ s32 updatePlayerNormalDriving(Player *player) {
         }
     }
 
-    if (tryActivateShortcut(player) != 0) {
+    if (tryEnterLift(player) != 0) {
         initKnockbackBehavior((BehaviorState *)player);
         return 1;
     }
@@ -1655,7 +1655,7 @@ s32 updateSharpTurnSlidingStep(Player *player) {
         return 1;
     }
 
-    if (tryActivateShortcut(player) != 0) {
+    if (tryEnterLift(player) != 0) {
         initKnockbackBehavior((BehaviorState *)player);
         return 1;
     }
@@ -1716,7 +1716,7 @@ s32 recoverSharpTurnSlidingStep(Player *player) {
         return 1;
     }
 
-    if (tryActivateShortcut(player) != 0) {
+    if (tryEnterLift(player) != 0) {
         initKnockbackBehavior((BehaviorState *)player);
         return 1;
     }
@@ -1750,7 +1750,7 @@ s32 initPostTrickLandingStep(Player *player) {
         return 1;
     }
 
-    if (tryActivateShortcut(player) != 0) {
+    if (tryEnterLift(player) != 0) {
         initKnockbackBehavior((BehaviorState *)player);
         startRumbleEffect(player, 0);
         queueSoundAtPosition(&player->worldPos, 0x25);
@@ -1815,7 +1815,7 @@ s32 updatePostTrickSlidingStep(Player *player) {
         return 1;
     }
 
-    if (tryActivateShortcut(player) != 0) {
+    if (tryEnterLift(player) != 0) {
         initKnockbackBehavior((BehaviorState *)player);
         return 1;
     }
@@ -1858,7 +1858,7 @@ s32 updatePostTrickChargingStep(Player *player) {
         return 1;
     }
 
-    if (tryActivateShortcut(player) != 0) {
+    if (tryEnterLift(player) != 0) {
         initKnockbackBehavior((BehaviorState *)player);
         return 1;
     }
@@ -4345,7 +4345,7 @@ s32 updateKnockbackRecoveryStep(Player *player) {
 
     gameState = getCurrentAllocation();
     levelData = getLevelConfig(gameState->memoryPoolId);
-    targetYaw = levelData->yawOffset + getTrackEndInfo(&gameState->gameData, trackInfoBuffer) + 0x1000;
+    targetYaw = levelData->liftEntryYawOffset + getTrackEndInfo(&gameState->gameData, trackInfoBuffer) + 0x1000;
     currentYaw = player->rotY;
     angleDelta = (targetYaw - currentYaw) & 0x1FFF;
     clampedAngleDelta = angleDelta;
@@ -4357,8 +4357,8 @@ s32 updateKnockbackRecoveryStep(Player *player) {
     player->velocity.x = 0;
     player->velocity.z = 0;
     player->rotY = currentYaw + (clampedAngleDelta / player->unkB8C);
-    player->worldPos.x = currentPosX + ((levelData->shortcutPosX - currentPosX) >> 2);
-    targetPosZ = levelData->shortcutPosZ;
+    player->worldPos.x = currentPosX + ((levelData->liftEntryPosX - currentPosX) >> 2);
+    targetPosZ = levelData->liftEntryPosZ;
     currentPosZ = player->worldPos.z;
     player->worldPos.z = currentPosZ + ((targetPosZ - currentPosZ) >> 2);
     applyClampedVelocityToPosition(player);
@@ -4389,8 +4389,8 @@ s32 fallToTrackCenterStep(Player *player) {
     player->velocity.x = 0;
     player->velocity.z = 0;
     player->velocity.y = player->velocity.y - 0x6000;
-    player->worldPos.x = player->worldPos.x + ((levelData->shortcutPosX - player->worldPos.x) >> 2);
-    player->worldPos.z = player->worldPos.z + ((levelData->shortcutPosZ - player->worldPos.z) >> 2);
+    player->worldPos.x = player->worldPos.x + ((levelData->liftEntryPosX - player->worldPos.x) >> 2);
+    player->worldPos.z = player->worldPos.z + ((levelData->liftEntryPosZ - player->worldPos.z) >> 2);
     applyClampedVelocityToPosition(player);
     decayPlayerSteeringAngles(player);
 
@@ -4402,7 +4402,7 @@ s32 fallToTrackCenterStep(Player *player) {
     return 0;
 }
 
-s32 fallTowardShortcutWarpStep(Player *player) {
+s32 approachLiftEntranceStep(Player *player) {
     Transform3D transform;
     Vec3i targetPos;
     s32 pad[4];
@@ -4414,13 +4414,13 @@ s32 fallTowardShortcutWarpStep(Player *player) {
 
     gameState = getCurrentAllocation();
     levelConfig = getLevelConfig(gameState->memoryPoolId);
-    baseYaw = levelConfig->yawOffset + getTrackEndInfo(&gameState->gameData, &targetPos);
+    baseYaw = levelConfig->liftEntryYawOffset + getTrackEndInfo(&gameState->gameData, &targetPos);
     angleDelta = baseYaw + 0x800;
     createYRotationMatrix(&transform, (u16)angleDelta);
-    transform.translation.x = levelConfig->shortcutPosX;
+    transform.translation.x = levelConfig->liftEntryPosX;
     transform.translation.y = targetPos.y;
-    transform.translation.z = levelConfig->shortcutPosZ;
-    transformVector((s16 *)&gShortcutWarpForwardOffset, (s16 *)&transform, &targetPos);
+    transform.translation.z = levelConfig->liftEntryPosZ;
+    transformVector((s16 *)&gLiftEntranceApproachOffset, (s16 *)&transform, &targetPos);
 
     if (player->behaviorCounter == 0) {
         player->velocity.y += 0x30000;
@@ -4516,7 +4516,7 @@ s32 fallTowardShortcutWarpStep(Player *player) {
                             player->worldPos.z = targetPos.z;
                             player->behaviorStep++;
                             player->unkB8C = 0x2F;
-                            gameState->shortcutGateState = gameState->shortcutGateState & 2;
+                            gameState->liftGateState = gameState->liftGateState & LIFT_GATE_RESET_PENDING;
                         }
                         break;
                     case 1:
@@ -4526,7 +4526,7 @@ s32 fallTowardShortcutWarpStep(Player *player) {
                             player->behaviorStep = 8;
                             player->unkB8C = 0xE;
                             player->chairliftFlags &= 0xF1;
-                            gameState->shortcutGateState = gameState->shortcutGateState & 2;
+                            gameState->liftGateState = gameState->liftGateState & LIFT_GATE_RESET_PENDING;
                         }
                         break;
                     case 8:
@@ -4593,7 +4593,7 @@ s32 slideDiagonallyDuringKnockbackRecoveryStep(Player *player) {
     return 0;
 }
 
-s32 respawnAtFinishLineAndSlideStep(Player *player) {
+s32 resumeAtCourseStartAndSlideStep(Player *player) {
     Vec3i sp10;
     s32 pad[8];
     GameState *gameState;
@@ -4604,18 +4604,18 @@ s32 respawnAtFinishLineAndSlideStep(Player *player) {
 
     if (player->behaviorCounter == 0) {
         player->rotY = 0x1000;
-        player->shortcutActivationSnapshot = 0;
+        player->liftEntryOrder = 0;
         player->sectorIndex = 0;
         player->animationFlags = player->animationFlags | 0x200;
         player->behaviorCounter++;
         player->currentLap++;
 
         createYRotationMatrix(&player->headingTransform, 0x1000);
-        transformVector2(&g_FinishLineRespawnOffset, &player->headingTransform, &sp10);
+        transformVector2(&gCourseStartSlideOffset, &player->headingTransform, &sp10);
 
-        player->worldPos.x = levelData->spawnPos.x + sp10.x;
-        player->worldPos.y = levelData->spawnPos.y + sp10.y;
-        player->worldPos.z = levelData->spawnPos.z + sp10.z;
+        player->worldPos.x = levelData->courseStartPos.x + sp10.x;
+        player->worldPos.y = levelData->courseStartPos.y + sp10.y;
+        player->worldPos.z = levelData->courseStartPos.z + sp10.z;
 
         memcpy(&player->prevWorldPos, &player->worldPos, sizeof(Vec3i));
 
@@ -4752,7 +4752,7 @@ s32 handleUfoStoredPositionStep(Player *player) {
 
     if (player->chairliftFlags & 2) {
         player->rotY = 0x1000;
-        player->shortcutActivationSnapshot = 0;
+        player->liftEntryOrder = 0;
         player->sectorIndex = 0;
         player->behaviorStep++;
         player->animationFlags |= 0x200;
@@ -4847,7 +4847,7 @@ s32 dropAfterUfoReleaseStep(Player *player) {
     return 0;
 }
 
-s32 spinRampUpStep(Player *arg0) {
+s32 liftEntrySpinRampUpStep(Player *arg0) {
     arg0->velocity.x = 0;
     arg0->velocity.z = 0;
     arg0->velocity.y = arg0->velocity.y - 0x6000;
@@ -4865,7 +4865,7 @@ s32 spinRampUpStep(Player *arg0) {
     return 0;
 }
 
-s32 maintainMaxSpinStep(Player *arg0) {
+s32 liftEntryMaxSpinStep(Player *arg0) {
     GameState *alloc = (GameState *)getCurrentAllocation();
     s32 timerRemaining;
 
@@ -4889,14 +4889,14 @@ s32 maintainMaxSpinStep(Player *arg0) {
         flags = flags | 0x800000;
         arg0->behaviorStep = nextStep;
         arg0->animationFlags = flags;
-        alloc->shortcutGateState = alloc->shortcutGateState & 2;
+        alloc->liftGateState = alloc->liftGateState & LIFT_GATE_RESET_PENDING;
         queueSoundAtPosition(&arg0->worldPos, 0x4E);
     }
 
     return 0;
 }
 
-s32 spinRampDownStep(Player *player) {
+s32 liftEntrySpinRampDownStep(Player *player) {
     GameState *alloc = (GameState *)getCurrentAllocation();
     u16 spinDecrementCounter;
     u16 spinIncrementCounter;
@@ -4920,14 +4920,14 @@ s32 spinRampDownStep(Player *player) {
         player->unkB8C = 0x11;
         player->behaviorStep = player->behaviorStep + 1;
         setViewportFadeValueBySlotIndex(player->playerIndex, 0xFF, 0x10);
-        alloc->shortcutWarpPlayerCount = alloc->shortcutWarpPlayerCount + 1;
+        alloc->liftTransitionPlayerCount = alloc->liftTransitionPlayerCount + 1;
         spawnDebugDisplayListTask(1);
     }
 
     return 0;
 }
 
-s32 spinFadeInWaitStep(Player *player) {
+s32 liftTransportWaitStep(Player *player) {
     GameState *alloc = (GameState *)getCurrentAllocation();
     s32 timerRemaining;
 
@@ -4949,17 +4949,17 @@ s32 spinFadeInWaitStep(Player *player) {
     return 0;
 }
 
-s32 warpToShortcutSpinUpStep(Player *player) {
+s32 appearAtLiftExitSpinUpStep(Player *player) {
     GameState *gameState;
-    LevelConfig *shortcutConfig;
+    LevelConfig *levelConfig;
     s32 pad[12];
 
     gameState = getCurrentAllocation();
-    shortcutConfig = getLevelConfig(gameState->memoryPoolId);
+    levelConfig = getLevelConfig(gameState->memoryPoolId);
 
     if (player->behaviorCounter == 0) {
         player->rotY = 0xE00;
-        player->shortcutActivationSnapshot = 0;
+        player->liftEntryOrder = 0;
         player->sectorIndex = 0;
         player->animationFlags |= 0x200;
         player->behaviorCounter++;
@@ -4967,9 +4967,9 @@ s32 warpToShortcutSpinUpStep(Player *player) {
 
         createYRotationMatrix(&player->headingTransform, 0xE00);
 
-        player->worldPos.x = shortcutConfig->spawnPos.x;
-        player->worldPos.y = shortcutConfig->spawnPos.y;
-        player->worldPos.z = shortcutConfig->spawnPos.z;
+        player->worldPos.x = levelConfig->courseStartPos.x;
+        player->worldPos.y = levelConfig->courseStartPos.y;
+        player->worldPos.z = levelConfig->courseStartPos.z;
 
         memcpy(&player->prevWorldPos, &player->worldPos, sizeof(Vec3i));
 
@@ -5002,7 +5002,7 @@ s32 warpToShortcutSpinUpStep(Player *player) {
     return 0;
 }
 
-s32 shortcutSpinDownStep(Player *player) {
+s32 liftExitSpinDownStep(Player *player) {
     GameState *alloc = (GameState *)getCurrentAllocation();
     s32 newSpinRate;
 
@@ -5016,14 +5016,14 @@ s32 shortcutSpinDownStep(Player *player) {
     if (newSpinRate == 0) {
         player->unkB8C = 6;
         player->behaviorStep = player->behaviorStep + 1;
-        alloc->shortcutWarpPlayerCount--;
+        alloc->liftTransitionPlayerCount--;
     }
 
     player->animationFlags = player->animationFlags | 0x10000;
     return 0;
 }
 
-s32 shortcutPostSpinWaitStep(Player *player) {
+s32 liftExitWaitStep(Player *player) {
     advancePlayerLeanAnimation(player, 3);
 
     player->unkB8C = player->unkB8C - 1;
@@ -5037,7 +5037,7 @@ s32 shortcutPostSpinWaitStep(Player *player) {
     return 0;
 }
 
-s32 shortcutLaunchStep(Player *player) {
+s32 launchFromLiftExitStep(Player *player) {
     if (player->behaviorCounter == 0) {
         player->velocity.z = 0xFFF80000;
         player->velocity.x = 0;
@@ -5143,10 +5143,8 @@ void updateAndRenderRaceCharacters(void) {
                         ((gs->players[rankI].unkBC6 == gs->players[rankJ].unkBC6) &&
                          ((gs->players[rankI].currentLap < gs->players[rankJ].currentLap) ||
                           ((gs->players[rankI].currentLap == gs->players[rankJ].currentLap) &&
-                           ((gs->players[rankI].shortcutActivationSnapshot <
-                             gs->players[rankJ].shortcutActivationSnapshot) ||
-                            ((gs->players[rankI].shortcutActivationSnapshot ==
-                              gs->players[rankJ].shortcutActivationSnapshot) &&
+                           ((gs->players[rankI].liftEntryOrder < gs->players[rankJ].liftEntryOrder) ||
+                            ((gs->players[rankI].liftEntryOrder == gs->players[rankJ].liftEntryOrder) &&
                              ((gs->players[rankI].lapProgressRemaining > gs->players[rankJ].lapProgressRemaining) ||
                               ((gs->players[rankI].lapProgressRemaining == gs->players[rankJ].lapProgressRemaining) &&
                                (gs->players[rankI].segmentProgress < gs->players[rankJ].segmentProgress))))))))) {

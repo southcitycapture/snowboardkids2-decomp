@@ -386,26 +386,26 @@ void updatePlayerSectorAndClampYToTrack(Player *player) {
 }
 
 /**
- * Checks if player is in shortcut activation zone and activates the shortcut.
- * The shortcut is activated when:
- * - Shortcut gate state is 0 (not yet activated)
+ * Checks whether a player has reached the lift entry and starts the lift transition.
+ * The lift is entered when:
+ * - The lift gate is ready
  * - Player is not on the final lap
  * - Player is not at the finish zone
- * - Player is within range of the shortcut position
+ * - Player is within range of the lift entry
  *
  * @param player The player to check
- * @return 1 if shortcut was activated, 0 otherwise
+ * @return 1 if the player entered the lift, 0 otherwise
  */
-s32 tryActivateShortcut(Player *player) {
+s32 tryEnterLift(Player *player) {
     GameState *gameState;
-    LevelConfig *levelItem;
+    LevelConfig *levelConfig;
     s32 deltaX, deltaZ;
     s64 distSq;
 
     gameState = (GameState *)getCurrentAllocation();
 
-    // Skip if shortcut already activated
-    if (gameState->shortcutGateState != 0) {
+    // Only one racer can pass through the lift gate at a time.
+    if (gameState->liftGateState != LIFT_GATE_READY) {
         return 0;
     }
 
@@ -419,12 +419,11 @@ s32 tryActivateShortcut(Player *player) {
         return 0;
     }
 
-    // Get level item containing shortcut position
-    levelItem = getLevelConfig(gameState->memoryPoolId);
+    levelConfig = getLevelConfig(gameState->memoryPoolId);
 
-    // Calculate 2D distance to shortcut position
-    deltaX = player->worldPos.x - levelItem->shortcutPosX;
-    deltaZ = player->worldPos.z - levelItem->shortcutPosZ;
+    // Calculate 2D distance to the lift entry at the bottom of the course.
+    deltaX = player->worldPos.x - levelConfig->liftEntryPosX;
+    deltaZ = player->worldPos.z - levelConfig->liftEntryPosZ;
 
     distSq = MAGNITUDE_SQ_2D(deltaX, deltaZ);
 
@@ -433,34 +432,33 @@ s32 tryActivateShortcut(Player *player) {
         return 0;
     }
 
-    // Activate the shortcut
-    gameState->shortcutGateState = 3;
-    player->shortcutActivationSnapshot = gameState->shortcutActivationCounter;
-    gameState->shortcutActivationCounter--;
+    gameState->liftGateState = LIFT_GATE_ACTIVE;
+    player->liftEntryOrder = gameState->liftEntryOrderCounter;
+    gameState->liftEntryOrderCounter--;
 
     return 1;
 }
 
 /**
- * Checks if a player is near the shortcut position (but not at finish zone).
- * This is a proximity-only check and does not activate the shortcut.
+ * Checks if a player is near the lift entry (but not at the finish zone).
+ * This is a proximity-only check and does not start the lift transition.
  *
  * @param player The player to check
- * @return 1 if player is near shortcut, 0 otherwise
+ * @return 1 if player is near the lift entry, 0 otherwise
  */
-s32 isPlayerNearShortcut(Player *player) {
+s32 isPlayerNearLiftEntry(Player *player) {
     GameState *gameState;
-    LevelConfig *levelItem;
+    LevelConfig *levelConfig;
     s32 deltaX, deltaZ;
     s64 distSq;
 
     gameState = (GameState *)getCurrentAllocation();
 
     if (getTrackSegmentFinishZoneFlag(&gameState->gameData, player->sectorIndex) == 0) {
-        levelItem = getLevelConfig(gameState->memoryPoolId);
+        levelConfig = getLevelConfig(gameState->memoryPoolId);
 
-        deltaX = player->worldPos.x - levelItem->shortcutPosX;
-        deltaZ = player->worldPos.z - levelItem->shortcutPosZ;
+        deltaX = player->worldPos.x - levelConfig->liftEntryPosX;
+        deltaZ = player->worldPos.z - levelConfig->liftEntryPosZ;
 
         distSq = MAGNITUDE_SQ_2D(deltaX, deltaZ);
 
@@ -1534,8 +1532,8 @@ s16 getPlayerTargetTrackAngle(Player *player) {
         } else {
             LevelConfig *levelConfig = getLevelConfig(gameState->memoryPoolId);
             targetAngle = computeAngleToPosition(
-                levelConfig->shortcutPosX,
-                levelConfig->shortcutPosZ,
+                levelConfig->liftEntryPosX,
+                levelConfig->liftEntryPosZ,
                 player->worldPos.x,
                 player->worldPos.z
             );
