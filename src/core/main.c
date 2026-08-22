@@ -638,8 +638,8 @@ s32 spawnedSpriteScales[4] = { 0x00010000, 0x00011999, 0x0000E666, 0x00013333 };
 
 s32 D_80089500[4] = { 0x00000000, 0x01000148, 0x00000000, 0x00000000 };
 
-void setModelRenderMode(setModelRenderMode_arg *arg0, s8 arg1) {
-    arg0->unk87 = arg1;
+void setModelEntityVisibility(ModelEntity *entity, s8 isVisible) {
+    entity->isVisible = isVisible;
 }
 
 s32 osVoiceCheckWord(u8 *data) {
@@ -691,7 +691,7 @@ void setupModelEntityLighting(ModelEntity *entity, ColorData *lightColors, Color
     ambientColor[0].r = config->ambientColorR;
     ambientColor[0].g = config->ambientColorG;
     ambientColor[0].b = config->ambientColorB;
-    setViewportLightColors(entity->parent->unkDA, 3, lightColors, ambientColor);
+    setViewportLightColors(entity->viewport->viewportId, 3, lightColors, ambientColor);
 }
 
 typedef struct {
@@ -700,40 +700,40 @@ typedef struct {
     u8 unk5;
 } initModelEntity_task;
 
-s32 initModelEntity(ModelEntity *entity, s16 index, void *arg2) {
+s32 initModelEntity(ModelEntity *entity, s16 index, ViewportNode *viewport) {
     ModelEntityConfig *entry;
     s32 i;
 
     entity->configIndex = index;
     entity->isVisible = 1;
     entry = &modelEntityConfigs[index];
-    entity->parent = arg2;
+    entity->viewport = viewport;
     entity->isDisposed = 0;
 
     if (entry->unk32 == 0xFFFF) {
-        entity->modelData = loadUncompressedData(entry->displayListStart, entry->displayListEnd);
+        entity->displayListData = loadUncompressedData(entry->displayListStart, entry->displayListEnd);
         entity->textureData =
             loadCompressedData(entry->compressedDataStart, entry->compressedDataEnd, entry->decompressedSize);
 
-        memcpy(&entity->primaryMatrix, &identityMatrix, sizeof(Transform3D));
+        memcpy(&entity->primaryDisplayList.transform, &identityMatrix, sizeof(Transform3D));
 
-        entity->animState = 0;
-        entity->activeModel = entity->modelData;
-        entity->activeTexture = entity->textureData;
-        entity->displayConfig = entry->unk1C;
+        entity->primaryDisplayList.segment3 = 0;
+        entity->primaryDisplayList.segment1 = entity->displayListData;
+        entity->primaryDisplayList.segment2 = entity->textureData;
+        entity->primaryDisplayList.displayLists = entry->unk1C;
 
         if (entry->unk24 != 0) {
-            memcpy(&entity->secondaryMatrix, &identityMatrix, sizeof(Transform3D));
-            entity->secondaryModel = entity->modelData;
-            entity->secondaryTexture = entity->textureData;
-            entity->secondaryConfig = entry->unk24;
+            memcpy(&entity->secondaryDisplayList.transform, &identityMatrix, sizeof(Transform3D));
+            entity->secondaryDisplayList.segment1 = entity->displayListData;
+            entity->secondaryDisplayList.segment2 = entity->textureData;
+            entity->secondaryDisplayList.displayLists = entry->unk24;
         } else {
-            entity->secondaryConfig = 0;
-            entity->secondaryTexture = 0;
-            entity->secondaryModel = 0;
+            entity->secondaryDisplayList.displayLists = 0;
+            entity->secondaryDisplayList.segment2 = 0;
+            entity->secondaryDisplayList.segment1 = 0;
         }
 
-        entity->unk74 = 0;
+        entity->secondaryDisplayList.segment3 = 0;
 
         for (i = 0; i < entry->taskCount; i++) {
             initModelEntity_task *task = scheduleTask((entry->taskConfigs + i)->unk0, 0, 0, 0xC8);
@@ -745,16 +745,16 @@ s32 initModelEntity(ModelEntity *entity, s16 index, void *arg2) {
         }
 
     } else {
-        entity->modelData = 0;
+        entity->displayListData = 0;
         entity->textureData = 0;
-        entity->activeModel = 0;
-        entity->activeTexture = 0;
-        entity->animState = 0;
-        entity->displayConfig = 0;
-        entity->secondaryModel = 0;
-        entity->secondaryTexture = 0;
-        entity->secondaryConfig = 0;
-        entity->unk74 = 0;
+        entity->primaryDisplayList.segment1 = 0;
+        entity->primaryDisplayList.segment2 = 0;
+        entity->primaryDisplayList.segment3 = 0;
+        entity->primaryDisplayList.displayLists = 0;
+        entity->secondaryDisplayList.segment1 = 0;
+        entity->secondaryDisplayList.segment2 = 0;
+        entity->secondaryDisplayList.displayLists = 0;
+        entity->secondaryDisplayList.segment3 = 0;
 
         return 1;
     }
@@ -762,21 +762,24 @@ s32 initModelEntity(ModelEntity *entity, s16 index, void *arg2) {
     return 0;
 }
 
-void freeEffectResources(EffectState *state) {
-    if (state->unk4 != 0) {
-        state->unk8 = freeNodeMemory(state->unk8);
-        state->unk4 = freeNodeMemory(state->unk4);
+void cleanupModelEntity(ModelEntity *entity) {
+    if (entity->displayListData != 0) {
+        entity->textureData = freeNodeMemory(entity->textureData);
+        entity->displayListData = freeNodeMemory(entity->displayListData);
     }
-    state->isDisposed = 1;
+    entity->isDisposed = 1;
 }
 
-void renderModelEntity(ModelEntityRenderState *state) {
-    if (state->isVisible != 0) {
-        if (state->primaryDisplayList.segment1 != 0) {
-            enqueueDisplayListObject(state->parent->slotIndex, &state->primaryDisplayList);
+void renderModelEntity(ModelEntity *entity) {
+    if (entity->isVisible != 0) {
+        if (entity->primaryDisplayList.segment1 != 0) {
+            enqueueDisplayListObject(entity->viewport->callbackSlotIndex, &entity->primaryDisplayList);
         }
-        if (state->hasSecondaryDisplayList != 0) {
-            enqueueDisplayListObjectWithFullRenderState(state->parent->slotIndex, &state->secondaryDisplayList);
+        if (entity->secondaryDisplayList.segment1 != 0) {
+            enqueueDisplayListObjectWithFullRenderState(
+                entity->viewport->callbackSlotIndex,
+                &entity->secondaryDisplayList
+            );
         }
     }
 }

@@ -327,10 +327,7 @@ typedef struct CutsceneManager {
     /* 0x4 */ ColorData *lightColors;
     /* 0x8 */ ColorData *ambientColor;
     /* 0xC */ void *sceneContext;
-    union {
-        /* 0x10 */ setModelRenderMode_arg renderModeArg;
-        /* 0x10 */ ModelEntity modelEntity;
-    } unk10;
+    /* 0x10 */ ModelEntity modelEntity;
     /* 0x98 */ u16 currentFrame;
     /* 0x9A */ u16 maxFrame;
     /* 0x9C */ u16 endFrame;

@@ -9,7 +9,7 @@
 
 typedef struct {
     CutsceneManager *cutsceneManager;
-    ModelEntityRenderState *renderState;
+    ModelEntity *modelEntity;
 } TransparentRenderTaskData;
 
 typedef struct {
@@ -83,19 +83,19 @@ AssetGroupTableEntry assetGroupTable[] = {
 s32 D_8008BF88 = 0x00020000;
 s32 D_8008BF8C = 0x00000000;
 
-void scheduleTransparentModelRender(CutsceneManager *cutsceneManager, ModelEntityRenderState *renderState) {
+void scheduleTransparentModelRender(CutsceneManager *cutsceneManager, ModelEntity *modelEntity) {
     TransparentRenderTaskData *task;
 
     task = scheduleTask(renderModelIfTransparent, 2, 0, 0xF0);
     if (task != NULL) {
         task->cutsceneManager = cutsceneManager;
-        task->renderState = renderState;
+        task->modelEntity = modelEntity;
     }
 }
 
 void renderModelIfTransparent(TransparentRenderTaskData *taskData) {
     if (taskData->cutsceneManager->enableTransparency != 0) {
-        renderModelEntity(taskData->renderState);
+        renderModelEntity(taskData->modelEntity);
     }
 }
 
@@ -185,7 +185,7 @@ void updateTiledTextureAssetDisplay(ScrollingTileGroupTaskData *taskData) {
         taskData->tileMaps[i].clipY = taskData->screenY;
 
         if (taskData->cutsceneManager->enableTransparency != 0) {
-            if (taskData->cutsceneManager->unk10.renderModeArg.unk87 != 0) {
+            if (taskData->cutsceneManager->modelEntity.isVisible != 0) {
                 pushViewportCallbackBySlot(
                     3,
                     VIEWPORT_CALLBACK_LAYER_POST_OPAQUE,

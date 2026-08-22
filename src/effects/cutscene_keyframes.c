@@ -184,10 +184,10 @@ void updateCutscenePlayback(void) {
             }
             scheduleTransparentModelRender(
                 &state->cutsceneData.cutsceneManager,
-                (ModelEntityRenderState *)&state->cutsceneData.cutsceneManager.unk10.modelEntity
+                &state->cutsceneData.cutsceneManager.modelEntity
             );
             setupModelEntityLighting(
-                &state->cutsceneData.cutsceneManager.unk10.modelEntity,
+                &state->cutsceneData.cutsceneManager.modelEntity,
                 &state->lightColors,
                 &state->ambientColor
             );

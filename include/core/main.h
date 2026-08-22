@@ -5,68 +5,26 @@
 #include "graphics/graphics.h"
 
 typedef struct {
-    struct {
-        s8 padding[0xD5];
-        s32 unkDA;
-    } *parent;
-    void *modelData;
-    void *textureData;
-    f32 primaryMatrix[8];
-    void *displayConfig;
-    void *activeModel;
-    void *activeTexture;
-    void *animState;
-    s8 pad3C[12];
-    float secondaryMatrix[8];
-    void *secondaryConfig;
-    void *secondaryModel;
-    void *secondaryTexture;
-    void *unk74;
-    s8 pad78[12];
-    s16 configIndex;
-    u8 isDisposed;
-    u8 isVisible;
-} ModelEntity;
-
-typedef struct {
-    struct {
-        u8 padding[0x16];
-        u16 slotIndex;
-    } *parent;
-    u8 padding[0x8];
-    DisplayListObject primaryDisplayList;
-    s32 secondaryDisplayList;
-    u8 padding4[0x20];
-    s32 hasSecondaryDisplayList;
-    u8 padding5[0x17];
-    s8 isVisible;
-} ModelEntityRenderState;
+    /* 0x00 */ ViewportNode *viewport;
+    /* 0x04 */ void *displayListData;
+    /* 0x08 */ void *textureData;
+    /* 0x0C */ DisplayListObject primaryDisplayList;
+    /* 0x48 */ DisplayListObject secondaryDisplayList;
+    /* 0x84 */ s16 configIndex;
+    /* 0x86 */ s8 isDisposed;
+    /* 0x87 */ s8 isVisible;
+} ModelEntity; /* Total size: 0x88 */
 
 struct CutsceneManager;
 
-typedef struct {
-    s32 unk0;
-    void *unk4;
-    void *unk8;
-    u8 padding[0x7A];
-    s8 isDisposed;
-} EffectState;
-
-typedef struct {
-    u8 padding[0x6];
-    u16 unk6;
-    s8 padding2[0x7F];
-    s8 unk87;
-} setModelRenderMode_arg;
-
 void setupModelEntityLighting(ModelEntity *entity, ColorData *lightColors, ColorData *ambientColor);
 
-s32 initModelEntity(ModelEntity *entity, s16 index, void *arg2);
+s32 initModelEntity(ModelEntity *entity, s16 index, ViewportNode *viewport);
 
-void renderModelEntity(ModelEntityRenderState *);
+void renderModelEntity(ModelEntity *entity);
 
-void scheduleTransparentModelRender(struct CutsceneManager *cutsceneManager, ModelEntityRenderState *renderState);
+void scheduleTransparentModelRender(struct CutsceneManager *cutsceneManager, ModelEntity *entity);
 
-void freeEffectResources(EffectState *);
+void cleanupModelEntity(ModelEntity *entity);
 
-void setModelRenderMode(setModelRenderMode_arg *arg0, s8 arg1);
+void setModelEntityVisibility(ModelEntity *entity, s8 isVisible);

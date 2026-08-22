@@ -139,10 +139,10 @@ void setShortCountdownAndContinue(void) {
     setCallback(&invokeTransitionEffect);
 }
 
-void invokeTransitionEffect(ModelEntityRenderState *state) {
-    renderModelEntity(state);
+void invokeTransitionEffect(ModelEntity *entity) {
+    renderModelEntity(entity);
 }
 
-void cleanupTransitionEffect(EffectState *arg0) {
-    freeEffectResources(arg0);
+void cleanupTransitionEffect(ModelEntity *entity) {
+    cleanupModelEntity(entity);
 }

@@ -18,8 +18,8 @@ void cleanupControllerSlotDisplay(TitleMenuOptionsState *);
 void updateControllerSlotHighlights(TitleMenuOptionsState *);
 void updatePressStartPrompt(TitlePressStartPromptState *);
 void cleanupPressStartPrompt(TitlePressStartPromptState *);
-void renderTitleEffectModel(ModelEntityRenderState *arg0);
-void cleanupTitleEffectModel(EffectState *arg0);
+void renderTitleEffectModel(ModelEntity *entity);
+void cleanupTitleEffectModel(ModelEntity *entity);
 void setupTitleCharacterTransform(TitleCharacterState *arg0);
 void updateTitleCharacterAnimation(TitleCharacterState *arg0);
 void handleUnlockAllCharacterAnim(TitleCharacterState *arg0);
@@ -196,12 +196,12 @@ void initTitleEffectModel(ModelEntity *arg0) {
     setCallback(renderTitleEffectModel);
 }
 
-void renderTitleEffectModel(ModelEntityRenderState *state) {
-    renderModelEntity(state);
+void renderTitleEffectModel(ModelEntity *entity) {
+    renderModelEntity(entity);
 }
 
-void cleanupTitleEffectModel(EffectState *arg0) {
-    freeEffectResources(arg0);
+void cleanupTitleEffectModel(ModelEntity *entity) {
+    cleanupModelEntity(entity);
 }
 
 void initTitleCharacterModel(TitleCharacterState *arg0) {

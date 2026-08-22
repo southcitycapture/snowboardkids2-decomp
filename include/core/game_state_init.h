@@ -30,11 +30,11 @@ typedef struct {
     /* 0x40E */ s8 unk42E;
 } task_memory_430;
 
-void cleanupTransitionEffect(EffectState *arg0);
+void cleanupTransitionEffect(ModelEntity *entity);
 void gameStateCleanupHandler(void);
 void gameStateCountdownHandler(void);
 void initializeGameState(void);
-void invokeTransitionEffect(ModelEntityRenderState *state);
+void invokeTransitionEffect(ModelEntity *entity);
 void setShortCountdownAndContinue(void);
 void setupGameStateTransition(ModelEntity *arg0);
 void transitionToMainMenu(void);
