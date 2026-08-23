@@ -13,17 +13,13 @@ typedef struct {
     /* 0x84 */ s16 configIndex;
     /* 0x86 */ s8 isDisposed;
     /* 0x87 */ s8 isVisible;
-} ModelEntity; /* Total size: 0x88 */
-
-struct CutsceneManager;
+} ModelEntity;
 
 void setupModelEntityLighting(ModelEntity *entity, ColorData *lightColors, ColorData *ambientColor);
 
 s32 initModelEntity(ModelEntity *entity, s16 index, ViewportNode *viewport);
 
 void renderModelEntity(ModelEntity *entity);
-
-void scheduleTransparentModelRender(struct CutsceneManager *cutsceneManager, ModelEntity *entity);
 
 void cleanupModelEntity(ModelEntity *entity);
 

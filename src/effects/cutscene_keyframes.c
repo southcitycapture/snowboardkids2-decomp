@@ -5,6 +5,7 @@
 #include "core/main.h"
 #include "cutscene/cutscene_manager.h"
 #include "effects/scrolling_texture.h"
+#include "effects/transparent_render.h"
 #include "graphics/graphics.h"
 #include "math/geometry.h"
 #include "os_cont.h"

@@ -234,10 +234,10 @@ u16 findTrackSector(void *arg0, u16 sectorIndex, void *arg2) {
             TrackFaceGroup *group;
             faceGroupOffset0 = ((idx << 3) + idx) << 2;
             group = (TrackFaceGroup *)(faceGroupOffset0 + fgAddr);
-            v0x = ((Vertex6 *)(group->vertexIdx0 * 6 + (s32)trackGeom->vertices))->x << 16;
-            v0z = ((Vertex6 *)(group->vertexIdx0 * 6 + (s32)trackGeom->vertices))->z << 16;
-            v1x = ((Vertex6 *)(group->vertexIdx1 * 6 + (s32)trackGeom->vertices))->x << 16;
-            v1z = ((Vertex6 *)(group->vertexIdx1 * 6 + (s32)trackGeom->vertices))->z << 16;
+            v0x = ((Vec3s *)(group->vertexIdx0 * 6 + (s32)trackGeom->vertices))->x << 16;
+            v0z = ((Vec3s *)(group->vertexIdx0 * 6 + (s32)trackGeom->vertices))->z << 16;
+            v1x = ((Vec3s *)(group->vertexIdx1 * 6 + (s32)trackGeom->vertices))->x << 16;
+            v1z = ((Vec3s *)(group->vertexIdx1 * 6 + (s32)trackGeom->vertices))->z << 16;
         }
 
         if (cross2d(pos->x, pos->z, v1x, v1z, v0x, v0z) > 0) {
@@ -254,10 +254,10 @@ u16 findTrackSector(void *arg0, u16 sectorIndex, void *arg2) {
             TrackFaceGroup *group;
             faceGroupOffset1 = ((idx << 3) + idx) << 2;
             group = (TrackFaceGroup *)(faceGroupOffset1 + fgAddr);
-            v2x = ((Vertex6 *)(group->vertexIdx2 * 6 + (s32)trackGeom->vertices))->x << 16;
-            v2z = ((Vertex6 *)(group->vertexIdx2 * 6 + (s32)trackGeom->vertices))->z << 16;
-            v3x = ((Vertex6 *)(group->vertexIdx3 * 6 + (s32)trackGeom->vertices))->x << 16;
-            v3z = ((Vertex6 *)(group->vertexIdx3 * 6 + (s32)trackGeom->vertices))->z << 16;
+            v2x = ((Vec3s *)(group->vertexIdx2 * 6 + (s32)trackGeom->vertices))->x << 16;
+            v2z = ((Vec3s *)(group->vertexIdx2 * 6 + (s32)trackGeom->vertices))->z << 16;
+            v3x = ((Vec3s *)(group->vertexIdx3 * 6 + (s32)trackGeom->vertices))->x << 16;
+            v3z = ((Vec3s *)(group->vertexIdx3 * 6 + (s32)trackGeom->vertices))->z << 16;
         }
 
         if (cross2d(pos->x, pos->z, v2x, v2z, v3x, v3z) > 0) {
@@ -481,9 +481,9 @@ s32 getTrackHeightAtPosition(void *trackGeom_void, u16 groupIdx, void *pos_void)
     s32 v2x;
     s32 v2z;
     TrackFace *temp_a0;
-    Vertex6 *temp_a1;
+    Vec3s *temp_a1;
     TrackFace *temp_a0_2;
-    Vertex6 *temp_a3;
+    Vec3s *temp_a3;
     s32 y0;
     s32 dY_v1;
     s32 dY_v2;
@@ -511,12 +511,12 @@ s32 getTrackHeightAtPosition(void *trackGeom_void, u16 groupIdx, void *pos_void)
         do {
             temp_a0 = (TrackFace *)(var_fp + (s32)trackGeom->faces);
             temp_a1 = trackGeom->vertices;
-            v0x = ((Vertex6 *)((temp_a0->v0 * 6) + (s32)temp_a1))->x;
-            v0z = ((Vertex6 *)((temp_a0->v0 * 6) + (s32)temp_a1))->z;
-            v1x = ((Vertex6 *)((temp_a0->v1 * 6) + (s32)temp_a1))->x;
-            v1z = ((Vertex6 *)((temp_a0->v1 * 6) + (s32)temp_a1))->z;
-            v2x = ((Vertex6 *)((temp_a0->v2 * 6) + (s32)temp_a1))->x;
-            v2z = ((Vertex6 *)((temp_a0->v2 * 6) + (s32)temp_a1))->z;
+            v0x = ((Vec3s *)((temp_a0->v0 * 6) + (s32)temp_a1))->x;
+            v0z = ((Vec3s *)((temp_a0->v0 * 6) + (s32)temp_a1))->z;
+            v1x = ((Vec3s *)((temp_a0->v1 * 6) + (s32)temp_a1))->x;
+            v1z = ((Vec3s *)((temp_a0->v1 * 6) + (s32)temp_a1))->z;
+            v2x = ((Vec3s *)((temp_a0->v2 * 6) + (s32)temp_a1))->x;
+            v2z = ((Vec3s *)((temp_a0->v2 * 6) + (s32)temp_a1))->z;
 
             if ((temp_a0->flags & 1) || (cross2d(pos->x, pos->z, v0x << 16, v0z << 16, v1x << 16, v1z << 16) >= 0)) {
                 if ((((TrackFace *)(var_fp + (s32)trackGeom->faces))->flags & 2) ||
@@ -526,12 +526,12 @@ s32 getTrackHeightAtPosition(void *trackGeom_void, u16 groupIdx, void *pos_void)
                     if (cross2d(pos->x, pos->z, v2x << 16, v2z << 16, t0, t3) >= 0) {
                         temp_a0_2 = (TrackFace *)(var_fp + (s32)trackGeom->faces);
                         temp_a3 = trackGeom->vertices;
-                        y0 = ((Vertex6 *)((temp_a0_2->v0 * 6) + (s32)temp_a3))->y;
-                        dY_v2 = ((Vertex6 *)((temp_a0_2->v2 * 6) + (s32)temp_a3))->y - y0;
+                        y0 = ((Vec3s *)((temp_a0_2->v0 * 6) + (s32)temp_a3))->y;
+                        dY_v2 = ((Vec3s *)((temp_a0_2->v2 * 6) + (s32)temp_a3))->y - y0;
                         v1z = v1z - v0z;
                         cross_a = dY_v2 * v1z;
 
-                        dY_v1 = ((Vertex6 *)((temp_a0_2->v1 * 6) + (s32)temp_a3))->y - y0;
+                        dY_v1 = ((Vec3s *)((temp_a0_2->v1 * 6) + (s32)temp_a3))->y - y0;
                         v2z = v2z - v0z;
                         cross_b = v2z * dY_v1;
 
@@ -572,9 +572,9 @@ s32 getTrackHeightWithNormalAtPosition(void *trackGeom_void, u16 groupIdx, void 
     s32 v2x;
     s32 v2z;
     TrackFace *temp_a0;
-    Vertex6 *temp_a1;
+    Vec3s *temp_a1;
     TrackFace *temp_a0_2;
-    Vertex6 *temp_a3;
+    Vec3s *temp_a3;
     s32 y0;
     s32 dY_v1;
     s32 dY_v2;
@@ -601,12 +601,12 @@ s32 getTrackHeightWithNormalAtPosition(void *trackGeom_void, u16 groupIdx, void 
         do {
             temp_a0 = (TrackFace *)(var_fp + (s32)trackGeom->faces);
             temp_a1 = trackGeom->vertices;
-            v0x = ((Vertex6 *)((temp_a0->v0 * 6) + (s32)temp_a1))->x;
-            v0z = ((Vertex6 *)((temp_a0->v0 * 6) + (s32)temp_a1))->z;
-            v1x = ((Vertex6 *)((temp_a0->v1 * 6) + (s32)temp_a1))->x;
-            v1z = ((Vertex6 *)((temp_a0->v1 * 6) + (s32)temp_a1))->z;
-            v2x = ((Vertex6 *)((temp_a0->v2 * 6) + (s32)temp_a1))->x;
-            v2z = ((Vertex6 *)((temp_a0->v2 * 6) + (s32)temp_a1))->z;
+            v0x = ((Vec3s *)((temp_a0->v0 * 6) + (s32)temp_a1))->x;
+            v0z = ((Vec3s *)((temp_a0->v0 * 6) + (s32)temp_a1))->z;
+            v1x = ((Vec3s *)((temp_a0->v1 * 6) + (s32)temp_a1))->x;
+            v1z = ((Vec3s *)((temp_a0->v1 * 6) + (s32)temp_a1))->z;
+            v2x = ((Vec3s *)((temp_a0->v2 * 6) + (s32)temp_a1))->x;
+            v2z = ((Vec3s *)((temp_a0->v2 * 6) + (s32)temp_a1))->z;
 
             if ((temp_a0->flags & 1) || (cross2d(pos->x, pos->z, v0x << 16, v0z << 16, v1x << 16, v1z << 16) >= 0)) {
                 if ((((TrackFace *)(var_fp + (s32)trackGeom->faces))->flags & 2) ||
@@ -616,11 +616,11 @@ s32 getTrackHeightWithNormalAtPosition(void *trackGeom_void, u16 groupIdx, void 
                     if (cross2d(pos->x, pos->z, v2x << 16, v2z << 16, t0, t3) >= 0) {
                         temp_a0_2 = (TrackFace *)(var_fp + (s32)trackGeom->faces);
                         temp_a3 = trackGeom->vertices;
-                        y0 = ((Vertex6 *)((temp_a0_2->v0 * 6) + (s32)temp_a3))->y;
-                        dY_v2 = ((Vertex6 *)((temp_a0_2->v2 * 6) + (s32)temp_a3))->y - y0;
+                        y0 = ((Vec3s *)((temp_a0_2->v0 * 6) + (s32)temp_a3))->y;
+                        dY_v2 = ((Vec3s *)((temp_a0_2->v2 * 6) + (s32)temp_a3))->y - y0;
                         v1z = v1z - v0z;
 
-                        dY_v1 = ((Vertex6 *)((temp_a0_2->v1 * 6) + (s32)temp_a3))->y - y0;
+                        dY_v1 = ((Vec3s *)((temp_a0_2->v1 * 6) + (s32)temp_a3))->y - y0;
                         v2z = v2z - v0z;
 
                         v1x = v1x - v0x;
@@ -634,8 +634,8 @@ s32 getTrackHeightWithNormalAtPosition(void *trackGeom_void, u16 groupIdx, void 
                         outNormal[2] = (v2x * dY_v1) - (dY_v2 * v1x);
 
                         return (s32)((-((s64)outNormal[0] * v0x) - ((s64)outNormal[2] * v0z)) / outNormal[1]) +
-                               (((Vertex6 *)(((TrackFace *)(var_fp + (s32)trackGeom->faces))->v0 * 6 +
-                                             (s32)trackGeom->vertices))
+                               (((Vec3s *)(((TrackFace *)(var_fp + (s32)trackGeom->faces))->v0 * 6 +
+                                           (s32)trackGeom->vertices))
                                     ->y
                                 << 16);
                     }
@@ -654,10 +654,10 @@ s32 getTrackHeightWithNormalAtPosition(void *trackGeom_void, u16 groupIdx, void 
 s32 projectPositionOntoTrackSegment(TrackGeometryData *arg0, u16 arg1, PositionXZ *arg2) {
     s32 dz;
     s32 dx;
-    Vertex6 *verts;
+    Vec3s *verts;
     s32 temp;
     s32 roundUp;
-    Vertex6 *vertsTemp;
+    Vec3s *vertsTemp;
     u16 idx0;
     u16 idx1;
     s32 distSq;
@@ -711,7 +711,7 @@ s32 computeSectorTrackHeight(TrackGeometryFaceData *geom, u16 groupIdx, Vec3i *p
     s32 v2x;
     s32 v2z;
     TrackFace *face;
-    Vertex6 *verts;
+    Vec3s *verts;
     s32 y0;
     s32 dY_v1;
     s32 dY_v2;
@@ -770,11 +770,11 @@ u16 getTrackEndInfo(void *arg0, void *arg1) {
     s32 var_v1;
     s32 temp_v0;
     TrackSegmentElement *elements;
-    Vertex6 *verts;
+    Vec3s *verts;
     u16 idx0;
     u16 idx1;
-    Vertex6 *vert0;
-    Vertex6 *vert1;
+    Vec3s *vert0;
+    Vec3s *vert1;
 
     var_v1 = 0;
     elements = ((TrackGeometryData *)arg0)->elements;
@@ -796,8 +796,8 @@ u16 getTrackEndInfo(void *arg0, void *arg1) {
     idx0 = (((TrackGeometryData *)arg0)->elements + var_v1)->vertexIdx1;
     verts = ((TrackGeometryData *)arg0)->vertices;
     idx1 = (((TrackGeometryData *)arg0)->elements + var_v1)->vertexIdx2;
-    vert0 = (Vertex6 *)((s32)idx0 * sizeof(Vertex6) + (s32)verts);
-    vert1 = (Vertex6 *)((s32)idx1 * sizeof(Vertex6) + (s32)verts);
+    vert0 = (Vec3s *)((s32)idx0 * sizeof(Vec3s) + (s32)verts);
+    vert1 = (Vec3s *)((s32)idx1 * sizeof(Vec3s) + (s32)verts);
 
     return (computeAngleToPosition(vert0->x, vert0->z, vert1->x, vert1->z) - 0x1000) & 0xFFFF;
 }
@@ -807,12 +807,12 @@ u16 findFaceGroupAtPosition(TrackGeometryFaceData *geom, Vec3i *pos) {
     s32 numFaceGroups;
     s32 v0x, v0z, v1x, v1z, v2x, v2z, v3x, v3z;
     TrackFace *faceEntry;
-    Vertex6 *vertexIdx;
+    Vec3s *vertexIdx;
 
     vertexIdx = geom->unk0;
-    vertexIdx = (Vertex6 *)(u32)((u16)geom->unk0->x);
+    vertexIdx = (Vec3s *)(u32)((u16)geom->unk0->x);
     faceEntry = (TrackFace *)&geom->vertices[(s32)(vertexIdx)];
-    faceEntry = &geom->faces[(u16)((Vertex6 *)faceEntry)->x];
+    faceEntry = &geom->faces[(u16)((Vec3s *)faceEntry)->x];
     numFaceGroups = faceEntry->v0;
 
     i = 0;
@@ -857,10 +857,10 @@ void findTrackFaceAtPosition(TrackGeometryFaceData *arg0, u16 arg1, Vec3i *arg2,
     s32 var_s2;
     s32 var_s3;
     TrackFace *temp_a0;
-    Vertex6 *temp_a1;
-    Vertex6 *temp_v0_2;
-    Vertex6 *temp_v0_3;
-    Vertex6 *temp_v0_4;
+    Vec3s *temp_a1;
+    Vec3s *temp_v0_2;
+    Vec3s *temp_v0_3;
+    Vec3s *temp_v0_4;
     TrackFaceGroup *temp_v0;
     TrackFaceGroup *temp_v0_5;
     s32 temp_v1;
@@ -878,13 +878,13 @@ void findTrackFaceAtPosition(TrackGeometryFaceData *arg0, u16 arg1, Vec3i *arg2,
         do {
             temp_a0 = (TrackFace *)(var_s2 + (s32)arg0->faces);
             temp_a1 = arg0->vertices;
-            temp_v0_2 = (Vertex6 *)((temp_a0->v0 * 6) + (s32)temp_a1);
+            temp_v0_2 = (Vec3s *)((temp_a0->v0 * 6) + (s32)temp_a1);
             temp_fp = (s32)temp_v0_2->x;
             sp24 = (s32)temp_v0_2->z;
-            temp_v0_3 = (Vertex6 *)((temp_a0->v1 * 6) + (s32)temp_a1);
+            temp_v0_3 = (Vec3s *)((temp_a0->v1 * 6) + (s32)temp_a1);
             temp_s4 = (s32)temp_v0_3->x;
             temp_s5 = (s32)temp_v0_3->z;
-            temp_v0_4 = (Vertex6 *)((temp_a0->v2 * 6) + (s32)temp_a1);
+            temp_v0_4 = (Vec3s *)((temp_a0->v2 * 6) + (s32)temp_a1);
             temp_s6 = (s32)temp_v0_4->x;
             temp_s7 = (s32)temp_v0_4->z;
             if ((temp_a0->flags & 1) ||
@@ -910,11 +910,11 @@ void findTrackFaceAtPosition(TrackGeometryFaceData *arg0, u16 arg1, Vec3i *arg2,
 u16 getTrackSegmentWaypoints(TrackGeometryData *trackGeom, u16 waypointIdx, void *waypointStart, void *waypointEnd) {
     Vec3i *startPos = (Vec3i *)waypointStart;
     Vec3i *endPos = (Vec3i *)waypointEnd;
-    Vertex6 *verts;
+    Vec3s *verts;
     u16 startVertexIdx;
     u16 endVertexIdx;
-    Vertex6 *startVert;
-    Vertex6 *endVert;
+    Vec3s *startVert;
+    Vec3s *endVert;
 
     startPos->x = trackGeom->vertices[trackGeom->elements[waypointIdx].vertexIdx1].x << 16;
     startPos->y = trackGeom->vertices[trackGeom->elements[waypointIdx].vertexIdx1].y << 16;
@@ -927,8 +927,8 @@ u16 getTrackSegmentWaypoints(TrackGeometryData *trackGeom, u16 waypointIdx, void
     startVertexIdx = trackGeom->elements[waypointIdx].vertexIdx1;
     verts = trackGeom->vertices;
     endVertexIdx = trackGeom->elements[waypointIdx].vertexIdx2;
-    startVert = (Vertex6 *)((s32)startVertexIdx * sizeof(Vertex6) + (s32)verts);
-    endVert = (Vertex6 *)((s32)endVertexIdx * sizeof(Vertex6) + (s32)verts);
+    startVert = (Vec3s *)((s32)startVertexIdx * sizeof(Vec3s) + (s32)verts);
+    endVert = (Vec3s *)((s32)endVertexIdx * sizeof(Vec3s) + (s32)verts);
 
     return (computeAngleToPosition(startVert->x, startVert->z, endVert->x, endVert->z) - 0x1000) & 0xFFFF;
 }

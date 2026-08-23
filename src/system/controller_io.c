@@ -90,8 +90,6 @@ static u8 D_800A1C9C_A289C[0x124] BSS = { 0 };
 
 extern OSMesgQueue gSerialEventQueue;
 extern OSMesg gSerialEventQueueMsg;
-extern u8 gConnectedControllerMask;
-extern u8 gControllerPollingEnabled;
 extern s8 gAnalogStickX[];
 extern s8 gAnalogStickY[];
 extern s32 gButtonsPressed[];

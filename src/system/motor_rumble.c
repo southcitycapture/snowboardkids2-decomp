@@ -1,9 +1,9 @@
 #include "common.h"
+#include "common_bss.h"
 #include "gamestate.h"
 #include "system/controller_io.h"
 #include "system/task_scheduler.h"
 
-extern u8 gControllerPollingEnabled;
 extern u8 gRumblePakReadyMask;
 
 void updateRumblePakCheckTask(void);

@@ -198,8 +198,6 @@ IntroFrameData2 sIntroCameraEvents[] = {
 // Bss
 static u8 gRaceResultCode;
 
-extern s8 gControllerPollingEnabled;
-
 void initRaceViewports(void);
 void onGameSessionTerminated(void);
 void parseRaceAssetData(void);

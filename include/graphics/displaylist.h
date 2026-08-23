@@ -30,12 +30,6 @@ typedef struct {
 } DisplayListObject;
 
 typedef struct {
-    s16 x;
-    s16 y;
-    s16 z;
-} Vertex6;
-
-typedef struct {
     u16 v0;
     u16 v1;
     u16 v2;
@@ -73,14 +67,14 @@ typedef struct {
 
 typedef struct {
     /* 0x00 */ void *unk0;
-    /* 0x04 */ Vertex6 *vertices;
+    /* 0x04 */ Vec3s *vertices;
     /* 0x08 */ void *unk8;
     /* 0x0C */ TrackSegmentElement *elements;
 } TrackGeometryData;
 
 typedef struct {
-    Vertex6 *unk0;
-    Vertex6 *vertices;
+    Vec3s *unk0;
+    Vec3s *vertices;
     TrackFace *faces;
     TrackFaceGroup *faceGroups;
 } TrackGeometryFaceData;

@@ -15,4 +15,5 @@ typedef struct {
     /* 0xC5 */ s8 initialized;
 } ScrollingTileGroupTaskData;
 
+void scheduleTransparentModelRender(CutsceneManager *cutsceneManager, ModelEntity *modelEntity);
 void scheduleDualAssetGroupLoad(void *context, u8 groupIndex1, s32 param1, u8 groupIndex2, s32 param2);

@@ -1,6 +1,7 @@
 #include "core/mainEntrypoint.h"
 #include "audio/audio.h"
 #include "common.h"
+#include "common_bss.h"
 #include "data/global_frame_counter.h"
 #include "graphics/displaylist.h"
 #include "graphics/graphics.h"
@@ -16,9 +17,7 @@
 ViConfig mainViConfig __attribute__((section(".bss")));
 OSMesg mainMessageQueueBuffer[32] __attribute__((section(".bss")));
 
-extern u8 gControllerPollingEnabled;
-
-void mainThreadEntrypoint(void *arg) {
+void mainThreadEntrypoint(void *arg /* NULL */) {
     u16 message;
     s32 hasSpecialMessage;
     s32 isPaused;

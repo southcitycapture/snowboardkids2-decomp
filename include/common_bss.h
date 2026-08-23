@@ -9,3 +9,4 @@ extern OSMesgQueue __osSiAccessQueue;
 extern s32 gControllerInputs[4];
 extern Vec3i gParallaxOffset;
 extern u8 gConnectedControllerMask;
+extern u8 gControllerPollingEnabled;
