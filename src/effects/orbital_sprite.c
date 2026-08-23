@@ -1,9 +1,11 @@
 #include "effects/orbital_sprite.h"
 #include "common.h"
+#include "graphics/graphics.h"
 #include "graphics/sprite_table.h"
 #include "math/geometry.h"
 #include "math/rand.h"
 #include "system/task_scheduler.h"
+#include "ui/level_preview_3d.h"
 
 #define ORBITAL_SPRITE_COUNT 12
 #define ORBITAL_SPRITE_Y_OFFSET 0x16147A
@@ -18,29 +20,7 @@ s32 orbitalSpriteOffsetsX[] = { 0xFFFAE667, 0x00109999, 0x0005CCCC, 0xFFEF3334, 
 s32 maxActiveOrbitalSprites = 12;
 
 typedef struct {
-    u8 _pad[0x16];
-    u16 assetIndex;
-} OrbitalSpriteAssetData;
-
-typedef struct {
-    u8 _pad[0x10];
-    OrbitalSpriteAssetData *assetData;
-    u8 _pad2[0x4];
-    s32 rotationMatrix[3];
-    u8 _pad3[0x8];
-    s32 posX;
-    s32 posY;
-    s32 posZ;
-    u8 _pad4[0x4];
-    s8 isDestroyed;
-    u8 _pad5[0x2];
-    s8 displayEnabled;
-    u8 _pad6[0x48];
-    s8 isVisible;
-} OrbitalSpriteOwner;
-
-typedef struct {
-    OrbitalSpriteOwner *owner;
+    SceneModel *model;
     SpriteAssetState spriteState;
     s32 spriteIndex;
     s16 delayTimer;
@@ -48,33 +28,29 @@ typedef struct {
 } OrbitalSpriteState;
 
 typedef struct {
-    OrbitalSpriteOwner *owner;
-} OrbitalSpriteRingControllerState;
-
-struct OrbitalSpriteRingInitArg {
-    s32 owner;
+    SceneModel *model;
     SpriteAssetState spriteState;
-};
+} OrbitalSpriteRingControllerState;
 
 void initOrbitalSprite(OrbitalSpriteState *);
 void updateOrbitalSprite(OrbitalSpriteState *);
 void cleanupOrbitalSprite(OrbitalSpriteState *);
 void updateOrbitalSpriteRingController(OrbitalSpriteRingControllerState *);
-void cleanupOrbitalSpriteRingController(OrbitalSpriteState *);
+void cleanupOrbitalSpriteRingController(OrbitalSpriteRingControllerState *);
 
 void initOrbitalSpriteRing(OrbitalSpriteRingInitArg *arg0) {
     s32 i;
     OrbitalSpriteState *task;
-    s32 temp;
+    s32 modelAddress;
 
     loadSpriteAsset(&arg0->spriteState, 5);
 
     for (i = 0; i < ORBITAL_SPRITE_COUNT; i++) {
         task = scheduleTask(initOrbitalSprite, 0, 0, 0);
         if (task != NULL) {
-            temp = arg0->owner;
+            modelAddress = arg0->modelAddress;
             task->spriteIndex = i;
-            task->owner = (OrbitalSpriteOwner *)temp;
+            task->model = (SceneModel *)modelAddress;
         }
     }
 
@@ -83,12 +59,12 @@ void initOrbitalSpriteRing(OrbitalSpriteRingInitArg *arg0) {
 }
 
 void updateOrbitalSpriteRingController(OrbitalSpriteRingControllerState *arg0) {
-    if (arg0->owner->isDestroyed == 1) {
+    if (arg0->model->isDestroyed == 1) {
         terminateCurrentTask();
     }
 }
 
-void cleanupOrbitalSpriteRingController(OrbitalSpriteState *arg0) {
+void cleanupOrbitalSpriteRingController(OrbitalSpriteRingControllerState *arg0) {
     releaseNodeMemoryRef((void **)&arg0->spriteState);
 }
 
@@ -109,7 +85,7 @@ void updateOrbitalSprite(OrbitalSpriteState *arg0) {
     Vec3i worldOffset;
     s32 x, y, z;
 
-    if (arg0->owner->isDestroyed == 1) {
+    if (arg0->model->isDestroyed == 1) {
         terminateCurrentTask();
         return;
     }
@@ -131,23 +107,23 @@ void updateOrbitalSprite(OrbitalSpriteState *arg0) {
     localOffset.y = ORBITAL_SPRITE_Y_OFFSET;
     localOffset.z = orbitalSpriteOffsetsZ[arg0->spriteIndex * 2];
 
-    transformVector2(&localOffset, &arg0->owner->rotationMatrix[0], &worldOffset);
+    transformVector2(&localOffset, &arg0->model->transform, &worldOffset);
 
-    x = arg0->owner->posX + worldOffset.x;
-    y = arg0->owner->posY + worldOffset.y;
-    z = arg0->owner->posZ + worldOffset.z;
+    x = arg0->model->transform.translation.x + worldOffset.x;
+    y = arg0->model->transform.translation.y + worldOffset.y;
+    z = arg0->model->transform.translation.z + worldOffset.z;
 
     updateSpriteAnimation(&arg0->spriteState, 0x10000);
 
-    if (arg0->owner->isVisible == 0) {
+    if (arg0->model->visibilityEnabled == 0) {
         return;
     }
 
-    if (arg0->owner->displayEnabled == 0) {
+    if (arg0->model->displayEnabled == 0) {
         return;
     }
 
-    renderSprite(&arg0->spriteState, arg0->owner->assetData->assetIndex, x, y, z, 0x4000, 0x4000, 0, 0, 0xAA);
+    renderSprite(&arg0->spriteState, arg0->model->viewport->callbackSlotIndex, x, y, z, 0x4000, 0x4000, 0, 0, 0xAA);
 }
 
 void cleanupOrbitalSprite(OrbitalSpriteState *arg0) {

@@ -913,3 +913,14 @@ The non-race shadow callback receives a `SceneModel *`, not a separate shadow en
 to the canonical model layout. The per-frame shadow vertex and matrix pointers at offsets `0x80` and `0x84`
 were hidden inside `SceneModel.padding2`; exposing them there removes the padded local alias while preserving
 the complete model size and all generated accesses.
+
+## Use SceneModel Directly for Orbital Sprite Owners
+
+The orbital-sprite owner is a `SceneModel`: its transform at offset `0x18`, destruction and display flags at
+offsets `0x3C` and `0x3F`, visibility flag at `0x88`, and viewport pointer at `0x10` all map to canonical
+fields. The sprite slot previously exposed through a padded local asset struct is
+`model->viewport->callbackSlotIndex` at viewport offset `0x16`.
+
+Keep the initialization callback's first payload word as an `s32` address view and cast it when assigning the
+typed child-task field. KMC schedules the adjacent sprite-index store differently if this initialization view
+is changed to `SceneModel *`, even though controller and child-task states should use `SceneModel *` directly.
