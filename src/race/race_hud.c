@@ -32,8 +32,7 @@
 
 typedef struct {
     /* 0x00 */ void *assetTable;
-    /* 0x04 */ loadAssetMetadata_arg metadata;
-    /* 0x20 */ u8 _pad20[0x4];
+    /* 0x04 */ BillboardSprite metadata;
     /* 0x24 */ Vec3i vel;
     /* 0x30 */ Player *player;
     /* 0x34 */ u16 sectorIndex;
@@ -78,8 +77,7 @@ typedef struct {
 
 typedef struct {
     /* 0x00 */ void *assetData;
-    /* 0x04 */ loadAssetMetadata_arg metadata;
-    /* 0x20 */ u8 _pad[0x4];
+    /* 0x04 */ BillboardSprite metadata;
     /* 0x24 */ u16 animationCounter;
     /* 0x26 */ u8 _pad2[0x2];
     /* 0x28 */ s32 velocity;
@@ -109,8 +107,7 @@ typedef struct {
 
 typedef struct {
     /* 0x00 */ void *assetData;
-    /* 0x04 */ loadAssetMetadata_arg metadata;
-    /* 0x20 */ u8 _pad20[0x4];
+    /* 0x04 */ BillboardSprite metadata;
     /* 0x24 */ BossEntity *boss;
     /* 0x28 */ Vec3i velocity;
     /* 0x34 */ s16 sectorIndex;
@@ -138,12 +135,6 @@ typedef struct {
     /* 0x1A */ s16 unk1A;
     /* 0x1C */ u32 frameCounter;
 } SceneAnimationTaskNew;
-
-typedef struct {
-    /* 0x00 */ s32 unk0;
-    /* 0x04 */ TexturedBillboardSprite displayListState;
-    /* 0x38 */ s16 playerIndex;
-} BossProjectileVariant1State;
 
 typedef struct {
     /* 0x00 */ DataTable_19E80 *assetTable;
@@ -348,8 +339,7 @@ typedef struct {
 } RaceHudAllocationOverlay;
 
 typedef struct {
-    /* 0x00 */ loadAssetMetadata_arg asset;
-    /* 0x1C */ u8 _pad1C[0x4];
+    /* 0x00 */ BillboardSprite asset;
 } AssetMetadata_46080;
 
 typedef struct {
@@ -482,8 +472,7 @@ typedef struct {
 
 typedef struct {
     /* 0x00 */ void *assetData;
-    /* 0x04 */ loadAssetMetadata_arg metadata;
-    /* 0x20 */ u8 _pad20[0x4];
+    /* 0x04 */ BillboardSprite metadata;
     /* 0x24 */ u16 sectorIndex;
     /* 0x26 */ s16 animFrame;
     /* 0x28 */ s16 timer;
@@ -583,7 +572,7 @@ void cleanupGoldCoinsTask(GoldCoinsTaskState *arg0);
 void setupGoldCoinEntries(GoldCoinSetupState *arg0);
 void enqueuePlayerDisplayList(PlayerDisplayListState *arg0);
 void initItemHomingProjectileMovement(ItemHomingProjectileState *);
-void updateBossHomingProjectileVariant1(BossProjectileVariant1State *arg0);
+void updateBossHomingProjectileVariant1(BossProjectileState *arg0);
 void renderSkyDisplayListsWithCourseFog(SkyRenderTaskState *);
 void updateFlyingSceneryAscendingStep(FlyingSceneryState *state);
 void updateFlyingSceneryGlidingStep(FlyingSceneryState *state);
@@ -614,7 +603,7 @@ void updatePanelProjectileMovement(PanelProjectileState *arg0);
 void initPanelProjectileMovement(PanelProjectileState *arg0);
 void cleanupBossHomingProjectileVariant1Task(AssetBackedTaskState *arg0);
 void spawnBossHomingProjectileVariant1(BossProjectileState *);
-void bounceBossHomingProjectileVariant1(BossProjectileVariant1State *);
+void bounceBossHomingProjectileVariant1(BossProjectileState *);
 void spawnBossHomingProjectileVariant2(BossProjectileState *arg0);
 void updateBossHomingProjectileVariant2(BossProjectileState *arg0);
 void bounceBossHomingProjectileVariant2(BossProjectileState *arg0);
@@ -1040,7 +1029,7 @@ void loadPlayerSparkleData(PlayerSparkleTask *task) {
     GameState *state = (GameState *)getCurrentAllocation();
 
     loadAssetMetadata(&task->metadata, task->assetData, 0);
-    task->metadata.assetTemplate = (loadAssetMetadata_arg *)((u8 *)state->unk44 + 0x40);
+    task->metadata.vertices = (Vtx *)((u8 *)state->unk44 + 0x40);
 
     switch (state->memoryPoolId) {
         case 0:
@@ -1086,7 +1075,7 @@ void updatePlayerSparkle(PlayerSparkleTask *task) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&task->metadata);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)&task->metadata);
     }
 }
 
@@ -1887,9 +1876,9 @@ void loadPlayerAuraData(PlayerAuraState *state) {
     loadAssetMetadata(&state->element1.asset, state->assetData, 3);
     loadAssetMetadata(&state->element2.asset, state->assetData, 4);
 
-    state->element0.asset.assetTemplate = (loadAssetMetadata_arg *)(alloc->displayListBase + 0xC0);
-    state->element1.asset.assetTemplate = (loadAssetMetadata_arg *)(alloc->displayListBase + 0x100);
-    state->element2.asset.assetTemplate = (loadAssetMetadata_arg *)(alloc->displayListBase + 0x140);
+    state->element0.asset.vertices = (Vtx *)(alloc->displayListBase + 0xC0);
+    state->element1.asset.vertices = (Vtx *)(alloc->displayListBase + 0x100);
+    state->element2.asset.vertices = (Vtx *)(alloc->displayListBase + 0x140);
     state->animationAngle = 0;
     setCallbackWithContinue(&updatePlayerAuraRising);
 }
@@ -1935,7 +1924,7 @@ loop:
     do {
         offset = 4;
         do {
-            enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)((s32)state + offset));
+            enqueueTexturedBillboardSprite(i, (BillboardSprite *)((s32)state + offset));
             j++;
             offset += 0x20;
         } while (j < 3);
@@ -1980,7 +1969,7 @@ loop:
     do {
         offset = 4;
         do {
-            enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)((s32)state + offset));
+            enqueueTexturedBillboardSprite(i, (BillboardSprite *)((s32)state + offset));
             j++;
             offset += 0x20;
         } while (j < 3);
@@ -2071,7 +2060,7 @@ void loadPlayerHaloData(PlayerHaloState *state) {
     i = 0;
     offset = 0x180;
     for (; i < 5; i++) {
-        state->elements[i].asset.assetTemplate = (loadAssetMetadata_arg *)(allocation->displayListBase + offset);
+        state->elements[i].asset.vertices = (Vtx *)(allocation->displayListBase + offset);
         offset += 0x40;
     }
 
@@ -2112,11 +2101,11 @@ loop:
         goto loop;
 
     for (i = 0; i < 2; i++) {
-        enqueueTexturedBillboardSprite(state->player->playerIndex, (TexturedBillboardSprite *)&state->elements[i]);
+        enqueueTexturedBillboardSprite(state->player->playerIndex, (BillboardSprite *)&state->elements[i]);
     }
 
     for (i = 2; i < 5; i++) {
-        enqueueTexturedBillboardSpriteTile(state->player->playerIndex, (TexturedBillboardSprite *)&state->elements[i]);
+        enqueueTexturedBillboardSpriteTile(state->player->playerIndex, (BillboardSprite *)&state->elements[i]);
     }
 }
 
@@ -2141,7 +2130,7 @@ void updatePlayerHaloAnimating(PlayerHaloState *state) {
         offset = 0x44;
     loop1:
         loadAssetMetadata(
-            (loadAssetMetadata_arg *)((u8 *)state + offset),
+            (BillboardSprite *)((u8 *)state + offset),
             state->assetData,
             D_80090C95_91895[(s16)state->animationIndex * 2]
         );
@@ -2186,11 +2175,11 @@ loop2:
         goto loop2;
 
     for (i = 0; i < 2; i++) {
-        enqueueTexturedBillboardSprite(state->player->playerIndex, (TexturedBillboardSprite *)&state->elements[i]);
+        enqueueTexturedBillboardSprite(state->player->playerIndex, (BillboardSprite *)&state->elements[i]);
     }
 
     for (i = 2; i < 5; i++) {
-        enqueueTexturedBillboardSpriteTile(state->player->playerIndex, (TexturedBillboardSprite *)&state->elements[i]);
+        enqueueTexturedBillboardSpriteTile(state->player->playerIndex, (BillboardSprite *)&state->elements[i]);
     }
 }
 
@@ -2226,11 +2215,11 @@ loop:
         goto loop;
 
     for (i = 0; i < 2; i++) {
-        enqueueTexturedBillboardSprite(state->player->playerIndex, (TexturedBillboardSprite *)&state->elements[i]);
+        enqueueTexturedBillboardSprite(state->player->playerIndex, (BillboardSprite *)&state->elements[i]);
     }
 
     for (i = 2; i < 5; i++) {
-        enqueueTexturedBillboardSpriteTile(state->player->playerIndex, (TexturedBillboardSprite *)&state->elements[i]);
+        enqueueTexturedBillboardSpriteTile(state->player->playerIndex, (BillboardSprite *)&state->elements[i]);
     }
 }
 
@@ -3122,7 +3111,7 @@ void initHomingProjectileMovement(HomingProjectileState *arg0) {
     arg0->animFrame = 0;
 
     temp = (void *)((s32)allocation->unk44 + 0x80);
-    arg0->metadata.assetTemplate = temp;
+    arg0->metadata.vertices = temp;
 
     loadAssetMetadata((void *)((s32)arg0 + 4), arg0->assetData, arg0->animFrame);
 
@@ -3177,7 +3166,7 @@ void updateHomingProjectileMovement(HomingProjectileState *arg0) {
         }
     }
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&arg0->metadata);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)&arg0->metadata);
     }
 }
 
@@ -3215,7 +3204,7 @@ void updateHomingProjectileImpact(HomingProjectileState *arg0) {
 
     if (arg0->timer >= 0x1F || (gFrameCounter & 1)) {
         for (i = 0; i < 4; i++) {
-            enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&arg0->metadata);
+            enqueueTexturedBillboardSprite(i, (BillboardSprite *)&arg0->metadata);
         }
     }
 }
@@ -3257,7 +3246,7 @@ void initPanelProjectileMovement(PanelProjectileState *arg0) {
     s32 pad[4];
 
     gs = (GameState *)getCurrentAllocation();
-    arg0->metadata.assetTemplate = (loadAssetMetadata_arg *)((u8 *)gs->unk44 + 0xEC0);
+    arg0->metadata.vertices = (Vtx *)((u8 *)gs->unk44 + 0xEC0);
     loadAssetMetadata((&arg0->metadata), arg0->assetTable, 0x3F);
     player = arg0->player;
     temp_s1 = &arg0->metadata.position;
@@ -3329,7 +3318,7 @@ void updatePanelProjectileMovement(PanelProjectileState *arg0) {
         }
     }
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&arg0->metadata);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)&arg0->metadata);
     }
 }
 
@@ -3378,7 +3367,7 @@ void updatePanelProjectileImpact(PanelProjectileState *arg0) {
             }
         }
         for (i = 0; i < 4; i++) {
-            enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&arg0->metadata);
+            enqueueTexturedBillboardSprite(i, (BillboardSprite *)&arg0->metadata);
         }
     }
 }
@@ -3477,7 +3466,7 @@ void updateItemHomingProjectileMovement(ItemHomingProjectileState *arg0) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&arg0->metadataPtr);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)&arg0->metadataPtr);
     }
 }
 
@@ -3527,7 +3516,7 @@ void updateItemHomingProjectileImpact(ItemHomingProjectileState *arg0) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&arg0->metadataPtr);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)&arg0->metadataPtr);
     }
 }
 
@@ -3583,7 +3572,7 @@ void spawnBossHomingProjectile(BossProjectileState *arg0) {
     BossEntity *boss;
 
     gameState = (GameState *)getCurrentAllocation();
-    arg0->metadata.assetTemplate = (void *)((s32)gameState->unk44 + 0x1300);
+    arg0->metadata.vertices = (void *)((s32)gameState->unk44 + 0x1300);
 
     loadAssetMetadata(&arg0->metadata, arg0->assetData, 3);
 
@@ -3660,7 +3649,7 @@ void updateBossHomingProjectile(BossProjectileState *projectile) {
 
 exit_loop:
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&projectile->metadata);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)&projectile->metadata);
     }
 }
 
@@ -3699,7 +3688,7 @@ void bounceBossHomingProjectile(BossProjectileState *arg0) {
             }
         }
         for (i = 0; i < 4; i++) {
-            enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&arg0->metadata);
+            enqueueTexturedBillboardSprite(i, (BillboardSprite *)&arg0->metadata);
         }
     }
 }
@@ -3741,7 +3730,7 @@ void spawnBossHomingProjectileVariant1(BossProjectileState *arg0) {
     s32 pad[4];
 
     allocation = (GameState *)getCurrentAllocation();
-    arg0->metadata.assetTemplate = (void *)((s32)allocation->unk44 + 0x1400);
+    arg0->metadata.vertices = (void *)((s32)allocation->unk44 + 0x1400);
 
     randomValue = randA();
     loadAssetMetadata(&arg0->metadata, arg0->assetData, (randomValue % 3) + 0x6B);
@@ -3770,7 +3759,7 @@ void spawnBossHomingProjectileVariant1(BossProjectileState *arg0) {
     setCallbackWithContinue(&updateBossHomingProjectileVariant1);
 }
 
-void updateBossHomingProjectileVariant1(BossProjectileVariant1State *arg0) {
+void updateBossHomingProjectileVariant1(BossProjectileState *arg0) {
     Vec3i sp;
     GameState_46080 *alloc;
     void *s0;
@@ -3784,21 +3773,21 @@ void updateBossHomingProjectileVariant1(BossProjectileVariant1State *arg0) {
         s0 = NULL;
     } else {
         s0 = &alloc->unk30;
-        s2 = &arg0->displayListState.position;
+        s2 = &arg0->metadata.position;
 
-        arg0->displayListState.unk28 -= 0x6000;
-        arg0->displayListState.position.x += arg0->displayListState.unk24;
-        arg0->displayListState.position.y += arg0->displayListState.unk28;
-        arg0->displayListState.position.z += arg0->displayListState.unk2C;
+        arg0->velocity.y -= 0x6000;
+        arg0->metadata.position.x += arg0->velocity.x;
+        arg0->metadata.position.y += arg0->velocity.y;
+        arg0->metadata.position.z += arg0->velocity.z;
 
-        arg0->displayListState.unk30 = findTrackSector(s0, arg0->displayListState.unk30, s2);
+        arg0->sectorIndex = findTrackSector(s0, arg0->sectorIndex, s2);
 
-        resolveTrackWallCollision(s0, arg0->displayListState.unk30, s2, 0x100000, &sp);
+        resolveTrackWallCollision(s0, arg0->sectorIndex, s2, 0x100000, &sp);
 
-        arg0->displayListState.position.x += sp.x;
-        arg0->displayListState.position.z += sp.z;
+        arg0->metadata.position.x += sp.x;
+        arg0->metadata.position.z += sp.z;
 
-        sp.y = getTrackHeightAtPosition(s0, arg0->displayListState.unk30, s2);
+        sp.y = getTrackHeightAtPosition(s0, arg0->sectorIndex, s2);
 
         temp_s0 = findPlayerNearPosition(s2, arg0->playerIndex, 0xA0000);
 
@@ -3810,9 +3799,9 @@ void updateBossHomingProjectileVariant1(BossProjectileVariant1State *arg0) {
             return;
         }
 
-        if (arg0->displayListState.position.y < sp.y) {
-            arg0->displayListState.position.y = sp.y;
-            arg0->displayListState.unk32 = 0x96;
+        if (arg0->metadata.position.y < sp.y) {
+            arg0->metadata.position.y = sp.y;
+            arg0->bounceTimer = 0x96;
             setCallback(&bounceBossHomingProjectileVariant1);
         }
 
@@ -3820,11 +3809,11 @@ void updateBossHomingProjectileVariant1(BossProjectileVariant1State *arg0) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, &arg0->displayListState);
+        enqueueTexturedBillboardSprite(i, &arg0->metadata);
     }
 }
 
-void bounceBossHomingProjectileVariant1(BossProjectileVariant1State *arg0) {
+void bounceBossHomingProjectileVariant1(BossProjectileState *arg0) {
     Vec3i sp10;
     Vec3i *s0;
     Vec3i *s2;
@@ -3832,14 +3821,14 @@ void bounceBossHomingProjectileVariant1(BossProjectileVariant1State *arg0) {
     s32 i;
 
     if (((GameState *)getCurrentAllocation())->gamePaused == 0) {
-        arg0->displayListState.unk32--;
+        arg0->bounceTimer--;
     }
 
-    if (arg0->displayListState.unk32 == 0) {
+    if (arg0->bounceTimer == 0) {
         terminateCurrentTask();
     }
 
-    s2 = &arg0->displayListState.position;
+    s2 = &arg0->metadata.position;
     s3 = findPlayerNearPosition(s2, arg0->playerIndex, 0xA0000);
     s0 = &sp10;
 
@@ -3851,14 +3840,14 @@ void bounceBossHomingProjectileVariant1(BossProjectileVariant1State *arg0) {
         setPlayerProjectileHitState(s3);
         terminateCurrentTask();
     } else {
-        if (arg0->displayListState.unk32 < 0x1F) {
+        if (arg0->bounceTimer < 0x1F) {
             i = 0;
             if ((gFrameCounter & 1) == 0) {
                 return;
             }
         }
         for (i = 0; i < 4; i++) {
-            enqueueTexturedBillboardSprite(i, &arg0->displayListState);
+            enqueueTexturedBillboardSprite(i, &arg0->metadata);
         }
     }
 }
@@ -3896,7 +3885,7 @@ void spawnBossHomingProjectileVariant2(BossProjectileState *arg0) {
     s32 pad[4];
 
     allocation = (GameState *)getCurrentAllocation();
-    arg0->metadata.assetTemplate = (void *)((s32)allocation->unk44 + 0xEC0);
+    arg0->metadata.vertices = (void *)((s32)allocation->unk44 + 0xEC0);
     loadAssetMetadata(&arg0->metadata, arg0->assetData, 0x3F);
     arg0->sectorIndex = arg0->boss->sectorIndex;
     temp_s2 = &arg0->metadata.position;
@@ -3963,7 +3952,7 @@ void updateBossHomingProjectileVariant2(BossProjectileState *arg0) {
 
 exit_loop:
     do {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&arg0->metadata);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)&arg0->metadata);
         i++;
     } while (i < 4);
 }
@@ -4002,7 +3991,7 @@ void bounceBossHomingProjectileVariant2(BossProjectileState *arg0) {
             }
         }
         for (i = 0; i < 4; i++) {
-            enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&arg0->metadata);
+            enqueueTexturedBillboardSprite(i, (BillboardSprite *)&arg0->metadata);
         }
     }
 }

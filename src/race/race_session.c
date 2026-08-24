@@ -819,7 +819,7 @@ void loadRaceGameData(void) {
     GameState *gameState;
 
     gameState = (GameState *)getCurrentAllocation();
-    gameState->gameData.dataStart = loadCourseDataByIndex(gameState->memoryPoolId);
+    gameState->gameData.serializedData = loadCourseDataByIndex(gameState->memoryPoolId);
     gameState->unk28 = loadCompressedData(&raceGameDataLayout_ROM_START, &raceGameDataLayout_ROM_END, 0x16E0);
     setGameStateHandlerWithContinue(&parseRaceAssetData);
 }
@@ -827,7 +827,7 @@ void loadRaceGameData(void) {
 void parseRaceAssetData(void) {
     GameState *gs = (GameState *)getCurrentAllocation();
 
-    parseGameDataLayout(&gs->gameData);
+    parseTrackData(&gs->gameData);
 
     gs->unk44 = (GameStateUnk44 *)((u8 *)gs->unk28 + gs->unk28->assetTableOffset);
     gs->raceTransformData = (u8 *)gs->unk28 + gs->unk28->transformDataOffset;
@@ -1790,7 +1790,7 @@ void cleanupGameSession(void) {
     freeNodeMemory(gameState->playerOverlayViewports);
     freeNodeMemory(gameState->playerCameraViewports);
     freeNodeMemory(gameState->playerRootViewports);
-    freeNodeMemory(gameState->gameData.dataStart);
+    freeNodeMemory(gameState->gameData.serializedData);
     freeNodeMemory(gameState->unk18);
     freeNodeMemory(gameState->unk1C);
     freeNodeMemory(gameState->unk20);

@@ -32,8 +32,7 @@ typedef struct {
 
 typedef struct {
     DataTable_19E80 *unk0;
-    loadAssetMetadataByIndex_arg unk4;
-    u8 _pad1[0x24 - 4 - sizeof(loadAssetMetadataByIndex_arg)];
+    BillboardSprite unk4;
     PlayerIndicatorPlayer *unk24;
     u8 _pad2[0x10];
     s32 unk38;
@@ -61,8 +60,7 @@ typedef struct {
 } PushStartPromptTask;
 
 typedef struct {
-    /* 0x00 */ loadAssetMetadata_arg sprite;
-    /* 0x1C */ s32 pad1C;
+    /* 0x00 */ BillboardSprite sprite;
     /* 0x20 */ Vec3i worldPos;
     /* 0x2C */ Vec3i velocity;
 } ConfettiParticle; /* 0x38 bytes */
@@ -122,7 +120,7 @@ void awaitPlayerIndicatorReady(PlayerIndicatorSpriteTask *arg0) {
 
 void updateRacePlayerIndicatorSprite(PlayerIndicatorSpriteTask *arg0) {
     PlayerIndicatorPlayer *temp;
-    loadAssetMetadataByIndex_arg *temp_s0;
+    BillboardSprite *temp_s0;
     s32 temp_v0;
 
     temp = arg0->unk24;
@@ -136,7 +134,7 @@ void updateRacePlayerIndicatorSprite(PlayerIndicatorSpriteTask *arg0) {
     } else {
         arg0->unk38 = 6;
     }
-    transformVector((s16 *)&gIndicatorSpriteOffset, &arg0->unk24->orientationHeadingTransform, &arg0->unk4.unk4);
+    transformVector((s16 *)&gIndicatorSpriteOffset, &arg0->unk24->orientationHeadingTransform, &arg0->unk4.position);
     temp_s0 = &arg0->unk4;
     if (arg0->unk24->aiPathFlags >= 2 && (gFrameCounter & 1)) {
         loadAssetMetadataByIndex(temp_s0, arg0->unk0, 0x60, 0x14);
@@ -145,7 +143,7 @@ void updateRacePlayerIndicatorSprite(PlayerIndicatorSpriteTask *arg0) {
         temp_s0--;
         loadAssetMetadataByIndex(temp_s0, arg0->unk0, 0x60, 0x13);
     }
-    enqueueTexturedBillboardSprite(arg0->unk24->unkBB8, (TexturedBillboardSprite *)temp_s0);
+    enqueueTexturedBillboardSprite(arg0->unk24->unkBB8, (BillboardSprite *)temp_s0);
 }
 
 void cleanupPlayerIndicator(PlayerIndicatorTask *arg0) {
@@ -387,13 +385,13 @@ void setupConfettiParticles(ConfettiEffectTask *task) {
     s32 pad[2];
     s32 i;
     s32 gravity;
-    loadAssetMetadata_arg *extPtr;
+    Vtx *extPtr;
 
     (void)pad;
     i = 0;
     if (task->particleCount > 0) {
         gravity = 0x40000;
-        extPtr = (loadAssetMetadata_arg *)&D_80090860_91460;
+        extPtr = (Vtx *)&D_80090860_91460;
         do {
             task->particles[i].worldPos.x = (randA() & 0xFF) << 17;
             task->particles[i].worldPos.y = (randA() & 0xFF) << 17;
@@ -402,7 +400,7 @@ void setupConfettiParticles(ConfettiEffectTask *task) {
             task->particles[i].velocity.y = -((randA() & 0xFF) << 8) - gravity;
             task->particles[i].velocity.z = 0;
             loadAssetMetadata(&task->particles[i].sprite, task->particleAsset, 0);
-            task->particles[i].sprite.assetTemplate = extPtr;
+            task->particles[i].sprite.vertices = extPtr;
             i++;
         } while (i < task->particleCount);
     }
@@ -448,7 +446,7 @@ void updateConfettiParticles(ConfettiEffectTask *task) {
                 task->particles[i].worldPos.y + (task->cameraNode->viewTransform.translation.y + cameraOffset);
             task->particles[i].sprite.position.z =
                 task->particles[i].worldPos.z + (task->cameraNode->viewTransform.translation.z + cameraOffset);
-            enqueueTexturedBillboardSprite(task->frameCounter, (TexturedBillboardSprite *)&task->particles[i]);
+            enqueueTexturedBillboardSprite(task->frameCounter, (BillboardSprite *)&task->particles[i]);
             i++;
         } while (i < task->particleCount);
     }

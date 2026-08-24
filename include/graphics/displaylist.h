@@ -38,128 +38,56 @@ typedef struct {
 } TrackFace;
 
 typedef struct {
-    /* 0x00 */ s16 neighbor0;
-    /* 0x02 */ s16 neighbor1;
-    /* 0x04 */ s16 neighbor2;
-    /* 0x06 */ s16 neighbor3;
-    /* 0x08 */ u8 padding[4];
-    /* 0x0C */ u16 baseIndex;
-    u16 count;
-    u16 baseIndex2;
-    u16 count2;
-    /* 0x14 */ u16 vertexIdx0;
-    /* 0x16 */ u8 padding2[2];
-    /* 0x18 */ u16 vertexIdx1;
-    /* 0x1A */ u16 vertexIdx2;
-    /* 0x1C */ u8 padding3[2];
-    /* 0x1E */ u16 vertexIdx3;
-    /* 0x20 */ u8 padding4[4];
-} TrackFaceGroup;
+    /* 0x00 */ s16 nextSectorIndex;
+    /* 0x02 */ s16 previousSectorIndex;
+    /* 0x04 */ s16 rightSectorIndex;
+    /* 0x06 */ s16 leftSectorIndex;
+    /* 0x08 */ u16 segmentLength;
+    /* 0x0A */ s16 lapProgressRemaining;
+    /* 0x0C */ u16 baseFaceIndex;
+    /* 0x0E */ u16 faceCount;
+    /* 0x10 */ u16 baseHeightFaceIndex;
+    /* 0x12 */ u16 heightFaceCount;
+    /* 0x14 */ u16 startLeftVertexIndex;
+    /* 0x16 */ u16 startCenterVertexIndex;
+    /* 0x18 */ u16 startRightVertexIndex;
+    /* 0x1A */ u16 endLeftVertexIndex;
+    /* 0x1C */ u16 endCenterVertexIndex;
+    /* 0x1E */ u16 endRightVertexIndex;
+    /* 0x20 */ u32 unused;
+} TrackSector;
 
 typedef struct {
-    /* 0x00 */ s16 nextElementIdx;
-    /* 0x02 */ u8 padding[0x14];
-    /* 0x16 */ u16 vertexIdx1;
-    /* 0x18 */ u8 padding2[0x4];
-    /* 0x1C */ u16 vertexIdx2;
-    /* 0x1E */ u8 padding3[0x6];
-} TrackSegmentElement;
-
-typedef struct {
-    /* 0x00 */ void *unk0;
+    /* 0x00 */ u16 *serializedData;
     /* 0x04 */ Vec3s *vertices;
-    /* 0x08 */ void *unk8;
-    /* 0x0C */ TrackSegmentElement *elements;
-} TrackGeometryData;
+    /* 0x08 */ TrackFace *faces;
+    /* 0x0C */ TrackSector *sectors;
+    /* 0x10 */ u16 sectorCount;
+} TrackData;
 
 typedef struct {
-    Vec3s *unk0;
-    Vec3s *vertices;
-    TrackFace *faces;
-    TrackFaceGroup *faceGroups;
-} TrackGeometryFaceData;
-
-typedef struct {
-    /* 0x00 */ s32 vertices;
+    /* 0x00 */ Vtx *vertices;
     /* 0x04 */ Transform3D transform;
     /* 0x24 */ u8 *textureData;
-    /* 0x28 */ TableEntry_19E80 *paletteData;
+    /* 0x28 */ u16 *paletteData;
     /* 0x2C */ u8 textureWidth;
     /* 0x2D */ u8 textureHeight;
     /* 0x2E */ u8 alpha;
-    /* 0x2F */ u8 padding;
     /* 0x30 */ Mtx *matrix;
 } RotatedBillboardSprite;
 
 typedef struct {
-    s16 linkedSegmentIdx;
-    u8 _pad[0x8];
-    s16 finishZoneFlag;
-    u8 _pad2[0x18];
-} TrackSegmentEntry;
-
-typedef struct {
-    u16 *dataStart;
-    u16 *section1Data;
-    u16 *section2Data;
-    TrackSegmentEntry *section3Data;
-    u16 finalValue;
-} GameDataLayout;
-
-/* Base struct without trailing fields - 0x18 bytes */
-typedef struct loadAssetMetadata_arg_base {
-    struct loadAssetMetadata_arg *assetTemplate;
-    /* 0x4 */ Vec3i position;
-    /* 0x10 */ u8 *data_ptr;
-    /* 0x14 */ TableEntry_19E80 *index_ptr;
-} loadAssetMetadata_arg_base;
-
-/* Full struct with alpha/animation fields - 0x1C bytes */
-typedef struct loadAssetMetadata_arg {
-    struct loadAssetMetadata_arg *assetTemplate;
-    /* 0x4 */ Vec3i position;
-    /* 0x10 */ u8 *data_ptr;
-    /* 0x14 */ TableEntry_19E80 *index_ptr;
-    u8 unk18;
-    u8 unk19;
-    u8 alpha;
-} loadAssetMetadata_arg;
-
-typedef struct {
-    /* 0x00 */ s32 vertices;
+    /* 0x00 */ Vtx *vertices;
     /* 0x04 */ Vec3i position;
     /* 0x10 */ u8 *textureData;
-    /* 0x14 */ u8 *paletteData;
-    /* 0x18 */ u8 width;
-    /* 0x19 */ u8 height;
-    /* 0x1A */ u8 pad1A[2];
+    /* 0x14 */ u16 *paletteData;
+    /* 0x18 */ u8 textureWidth;
+    /* 0x19 */ u8 textureHeight;
+    /* 0x1A */ u8 alpha;
     /* 0x1C */ Mtx *matrix;
-    /* 0x20 */ s32 unk20;
-    /* 0x24 */ s32 unk24;
-    /* 0x28 */ s32 unk28;
-    /* 0x2C */ s32 unk2C;
-    /* 0x30 */ s16 unk30;
-    /* 0x32 */ s16 unk32;
-} TexturedBillboardSprite;
+} BillboardSprite;
 
-typedef struct {
-    u8 padding0[4];
-    s32 unk4;
-    s32 unk8;
-    s32 unkC;
-    /* 0x10 */ u8 *data_ptr;
-    /* 0x14 */ TableEntry_19E80 *index_ptr;
-    s8 unk18;
-    u8 unk19;
-    u8 alpha;
-} loadAssetMetadataByIndex_arg;
-
-void loadAssetMetadataByIndex(
-    loadAssetMetadataByIndex_arg *arg0,
-    DataTable_19E80 *table,
-    s32 entry_index,
-    s32 sub_index
-);
+void loadAssetMetadataByIndex(BillboardSprite *arg0, DataTable_19E80 *table, s32 entry_index, s32 sub_index);
 
 void enqueueDisplayListObject(s32 arg0, DisplayListObject *arg1);
 
@@ -191,11 +119,11 @@ void enqueuePreLitMultiPartDisplayList(s32 arg0, DisplayListObject *arg1, s32 ar
 
 void enqueueMultiPartDisplayList(s32 arg0, DisplayListObject *arg1, s32 arg2);
 
-void parseGameDataLayout(GameDataLayout *gameData);
+void parseTrackData(TrackData *trackData);
 
 void initializeOverlaySystem(void);
 
-void loadAssetMetadata(loadAssetMetadata_arg *, void *, s32);
+void loadAssetMetadata(BillboardSprite *, void *, s32);
 
 void enqueueDisplayListWithFrustumCull(s32, DisplayListObject *);
 
@@ -219,13 +147,13 @@ void renderTransparentDisplayList(DisplayListObject *arg0);
 
 void renderOverlayDisplayList(DisplayListObject *arg0);
 
-void enqueueTexturedBillboardSprite(s32 arg0, TexturedBillboardSprite *arg1);
+void enqueueTexturedBillboardSprite(s32 arg0, BillboardSprite *arg1);
 
-void enqueueAlphaBillboardSprite(s32 arg0, loadAssetMetadata_arg *arg1);
+void enqueueAlphaBillboardSprite(s32 arg0, BillboardSprite *arg1);
 
-void enqueueTexturedBillboardSpriteTile(u16 arg0, TexturedBillboardSprite *arg1);
+void enqueueTexturedBillboardSpriteTile(u16 arg0, BillboardSprite *arg1);
 
-void enqueueAlphaSprite(s32, loadAssetMetadata_arg *);
+void enqueueAlphaSprite(s32, BillboardSprite *);
 
 void buildOverlayDisplayListSegment(DisplayListObject *obj);
 
@@ -243,9 +171,9 @@ s32 getTrackHeightAtPosition(void *trackGeom, u16 groupIdx, void *pos);
 
 s32 getTrackHeightWithNormalAtPosition(void *arg0, u16 arg1, void *arg2, s32 arg3);
 
-s32 computeSectorTrackHeight(TrackGeometryFaceData *geom, u16 groupIdx, Vec3i *pos, s32 yOffset);
+s32 computeSectorTrackHeight(TrackData *geom, u16 groupIdx, Vec3i *pos, s32 yOffset);
 
-void findTrackFaceAtPosition(TrackGeometryFaceData *arg0, u16 arg1, Vec3i *arg2, u8 *arg3, u8 *arg4);
+void findTrackFaceAtPosition(TrackData *arg0, u16 arg1, Vec3i *arg2, u8 *arg3, u8 *arg4);
 
 void prepareDisplayListRenderStateWithLights(DisplayListObject *obj);
 
@@ -263,11 +191,11 @@ void renderMultiPartTransparentDisplayListsWithLights(DisplayListObject *display
 
 void renderMultiPartOverlayDisplayListsWithLights(DisplayListObject *displayObjects);
 
-u16 getTrackSegmentWaypoints(TrackGeometryData *trackGeom, u16 waypointIdx, void *waypointStart, void *waypointEnd);
+u16 getTrackSegmentWaypoints(TrackData *trackData, u16 sectorIndex, void *waypointStart, void *waypointEnd);
 
-s16 getTrackSegmentFinishZoneFlag(GameDataLayout *gameData, u16 index);
+s16 getTrackLapProgressRemaining(TrackData *trackData, u16 sectorIndex);
 
-s32 resolveTrackSegmentIndex(TrackSegmentEntry **arg0, u16 index);
+s32 resolveTrackSegmentIndex(TrackSector **arg0, u16 index);
 
 void enqueueRotatedBillboardSprite(s32 arg0, RotatedBillboardSprite *arg1);
 
@@ -275,4 +203,4 @@ void renderRotatedBillboardSpriteCI(RotatedBillboardSprite *arg1);
 
 s32 normalizeSurfaceType(s32);
 
-s32 projectPositionOntoTrackSegment(TrackGeometryData *trackGeom, u16 sectorIdx, Vec3i *pos);
+s32 projectPositionOntoTrackSegment(TrackData *trackData, u16 sectorIdx, Vec3i *pos);

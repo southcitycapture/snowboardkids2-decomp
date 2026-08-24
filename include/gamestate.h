@@ -118,8 +118,8 @@ typedef struct {
 } BoneAnimationStateIndexed;
 
 typedef struct {
-    loadAssetMetadata_arg asset;
-    u8 padding[0x24];
+    BillboardSprite asset;
+    u8 padding[0x20];
 } GameStateUnk44_Item;
 
 typedef struct {
@@ -399,7 +399,7 @@ typedef struct {
     /* 0x24 */ struct ShootCrossTargets *shootCrossTargets;
     /* 0x28 */ RaceAssetHeader *unk28;
     /* 0x2C */ u8 PAD_3[0x4];
-    /* 0x30 */ GameDataLayout gameData;
+    /* 0x30 */ TrackData gameData;
     /* 0x44 */ GameStateUnk44 *unk44;
     /* 0x48 */ u8 *raceTransformData;
     /* 0x4C */ s32 stateDelayTimer;

@@ -133,7 +133,7 @@ void initLevelPreviewCharacter(LevelPreviewCharacterState *arg0) {
     temp = levelSelect->selectedIndex;
     charIndex = levelSelect->levelIdList[temp];
 
-    arg0->gameData.dataStart = loadCourseDataByIndex(charIndex);
+    arg0->gameData.serializedData = loadCourseDataByIndex(charIndex);
 
     setCleanupCallback(&cleanupLevelPreviewCharacter);
     setCallback(&setupLevelPreviewCamera);
@@ -150,9 +150,9 @@ void setupLevelPreviewCamera(LevelPreviewCharacterState *state) {
     u16 angle;
 
     levelSelect = (LevelSelectState *)getCurrentAllocation();
-    parseGameDataLayout(&state->gameData);
+    parseTrackData(&state->gameData);
 
-    getTrackSegmentWaypoints((TrackGeometryData *)&state->gameData, state->startWaypoint, waypointStart, waypointEnd);
+    getTrackSegmentWaypoints(&state->gameData, state->startWaypoint, waypointStart, waypointEnd);
 
     memcpy(&state->transform, &identityMatrix, sizeof(Transform3D));
     memcpy(state, waypointEnd, sizeof(Vec3i));
@@ -280,7 +280,7 @@ void updateLevelPreviewCharacterAndCamera(LevelPreviewCharacterState *state) {
         if (newWaypoint != state->startWaypoint) {
             u16 angle;
             state->startWaypoint = waypoint;
-            getTrackSegmentWaypoints((TrackGeometryData *)&state->gameData, newWaypoint, waypointStart, waypointEnd);
+            getTrackSegmentWaypoints(&state->gameData, newWaypoint, waypointStart, waypointEnd);
             angle = (computeAngleToPosition(waypointStart[0], waypointStart[2], state->posX, state->posZ) - 0x1000) &
                     0x1FFF;
             state->targetRotation = angle;
@@ -478,7 +478,7 @@ void moveCharacterToStartWaypoint(LevelPreviewCharacterState *state) {
         if (newWaypoint != state->startWaypoint) {
             u16 angle;
             state->startWaypoint = waypoint;
-            getTrackSegmentWaypoints((TrackGeometryData *)&state->gameData, newWaypoint, waypointStart, waypointEnd);
+            getTrackSegmentWaypoints(&state->gameData, newWaypoint, waypointStart, waypointEnd);
             angle =
                 (computeAngleToPosition(waypointEnd[0], waypointEnd[2], state->posX, state->posZ) - 0x1000) & 0x1FFF;
             state->targetRotation = angle;
@@ -586,7 +586,7 @@ void resumeLevelPreviewAfterHold(LevelPreviewCharacterState *state) {
 }
 
 void cleanupLevelPreviewCharacter(LevelPreviewCharacterState *state) {
-    state->gameData.dataStart = freeNodeMemory(state->gameData.dataStart);
+    state->gameData.serializedData = freeNodeMemory(state->gameData.serializedData);
     destroySceneModel(state->sceneModel);
 }
 

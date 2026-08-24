@@ -8,7 +8,7 @@
 s32 getTrackHeightInSector(void *gameData, s32 sectorIndex, void *pos, s32 heightOffset);
 s32 getTrackHeightInSectorWithOffset(void *gameData, u16 sectorIndex, void *pos, s32 unused, s32 heightOffset);
 void findTrackFaceInSector(void *geom, u16 sectorIndex, void *pos, u8 *surfaceFlags, u8 *surfaceIndex);
-s32 getSectorTrackHeight(TrackGeometryFaceData *geom, u16 groupIdx, Vec3i *pos, s32 yOffset);
+s32 getSectorTrackHeight(TrackData *geom, u16 groupIdx, Vec3i *pos, s32 yOffset);
 void clampPlayerVelocityToMaxSpeed(Player *player);
 s32 advancePlayerLeanAnimationAuto(void *player, s16 animIndex);
 s32 advancePlayerLeanAnimation(void *player, s16 animIndex);

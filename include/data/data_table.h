@@ -18,7 +18,7 @@ typedef struct {
 
 typedef struct {
     /* 0x00 */ u8 *data_ptr;
-    /* 0x04 */ TableEntry_19E80 *index_ptr;
+    /* 0x04 */ u16 *index_ptr;
     /* 0x08 */ u16 width;
     /* 0x0A */ u16 height;
 } OutputStruct_19E80;

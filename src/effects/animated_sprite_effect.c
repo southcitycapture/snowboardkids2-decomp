@@ -20,10 +20,8 @@ typedef struct {
 typedef struct {
     /* 0x00 */ void *modelData;
     /* 0x04 */ void *textureData;
-    /* 0x08 */ loadAssetMetadata_arg sprite1;
-    /* 0x24 */ s32 unk24;
-    /* 0x28 */ loadAssetMetadata_arg sprite2;
-    /* 0x44 */ u8 padding[0x4];
+    /* 0x08 */ BillboardSprite sprite1;
+    /* 0x28 */ BillboardSprite sprite2;
     /* 0x48 */ s32 velocityX;
     /* 0x4C */ s32 velocityY;
     /* 0x50 */ s32 velocityZ;
@@ -40,10 +38,10 @@ void initSpriteEffectTask(SpriteEffectTask *task) {
     task->modelData = loadCompressedData(&spriteEffectModelData_ROM_START, &spriteEffectModelData_ROM_END, 0xF18);
     textureData = loadCompressedData(&spriteEffectTextureData_ROM_START, &spriteEffectTextureData_ROM_END, 0x240);
     task->textureData = textureData;
-    task->sprite1.assetTemplate = (loadAssetMetadata_arg *)((u8 *)textureData + (task->textureIndex << 6));
+    task->sprite1.vertices = (Vtx *)((u8 *)textureData + (task->textureIndex << 6));
     task->sprite1.alpha = (randA() & 0x1F) + 0x70;
     task->frameCounter = 0;
-    task->sprite2.assetTemplate = task->sprite1.assetTemplate;
+    task->sprite2.vertices = task->sprite1.vertices;
     task->sprite2.alpha = task->sprite1.alpha;
     setCleanupCallback(&cleanupSpriteEffectTask);
     setCallbackWithContinue(&updateSpriteEffectTask);
@@ -52,10 +50,10 @@ void initSpriteEffectTask(SpriteEffectTask *task) {
 void updateSpriteEffectTask(SpriteEffectTask *task) {
     loadAssetMetadata(&task->sprite1, task->modelData, task->frameCounter);
 
-    task->sprite2.data_ptr = task->sprite1.data_ptr;
-    task->sprite2.index_ptr = task->sprite1.index_ptr;
-    task->sprite2.unk18 = task->sprite1.unk18;
-    task->sprite2.unk19 = task->sprite1.unk19;
+    task->sprite2.textureData = task->sprite1.textureData;
+    task->sprite2.paletteData = task->sprite1.paletteData;
+    task->sprite2.textureWidth = task->sprite1.textureWidth;
+    task->sprite2.textureHeight = task->sprite1.textureHeight;
 
     enqueueAlphaSprite(0, &task->sprite1);
     enqueueAlphaSprite(0, &task->sprite2);

@@ -79,7 +79,7 @@ class N64SegTrack_sector_mesh(CommonSegment):
             faces.append({"v0": v0, "v1": v1, "v2": v2, "flags": flags, "surface_index": surface_index})
             offset += 8
 
-        final_value = int.from_bytes(data[offset : offset + 2], "big")
+        sector_count = int.from_bytes(data[offset : offset + 2], "big")
         offset += 2
         if (len(data) - offset) % 0x24 != 0:
             log.error(f"track sector mesh segment {self.name} has trailing size that is not a sector multiple")
@@ -87,29 +87,39 @@ class N64SegTrack_sector_mesh(CommonSegment):
         sectors = []
         while offset < len(data):
             chunk = data[offset : offset + 0x24]
-            neighbor0, neighbor1, neighbor2, neighbor3 = struct.unpack(">hhhh", chunk[0:8])
+            if chunk[0x20:0x24] != b"\x00\x00\x00\x00":
+                log.error(f"track sector mesh segment {self.name} has a nonzero unused sector word")
+            next_sector, previous_sector, right_sector, left_sector = struct.unpack(">hhhh", chunk[0:8])
+            segment_length, lap_progress_remaining = struct.unpack(">Hh", chunk[0x08:0x0C])
             base_face, face_count_2, base_height_face, height_face_count = struct.unpack(">HHHH", chunk[0x0C:0x14])
+            start_left_vertex, start_center_vertex, start_right_vertex = struct.unpack(">HHH", chunk[0x14:0x1A])
+            end_left_vertex, end_center_vertex, end_right_vertex = struct.unpack(">HHH", chunk[0x1A:0x20])
             sectors.append(
                 {
-                    "neighbor0": neighbor0,
-                    "neighbor1": neighbor1,
-                    "neighbor2": neighbor2,
-                    "neighbor3": neighbor3,
-                    "unknown_08": chunk[0x08:0x0C].hex(),
+                    "next_sector": next_sector,
+                    "previous_sector": previous_sector,
+                    "right_sector": right_sector,
+                    "left_sector": left_sector,
+                    "segment_length": segment_length,
+                    "lap_progress_remaining": lap_progress_remaining,
                     "base_face": base_face,
                     "face_count": face_count_2,
                     "base_height_face": base_height_face,
                     "height_face_count": height_face_count,
-                    "vertex0": int.from_bytes(chunk[0x14:0x16], "big"),
-                    "unknown_16": chunk[0x16:0x18].hex(),
-                    "vertex1": int.from_bytes(chunk[0x18:0x1A], "big"),
-                    "vertex2": int.from_bytes(chunk[0x1A:0x1C], "big"),
-                    "unknown_1c": chunk[0x1C:0x1E].hex(),
-                    "vertex3": int.from_bytes(chunk[0x1E:0x20], "big"),
-                    "unknown_20": chunk[0x20:0x24].hex(),
+                    "start_left_vertex": start_left_vertex,
+                    "start_center_vertex": start_center_vertex,
+                    "start_right_vertex": start_right_vertex,
+                    "end_left_vertex": end_left_vertex,
+                    "end_center_vertex": end_center_vertex,
+                    "end_right_vertex": end_right_vertex,
                 }
             )
             offset += 0x24
+
+        if sector_count != len(sectors):
+            log.error(
+                f"track sector mesh segment {self.name} declares {sector_count} sectors but contains {len(sectors)}"
+            )
 
         manifest = {
             "name": self.name,
@@ -118,7 +128,7 @@ class N64SegTrack_sector_mesh(CommonSegment):
             "course_id": self._course_id(),
             "vertices": vertices,
             "faces": faces,
-            "final_value": final_value,
+            "sector_count": sector_count,
             "sectors": sectors,
         }
         if unused_tail:

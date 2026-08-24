@@ -17,23 +17,6 @@ typedef struct {
     /* 0x30 */ u8 unk30[0];
 } Allocation5AA90;
 
-// Element size is 6 bytes based on *6 pattern in asm
-typedef struct {
-    /* 0x0 */ s16 unk0;
-    /* 0x2 */ s16 unk2;
-    /* 0x4 */ s16 unk4;
-} Section1Element;
-
-// Element at offset 0x3C has size 0x24 (36 bytes)
-typedef struct {
-    /* 0x00 */ s16 unk0;
-    /* 0x02 */ u8 pad[0x14];
-    /* 0x16 */ u16 unk16;
-    /* 0x18 */ u8 pad2[0x4];
-    /* 0x1C */ u16 unk1C;
-    /* 0x1E */ u8 pad3[0x6];
-} Section3Element;
-
 typedef struct {
     s16 sampleOffset[6];
     s32 threshold;
@@ -369,13 +352,13 @@ void alignPlayerToTrackSurface(Player *player) {
  */
 void updatePlayerSectorAndClampYToTrack(Player *player) {
     GameState *gameState;
-    TrackGeometryFaceData *gameData;
+    TrackData *gameData;
     Vec3i *playerPos;
     u16 newSectorIndex;
     s32 trackHeight;
 
     gameState = (GameState *)getCurrentAllocation();
-    gameData = (TrackGeometryFaceData *)&gameState->gameData;
+    gameData = &gameState->gameData;
     playerPos = &player->worldPos;
     newSectorIndex = getOrUpdatePlayerSectorIndex(player, gameData, player->sectorIndex, playerPos);
     player->sectorIndex = newSectorIndex;
@@ -415,7 +398,7 @@ s32 tryEnterLift(Player *player) {
     }
 
     // Skip if player is at finish zone
-    if (getTrackSegmentFinishZoneFlag(&gameState->gameData, player->sectorIndex) != 0) {
+    if (getTrackLapProgressRemaining(&gameState->gameData, player->sectorIndex) != 0) {
         return 0;
     }
 
@@ -454,7 +437,7 @@ s32 isPlayerNearLiftEntry(Player *player) {
 
     gameState = (GameState *)getCurrentAllocation();
 
-    if (getTrackSegmentFinishZoneFlag(&gameState->gameData, player->sectorIndex) == 0) {
+    if (getTrackLapProgressRemaining(&gameState->gameData, player->sectorIndex) == 0) {
         levelConfig = getLevelConfig(gameState->memoryPoolId);
 
         deltaX = player->worldPos.x - levelConfig->liftEntryPosX;
@@ -1516,19 +1499,18 @@ void computePlayerTerrainAlignment(Player *player) {
 
 s16 getPlayerTargetTrackAngle(Player *player) {
     GameState *gameState;
-    Section3Element *sectorEntry;
+    TrackSector *sectorEntry;
     s32 targetAngle;
 
     gameState = (GameState *)getCurrentAllocation();
-    sectorEntry = (Section3Element *)(player->sectorIndex * 0x24 + (u32)gameState->gameData.section3Data);
+    sectorEntry = (TrackSector *)(player->sectorIndex * sizeof(TrackSector) + (u32)gameState->gameData.sectors);
 
-    if (sectorEntry->unk0 < 0) {
+    if (sectorEntry->nextSectorIndex < 0) {
         if (gameState->finalLapNumber == player->currentLap) {
-            Section1Element *waypointData = (Section1Element *)gameState->gameData.section1Data;
-            Section1Element *waypoint1 = (Section1Element *)(sectorEntry->unk1C * 6 + (u32)waypointData);
-            Section1Element *waypoint2 = (Section1Element *)(sectorEntry->unk16 * 6 + (u32)waypointData);
-            targetAngle =
-                computeAngleToPosition(waypoint1->unk0, waypoint1->unk4, waypoint2->unk0, waypoint2->unk4) + 0x800;
+            Vec3s *waypointData = gameState->gameData.vertices;
+            Vec3s *waypoint1 = (Vec3s *)(sectorEntry->endCenterVertexIndex * 6 + (u32)waypointData);
+            Vec3s *waypoint2 = (Vec3s *)(sectorEntry->startCenterVertexIndex * 6 + (u32)waypointData);
+            targetAngle = computeAngleToPosition(waypoint1->x, waypoint1->z, waypoint2->x, waypoint2->z) + 0x800;
         } else {
             LevelConfig *levelConfig = getLevelConfig(gameState->memoryPoolId);
             targetAngle = computeAngleToPosition(
@@ -1542,10 +1524,10 @@ s16 getPlayerTargetTrackAngle(Player *player) {
             }
         }
     } else {
-        Section1Element *waypointData = (Section1Element *)gameState->gameData.section1Data;
-        Section1Element *waypoint1 = (Section1Element *)(sectorEntry->unk16 * 6 + (u32)waypointData);
-        Section1Element *waypoint2 = (Section1Element *)(sectorEntry->unk1C * 6 + (u32)waypointData);
-        targetAngle = computeAngleToPosition(waypoint1->unk0, waypoint1->unk4, waypoint2->unk0, waypoint2->unk4);
+        Vec3s *waypointData = gameState->gameData.vertices;
+        Vec3s *waypoint1 = (Vec3s *)(sectorEntry->startCenterVertexIndex * 6 + (u32)waypointData);
+        Vec3s *waypoint2 = (Vec3s *)(sectorEntry->endCenterVertexIndex * 6 + (u32)waypointData);
+        targetAngle = computeAngleToPosition(waypoint1->x, waypoint1->z, waypoint2->x, waypoint2->z);
         if (player->animationFlags & 2) {
             targetAngle += 0x1000;
         }

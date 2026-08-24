@@ -2012,7 +2012,7 @@ selectGraphicsArena = 0x8006F550; // rom:0x70150
 arenaAlloc16 = 0x8006F580;
 initLinearAllocator = 0x8006F5C0; // rom:0x701C0
 getIndexedAnimationDataPtr = 0x80060950; // rom:0x61550
-parseGameDataLayout = 0x800609A0;
+parseTrackData = 0x800609A0;
 gCourseDataAssets = 0x80091250; // rom:0x91E50 type:Asset_56910 size:0xC0
 crazyJungleRockPositions = 0x800BBB90; // type:s32 rom:0xB7DD0 size:0xA0
 
@@ -3998,7 +3998,7 @@ enableSlotUpdate = 0x800B2A24; // rom:0x1DFAD4
 disableSlotUpdate = 0x800B2A50; // rom:0x1DFB00
 skipCutsceneOnInputCallback = 0x800B2550; // rom:0x1DF600
 scheduleLevelEnvironmentTasks = 0x800497FC; // rom:0x4A3FC
-getTrackSegmentFinishZoneFlag = 0x80062254; // rom:0x62E54
+getTrackLapProgressRemaining = 0x80062254; // rom:0x62E54
 showAllSlotModels = 0x800B2D68; // rom:0x1DFE18
 jtbl_8009E740_9F340 = 0x8009E740; // type:u32 size:0x58
 initStoryMapRareEvent = 0x8002BCF0; // rom:0x2C8F0

@@ -662,7 +662,7 @@ void updateAndRenderPlayersByLiftEntryDistance(void) {
     if (gameState->numPlayers > i) {
         do {
             distances[i] = 0x7FFFFFFF;
-            if ((getTrackSegmentFinishZoneFlag(&gameState->gameData, gameState->players[i].sectorIndex) << 16) == 0) {
+            if ((getTrackLapProgressRemaining(&gameState->gameData, gameState->players[i].sectorIndex) << 16) == 0) {
                 distances[i] = distance_2d(
                     gameState->players[i].worldPos.x - levelConfig->liftEntryPosX,
                     gameState->players[i].worldPos.z - levelConfig->liftEntryPosZ
@@ -1045,7 +1045,7 @@ s32 initPlayerForRace(Player *player) {
         player->worldPos.x = 0;
     }
 
-    getTrackSegmentWaypoints((TrackGeometryData *)&gameState->gameData, 0, &waypoint1, &waypoint2);
+    getTrackSegmentWaypoints(&gameState->gameData, 0, &waypoint1, &waypoint2);
     player->worldPos.z = waypoint1.z + 0x200000;
     player->sectorIndex = getOrUpdatePlayerSectorIndex(player, &gameState->gameData, 0, &player->worldPos);
     player->worldPos.y = getTrackHeightInSector(&gameState->gameData, player->sectorIndex, &player->worldPos, 0x100000);
@@ -3730,8 +3730,8 @@ s32 updateStunnedRecoveryRespawnPhase(Player *player) {
     u8 surfaceType;
     u8 surfaceExtra;
     GameState *gs;
-    TrackGeometryData *trackGeomAlias;
-    TrackGeometryData *trackGeom;
+    TrackData *trackGeomAlias;
+    TrackData *trackGeom;
     s16 pathAngle;
     Vec3i *worldPos;
     Vec3i *rotatedPtr;
@@ -3757,7 +3757,7 @@ s32 updateStunnedRecoveryRespawnPhase(Player *player) {
         }
         if (player->unkB8C == 0) {
             gs = getCurrentAllocation();
-            trackGeom = (TrackGeometryData *)&gs->gameData;
+            trackGeom = &gs->gameData;
             pathAngle = getTrackSegmentWaypoints(trackGeom, player->sectorIndex, &waypointStart, &waypointEnd);
             delta.x = player->worldPos.x - waypointStart.x;
             rotatedPtr = &rotated;
@@ -3770,23 +3770,16 @@ s32 updateStunnedRecoveryRespawnPhase(Player *player) {
             worldPos = &player->worldPos;
             player->worldPos.z = delta.z + waypointStart.z;
             player->sectorIndex = findTrackSector(trackGeom, player->sectorIndex, worldPos);
-            findTrackFaceAtPosition(
-                (TrackGeometryFaceData *)trackGeom,
-                player->sectorIndex,
-                worldPos,
-                &surfaceType,
-                &surfaceExtra
-            );
+            findTrackFaceAtPosition(trackGeom, player->sectorIndex, worldPos, &surfaceType, &surfaceExtra);
             trackGeomAlias = trackGeom;
             while (normalizeSurfaceType(surfaceType) != 0) {
-                player->sectorIndex =
-                    resolveTrackSegmentIndex((TrackSegmentEntry **)trackGeomAlias, player->sectorIndex);
+                player->sectorIndex = resolveTrackSegmentIndex((TrackSector **)trackGeomAlias, player->sectorIndex);
                 pathAngle = getTrackSegmentWaypoints(trackGeomAlias, player->sectorIndex, &waypointStart, &waypointEnd);
                 rotateVectorY(&respawnTrackOffset, pathAngle, &delta);
                 player->worldPos.x = waypointStart.x + delta.x;
                 player->worldPos.z = waypointStart.z + delta.z;
                 findTrackFaceAtPosition(
-                    (TrackGeometryFaceData *)trackGeomAlias,
+                    trackGeomAlias,
                     player->sectorIndex,
                     &player->worldPos,
                     &surfaceType,
@@ -5119,12 +5112,9 @@ void updateAndRenderRaceCharacters(void) {
     if (gs->gamePaused == 0) {
         for (i = 0; i < gs->numPlayers; i++) {
             player = &gs->players[i];
-            player->segmentProgress = projectPositionOntoTrackSegment(
-                (TrackGeometryData *)&gs->gameData,
-                player->sectorIndex,
-                &player->worldPos
-            );
-            player->lapProgressRemaining = getTrackSegmentFinishZoneFlag(&gs->gameData, player->sectorIndex);
+            player->segmentProgress =
+                projectPositionOntoTrackSegment(&gs->gameData, player->sectorIndex, &player->worldPos);
+            player->lapProgressRemaining = getTrackLapProgressRemaining(&gs->gameData, player->sectorIndex);
         }
 
         {
@@ -5449,7 +5439,7 @@ void handlePlayerPositionAndTrackCollision(Player *player) {
     }
 
     findTrackFaceInSector(
-        (TrackGeometryFaceData *)&gs->gameData,
+        &gs->gameData,
         player->sectorIndex,
         &player->worldPos,
         &player->trackFaceType,
@@ -6015,7 +6005,7 @@ void renderRacerProjectedShadow(Player *player) {
 
 void updateRacerShadowSamplePositions(Player *player) {
     GameState *gameSt;
-    GameDataLayout *gameData;
+    TrackData *gameData;
     s32 sampleIndex;
     Vec3i *samplePos;
     s32 trackSectorIndex;

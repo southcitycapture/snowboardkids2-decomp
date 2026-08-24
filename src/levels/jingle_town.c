@@ -134,7 +134,7 @@ void handleTrainIdleState(JingleTownTrain *train) {
 
 void handleTrainHopBehavior(JingleTownTrain *train) {
     GameState *gameState;
-    GameDataLayout *gameData;
+    TrackData *gameData;
     s32 *posPtr;
     Vec3i rotResult;
     s16 angleDiff;
@@ -198,7 +198,7 @@ void handleTrainJumpBehavior(JingleTownTrain *train) {
     Vec3i rotatedVec;
     s16 angleDiff;
     s16 clampedAngle;
-    GameDataLayout *gameData;
+    TrackData *gameData;
     s32 *posPtr;
 
     gameState = getCurrentAllocation();

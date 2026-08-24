@@ -170,7 +170,7 @@ void updateFlyingEnemyLowJump(FlyingEnemyTask *task) {
     GameState *gs;
     Vec3i rotatedVec;
     s16 angleDelta;
-    GameDataLayout *gameData;
+    TrackData *gameData;
     gs = (GameState *)getCurrentAllocation();
 
     if (gs->gamePaused == 0) {

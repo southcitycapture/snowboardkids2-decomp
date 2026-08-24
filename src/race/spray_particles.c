@@ -16,8 +16,8 @@
 
 typedef struct {
     DataTable_19E80 *assetTable;
-    loadAssetMetadata_arg particle;
-    u8 padding2[0x10];
+    BillboardSprite particle;
+    u8 padding2[0xC];
     s32 particleType;
     s32 iteration;
     s32 velX;
@@ -25,8 +25,7 @@ typedef struct {
 
 typedef struct {
     s32 padding0;
-    loadAssetMetadata_arg particle;
-    s32 padding2;
+    BillboardSprite particle;
     s32 velX;
     s32 velY;
     s32 velZ;
@@ -35,8 +34,7 @@ typedef struct {
 } SprayEffectUpdateTask;
 
 typedef struct {
-    loadAssetMetadata_arg lam;
-    u8 padding[0x4];
+    BillboardSprite lam;
 } AssetWrapper;
 
 typedef struct {
@@ -91,7 +89,7 @@ typedef struct {
 typedef struct {
     GlintEffectSource *source;
     void *assetTable;
-    loadAssetMetadata_arg particle;
+    BillboardSprite particle;
 } GlintEffectTask;
 
 typedef struct {
@@ -102,10 +100,8 @@ typedef struct {
 typedef struct {
     Player *player;
     DataTable_19E80 *assetTable;
-    loadAssetMetadata_arg particleLeft;
-    u8 padding24[0x4];
-    loadAssetMetadata_arg particleRight;
-    u8 padding44[0x4];
+    BillboardSprite particleLeft;
+    BillboardSprite particleRight;
     Vec3i skiOffsets[2];
     s16 frameCounter;
     s16 particleIndex;
@@ -135,8 +131,7 @@ typedef struct {
 
 typedef struct {
     /* 0x00 */ void *assetTable;
-    /* 0x04 */ loadAssetMetadata_arg particle;
-    /* 0x20 */ u8 padding_20[0x4];
+    /* 0x04 */ BillboardSprite particle;
     /* 0x24 */ s16 particleType;
     /* 0x26 */ u16 animFrame;
     /* 0x28 */ s32 velX;
@@ -160,8 +155,7 @@ typedef struct {
 } ImpactStarTask;
 
 typedef struct {
-    loadAssetMetadata_arg particle;
-    u8 _pad2[0x4];
+    BillboardSprite particle;
 } CharacterAttackEffectParticle;
 
 typedef struct {
@@ -249,7 +243,7 @@ void loadFirstSprayParticle(SprayEffectTask *arg0) {
     GameState *gs = (GameState *)getCurrentAllocation();
     loadAssetMetadata(&arg0->particle, arg0->assetTable, arg0->particleType);
     arg0->particle.alpha = 0xE0;
-    arg0->particle.assetTemplate = &gs->unk44->unkFC0->asset;
+    arg0->particle.vertices = (Vtx *)&gs->unk44->unkFC0->asset;
     arg0->iteration = 0;
     setCallbackWithContinue(&updateSprayEffect);
 }
@@ -264,7 +258,7 @@ void updateSprayEffect(SprayEffectUpdateTask *arg0) {
         GameStateUnk44 *base;
 
         base = gs->unk44;
-        arg0->particle.assetTemplate = &base->unkFC0[arg0->iteration].asset;
+        arg0->particle.vertices = (Vtx *)&base->unkFC0[arg0->iteration].asset;
 
         arg0->iteration = arg0->iteration + 1;
         if (arg0->iteration == 4) {
@@ -316,10 +310,10 @@ void updateDualSnowSprayParticles(DualSnowSprayUpdateTask *arg0) {
     gs = (GameState *)getCurrentAllocation();
     loadAssetMetadata(&arg0->assets[0].lam, arg0->assetTable, arg0->particleType + arg0->frameCounter);
 
-    arg0->assets[1].lam.data_ptr = arg0->assets[0].lam.data_ptr;
-    arg0->assets[1].lam.index_ptr = arg0->assets[0].lam.index_ptr;
-    arg0->assets[1].lam.unk18 = arg0->assets[0].lam.unk18;
-    arg0->assets[1].lam.unk19 = arg0->assets[0].lam.unk19;
+    arg0->assets[1].lam.textureData = arg0->assets[0].lam.textureData;
+    arg0->assets[1].lam.paletteData = arg0->assets[0].lam.paletteData;
+    arg0->assets[1].lam.textureWidth = arg0->assets[0].lam.textureWidth;
+    arg0->assets[1].lam.textureHeight = arg0->assets[0].lam.textureHeight;
 
     for (i = 0; i < 4; i++) {
         enqueueAlphaSprite(i, &arg0->assets[0].lam);
@@ -448,7 +442,7 @@ void updateCharacterTrailParticle(CharacterTrailParticleTask *arg0) {
     i = 0;
     if (arg0->particle.alpha == 0xFF) {
         do {
-            enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&arg0->particle);
+            enqueueTexturedBillboardSprite(i, (BillboardSprite *)&arg0->particle);
             i++;
         } while (i < 4);
     } else {
@@ -477,7 +471,7 @@ void spawnCharacterTrailParticle(void *arg0) {
         task->velY = 0;
         task->velZ = 0;
         task->positionSelector = 0;
-        task->particle.assetTemplate = (loadAssetMetadata_arg *)&allocation->unk44->unkFC0;
+        task->particle.vertices = (Vtx *)&allocation->unk44->unkFC0;
     }
 }
 
@@ -509,7 +503,7 @@ void spawnPlayerCharacterTrailParticle(Player *arg0, s32 arg1) {
         task->velY = arg0->velocity.y / 2;
         task->velZ = arg0->velocity.z / 2;
         task->positionSelector = -1;
-        task->particle.assetTemplate = (void *)((u32)allocation->unk44 + 0x1440);
+        task->particle.vertices = (void *)((u32)allocation->unk44 + 0x1440);
     }
 }
 
@@ -530,7 +524,7 @@ void loadImpactStarAsset(ImpactStarTask *arg0) {
     arg0->unk4 = temp;
     arg0->unk28 = 0;
 
-    loadAssetMetadata((loadAssetMetadata_arg *)&arg0->unk4, arg0->unk0, arg0->unk24);
+    loadAssetMetadata((BillboardSprite *)&arg0->unk4, arg0->unk0, arg0->unk24);
 
     setCallbackWithContinue(&updateImpactStar);
 }
@@ -542,7 +536,7 @@ void updateImpactStar(ImpactStarTask *arg0) {
     alloc = getCurrentAllocation();
     if (alloc->gamePaused == 0) {
         if ((arg0->unk28 & 1) == 0) {
-            loadAssetMetadata((loadAssetMetadata_arg *)&arg0->unk4, arg0->unk0, arg0->unk24 + (arg0->unk28 >> 1));
+            loadAssetMetadata((BillboardSprite *)&arg0->unk4, arg0->unk0, arg0->unk24 + (arg0->unk28 >> 1));
         }
         arg0->unk28++;
         if (arg0->unk28 >= 0xA) {
@@ -551,7 +545,7 @@ void updateImpactStar(ImpactStarTask *arg0) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&arg0->unk4);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)&arg0->unk4);
     }
 }
 
@@ -641,10 +635,10 @@ void updateDualSnowSprayParticles_SingleSlot(DualSnowSprayUpdateTask *arg0) {
     gs = (GameState *)getCurrentAllocation();
     loadAssetMetadata(&arg0->assets[0].lam, arg0->assetTable, (arg0->frameCounter / 4) + 8);
 
-    arg0->assets[1].lam.data_ptr = arg0->assets[0].lam.data_ptr;
-    arg0->assets[1].lam.index_ptr = arg0->assets[0].lam.index_ptr;
-    arg0->assets[1].lam.unk18 = arg0->assets[0].lam.unk18;
-    arg0->assets[1].lam.unk19 = arg0->assets[0].lam.unk19;
+    arg0->assets[1].lam.textureData = arg0->assets[0].lam.textureData;
+    arg0->assets[1].lam.paletteData = arg0->assets[0].lam.paletteData;
+    arg0->assets[1].lam.textureWidth = arg0->assets[0].lam.textureWidth;
+    arg0->assets[1].lam.textureHeight = arg0->assets[0].lam.textureHeight;
 
     for (i = 0; i < 4; i++) {
         enqueueAlphaSprite(i, &arg0->assets[0].lam);
@@ -695,9 +689,9 @@ void initSkiTrailTask(SkiTrailTask *task) {
     task->assetTable = load_3ECE40();
     particleAsset = (void *)((u8 *)gs->unk44 + 0x13C0);
     task->particleLeft.alpha = 0xFF;
-    task->particleLeft.assetTemplate = particleAsset;
+    task->particleLeft.vertices = particleAsset;
     task->particleRight.alpha = task->particleLeft.alpha;
-    task->particleRight.assetTemplate = task->particleLeft.assetTemplate;
+    task->particleRight.vertices = task->particleLeft.vertices;
 
     i = 0;
 
@@ -751,16 +745,16 @@ void updateSkiTrailTask(SkiTrailTask *task) {
 
     gs = (GameState *)getCurrentAllocation();
     loadAssetMetadataByIndex(
-        (loadAssetMetadataByIndex_arg *)&task->particleLeft,
+        (BillboardSprite *)&task->particleLeft,
         task->assetTable,
         task->frameCounter + 0x61,
         task->particleIndex
     );
 
-    task->particleRight.data_ptr = task->particleLeft.data_ptr;
-    task->particleRight.index_ptr = task->particleLeft.index_ptr;
-    task->particleRight.unk18 = task->particleLeft.unk18;
-    task->particleRight.unk19 = task->particleLeft.unk19;
+    task->particleRight.textureData = task->particleLeft.textureData;
+    task->particleRight.paletteData = task->particleLeft.paletteData;
+    task->particleRight.textureWidth = task->particleLeft.textureWidth;
+    task->particleRight.textureHeight = task->particleLeft.textureHeight;
 
     task->particleLeft.position.x = task->skiOffsets[0].x + task->player->worldPos.x;
     task->particleLeft.position.y = task->skiOffsets[0].y + task->player->worldPos.y;
@@ -798,7 +792,7 @@ void spawnSkiTrailTask(Player *player) {
 void initGlintEffect(GlintEffectTask *arg0) {
     getCurrentAllocation();
     arg0->assetTable = load_3ECE40();
-    arg0->particle.assetTemplate = (loadAssetMetadata_arg *)&gGlintEffectAssetTemplate;
+    arg0->particle.vertices = (Vtx *)&gGlintEffectAssetTemplate;
     arg0->particle.alpha = 0xFF;
     loadAssetMetadata(&arg0->particle, arg0->assetTable, 0x6A);
     setCleanupCallback(&cleanupGlintEffect);
@@ -846,7 +840,7 @@ void loadCharacterAttackEffectAssets(CharacterAttackEffectState *arg0) {
 
     for (i = 0; i < 6; i++) {
         loadAssetMetadata(&arg0->particles[i].particle, arg0->assetTable, arg0->particleType);
-        arg0->particles[i].particle.assetTemplate = (loadAssetMetadata_arg *)&gCharacterAttackEffectAssetTemplate;
+        arg0->particles[i].particle.vertices = (Vtx *)&gCharacterAttackEffectAssetTemplate;
 
         if (arg0->isVariant == 0) {
             memcpy(&arg0->positionOffsets, &gCharacterAttackEffectPositionOffsetsA, sizeof(Vec3i));
@@ -929,10 +923,10 @@ void updateCharacterAttackEffect(CharacterAttackEffectState *arg0) {
 #endif
             d = &arg0->particles[1];
             for (j = 1; j < 6; j++) {
-                d->particle.data_ptr = arg0->particles[0].particle.data_ptr;
-                d->particle.index_ptr = arg0->particles[0].particle.index_ptr;
-                d->particle.unk18 = arg0->particles[0].particle.unk18;
-                d->particle.unk19 = arg0->particles[0].particle.unk19;
+                d->particle.textureData = arg0->particles[0].particle.textureData;
+                d->particle.paletteData = arg0->particles[0].particle.paletteData;
+                d->particle.textureWidth = arg0->particles[0].particle.textureWidth;
+                d->particle.textureHeight = arg0->particles[0].particle.textureHeight;
                 d++;
             }
         }

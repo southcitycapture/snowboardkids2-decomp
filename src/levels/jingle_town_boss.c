@@ -224,7 +224,7 @@ s32 initJingleTownBoss(Player *arg0) {
     memcpy(&arg0->tiltTransform, &identityMatrix, sizeof(Transform3D));
 
     arg0->worldPos.x = gJingleTownBossSpawnPos[arg0->playerIndex];
-    getTrackSegmentWaypoints((TrackGeometryData *)&gameState->gameData, 0, &waypoint1, &waypoint2);
+    getTrackSegmentWaypoints(&gameState->gameData, 0, &waypoint1, &waypoint2);
     arg0->worldPos.z = waypoint1.z + 0x200000;
     arg0->sectorIndex = getOrUpdatePlayerSectorIndex(arg0, &gameState->gameData, 0, &arg0->worldPos);
     arg0->worldPos.y = getTrackHeightInSector(&gameState->gameData, arg0->sectorIndex, &arg0->worldPos, 0x100000);
@@ -691,7 +691,7 @@ void updateJingleTownBossPositionAndTrackCollision(Player *arg0) {
     Vec3i collisionOffset;
     s32 pad2[8];
     GameState *gameState;
-    GameDataLayout *gameData;
+    TrackData *gameData;
     u16 newSectorIndex;
 
     gameState = getCurrentAllocation();
@@ -881,7 +881,7 @@ void renderJingleTownBossWithEffects(Player *arg0) {
  */
 void updateJingleTownBossJointPositions(Player *arg0) {
     s32 i;
-    GameDataLayout *temp_s5;
+    TrackData *temp_s5;
     GameState *alloc;
 
     alloc = getCurrentAllocation();

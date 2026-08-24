@@ -252,7 +252,7 @@ s32 initIceLandBoss(Player *arg0) {
 
     // Set initial position based on boss index
     arg0->worldPos.x = gIceLandBossSpawnXPositions[arg0->playerIndex];
-    getTrackSegmentWaypoints((TrackGeometryData *)&gameState->gameData, 0, &waypoint1, &waypoint2);
+    getTrackSegmentWaypoints(&gameState->gameData, 0, &waypoint1, &waypoint2);
     arg0->worldPos.z = waypoint1.z + 0x200000;
     trackIdx = getOrUpdatePlayerSectorIndex(arg0, &gameState->gameData, 0, &arg0->worldPos);
     arg0->sectorIndex = trackIdx;
@@ -772,7 +772,7 @@ void updateIceLandBossPositionAndTrackCollision(Player *boss) {
     Vec3i collisionOffset;
     s32 pad2[8];
     GameState *gameState;
-    GameDataLayout *gameData;
+    TrackData *gameData;
     u16 newSectorIndex;
 
     gameState = getCurrentAllocation();
@@ -880,7 +880,7 @@ void renderIceLandBossWithSurfaceColors(Player *arg0) {
  */
 void updateIceLandBossJointPositions(Player *boss) {
     GameState *gameState;
-    GameDataLayout *gameData;
+    TrackData *gameData;
     s32 jointIndex;
     s32 flyingFlag;
     s32 jointOffset;

@@ -29,8 +29,7 @@ typedef struct {
 
 typedef struct {
     /* 0x00 */ void *spriteAsset;
-    /* 0x04 */ loadAssetMetadata_arg sprite;
-    /* 0x20 */ u8 padding20[4];
+    /* 0x04 */ BillboardSprite sprite;
     /* 0x24 */ Vec3i worldPosition;
     /* 0x30 */ Vec3i velocity;
     /* 0x3C */ s16 ghostType;
@@ -43,16 +42,14 @@ typedef struct {
 
 typedef struct {
     /* 0x00 */ void *spriteAsset;
-    /* 0x04 */ loadAssetMetadata_arg sprite;
-    /* 0x20 */ u8 padding20[4];
+    /* 0x04 */ BillboardSprite sprite;
     /* 0x24 */ s32 targetYOffset;
     /* 0x28 */ s16 lifetime;
 } FloatingBillboard;
 
 typedef struct {
     /* 0x00 */ void *spriteAsset;
-    /* 0x04 */ loadAssetMetadata_arg sprite;
-    /* 0x20 */ u8 padding20[4];
+    /* 0x04 */ BillboardSprite sprite;
     /* 0x24 */ s16 variantIndex;
     /* 0x26 */ s16 animationPhase;
 } FloatingSpriteEntity;

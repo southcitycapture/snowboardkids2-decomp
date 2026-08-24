@@ -254,7 +254,7 @@ s32 initCrazyJungleBoss(Player *arg0) {
 
     // Set initial position based on boss index
     arg0->worldPos.x = D_800BC44C_ACC7C[arg0->playerIndex];
-    getTrackSegmentWaypoints((TrackGeometryData *)&gameState->gameData, 0, &waypoint1, &waypoint2);
+    getTrackSegmentWaypoints(&gameState->gameData, 0, &waypoint1, &waypoint2);
 
     arg0->worldPos.z = waypoint1.z + 0x200000;
 
@@ -519,7 +519,7 @@ void updateCrazyJungleBossPositionAndTrackCollision(Player *arg0) {
     Vec3i collisionOffset;
     s32 pad2[8];
     GameState *gameState;
-    GameDataLayout *gameData;
+    TrackData *gameData;
     u16 newSectorIndex;
 
     gameState = getCurrentAllocation();
@@ -613,7 +613,7 @@ void renderCrazyJungleBossWithSurfaceColors(Player *arg0) {
 
 void updateBossProximityCheckpoints(Player *arg0) {
     s32 checkpointIndex;
-    GameDataLayout *gameData;
+    TrackData *gameData;
     GameState *gameState;
 
     gameState = getCurrentAllocation();

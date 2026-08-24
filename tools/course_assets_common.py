@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import struct
+from math import isqrt
 from pathlib import Path
 from typing import Iterable
 
@@ -230,17 +231,44 @@ def pack_track_sector_mesh(manifest: dict) -> bytes:
             )
         )
 
-    out.extend(parse_int(manifest["final_value"]).to_bytes(2, "big"))
-    for sector in manifest["sectors"]:
-        out.extend(struct.pack(">hhhh", *(parse_int(sector[f"neighbor{i}"]) for i in range(4))))
-        out.extend(bytes.fromhex(str(sector["unknown_08"])))
+    sectors = manifest["sectors"]
+    sector_count = parse_int(manifest["sector_count"])
+    if sector_count != len(sectors):
+        raise ValueError(f"sector_count is {sector_count}, but the manifest contains {len(sectors)} sectors")
+
+    out.extend(sector_count.to_bytes(2, "big"))
+    for sector_index, sector in enumerate(sectors):
+        out.extend(
+            struct.pack(
+                ">hhhhHh",
+                parse_int(sector["next_sector"]),
+                parse_int(sector["previous_sector"]),
+                parse_int(sector["right_sector"]),
+                parse_int(sector["left_sector"]),
+                parse_int(sector["segment_length"]),
+                parse_int(sector["lap_progress_remaining"]),
+            )
+        )
         out.extend(struct.pack(">HHHH", parse_int(sector["base_face"]), parse_int(sector["face_count"]), parse_int(sector["base_height_face"]), parse_int(sector["height_face_count"])))
-        out.extend(parse_int(sector["vertex0"]).to_bytes(2, "big"))
-        out.extend(bytes.fromhex(str(sector["unknown_16"])))
-        out.extend(parse_int(sector["vertex1"]).to_bytes(2, "big"))
-        out.extend(parse_int(sector["vertex2"]).to_bytes(2, "big"))
-        out.extend(bytes.fromhex(str(sector["unknown_1c"])))
-        out.extend(parse_int(sector["vertex3"]).to_bytes(2, "big"))
-        out.extend(bytes.fromhex(str(sector["unknown_20"])))
+        vertex_indices = (
+            parse_int(sector["start_left_vertex"]),
+            parse_int(sector["start_center_vertex"]),
+            parse_int(sector["start_right_vertex"]),
+            parse_int(sector["end_left_vertex"]),
+            parse_int(sector["end_center_vertex"]),
+            parse_int(sector["end_right_vertex"]),
+        )
+        out.extend(struct.pack(">HHHHHH", *vertex_indices))
+        out.extend(b"\x00\x00\x00\x00")
+
+        start = vertices[vertex_indices[1]]
+        end = vertices[vertex_indices[4]]
+        dx = parse_int(end["x"]) - parse_int(start["x"])
+        dz = parse_int(end["z"]) - parse_int(start["z"])
+        expected_length = isqrt(dx * dx + dz * dz)
+        if parse_int(sector["segment_length"]) != expected_length:
+            raise ValueError(
+                f"sector {sector_index} segment_length is {sector['segment_length']}, expected {expected_length}"
+            )
 
     return bytes(out)

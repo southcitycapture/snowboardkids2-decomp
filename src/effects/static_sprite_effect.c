@@ -19,10 +19,8 @@ typedef struct {
 
 typedef struct {
     void *modelData;
-    loadAssetMetadata_arg sprite1;
-    u8 padding[4];
-    loadAssetMetadata_arg sprite2;
-    u8 padding2[4];
+    BillboardSprite sprite1;
+    BillboardSprite sprite2;
     s32 velocityX;
     s32 velocityY;
     s32 velocityZ;
@@ -53,10 +51,10 @@ void cleanupStaticSpriteEffectTask(void **);
 
 void initStaticSpriteEffectTask(StaticSpriteEffectTaskData *arg0) {
     arg0->modelData = loadCompressedData(&spriteEffectModelData_ROM_START, &spriteEffectModelData_ROM_END, 0xF18);
-    arg0->sprite1.assetTemplate = (loadAssetMetadata_arg *)&staticSpriteEffectTexture;
+    arg0->sprite1.vertices = (Vtx *)&staticSpriteEffectTexture;
     arg0->sprite1.alpha = (randA() & 0x1F) + 0x70;
     arg0->frameCounter = 0;
-    arg0->sprite2.assetTemplate = arg0->sprite1.assetTemplate;
+    arg0->sprite2.vertices = arg0->sprite1.vertices;
     arg0->sprite2.alpha = arg0->sprite1.alpha;
     setCleanupCallback(&cleanupStaticSpriteEffectTask);
     setCallbackWithContinue(&updateStaticSpriteEffectTask);
@@ -64,14 +62,14 @@ void initStaticSpriteEffectTask(StaticSpriteEffectTaskData *arg0) {
 
 void updateStaticSpriteEffectTask(StaticSpriteEffectTaskData *arg0) {
     s32 i;
-    loadAssetMetadata_arg *sprite1_ptr = &arg0->sprite1;
+    BillboardSprite *sprite1_ptr = &arg0->sprite1;
 
     loadAssetMetadata(sprite1_ptr, arg0->modelData, arg0->frameCounter / 4);
 
-    arg0->sprite2.data_ptr = arg0->sprite1.data_ptr;
-    arg0->sprite2.index_ptr = arg0->sprite1.index_ptr;
-    arg0->sprite2.unk18 = arg0->sprite1.unk18;
-    arg0->sprite2.unk19 = arg0->sprite1.unk19;
+    arg0->sprite2.textureData = arg0->sprite1.textureData;
+    arg0->sprite2.paletteData = arg0->sprite1.paletteData;
+    arg0->sprite2.textureWidth = arg0->sprite1.textureWidth;
+    arg0->sprite2.textureHeight = arg0->sprite1.textureHeight;
 
     enqueueAlphaSprite(0, sprite1_ptr);
     enqueueAlphaSprite(0, &arg0->sprite2);

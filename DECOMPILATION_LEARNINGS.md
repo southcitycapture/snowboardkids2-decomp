@@ -930,3 +930,31 @@ fields. The sprite slot previously exposed through a padded local asset struct i
 Keep the initialization callback's first payload word as an `s32` address view and cast it when assigning the
 typed child-task field. KMC schedules the adjacent sprite-index store differently if this initialization view
 is changed to `SceneModel *`, even though controller and child-task states should use `SceneModel *` directly.
+
+## Treat Course Geometry as One Parsed Track Layout
+
+The parsed course buffer has one canonical runtime view: a vertex array, a face array, and an array of
+`0x24`-byte track sectors. The sector words at `0x08` and `0x0A` are the centerline segment length and remaining
+lap progress. Offsets `0x16` and `0x1C` are the start and end center vertices; together with the left and right
+vertices, they account for all six indices at `0x14` through `0x1E`. The trailing word at `0x20` is zero in all
+extracted courses and can be named `unused` rather than represented as padding.
+
+The stored segment length is the integer square root of the XZ distance between the two center vertices for
+every extracted sector. Validate that relationship, the declared sector count, and the zero trailing word in
+the editable course-asset pipeline so future extraction cannot regress to opaque byte strings.
+
+KMC's operand ordering can still depend on how a sector address is written. In `getPlayerTargetTrackAngle`, a
+typed array subscript reverses the operands of the final `addu`; retaining the original scaled-address
+expression is required for an exact match even though the resulting pointer is a `TrackSector *`.
+
+## Include the Matrix in Billboard Sprite State
+
+The common billboard renderer payload is `0x20` bytes, not `0x1C`: vertices, fixed-point position, texture and
+palette pointers, dimensions, alpha, and a matrix pointer at `0x1C`. The enqueue functions clear that matrix
+field directly. Four-byte placeholders after the old truncated metadata structs were therefore matrix storage,
+and removing them while embedding the complete `BillboardSprite` preserves all following owner offsets.
+
+This one prefix replaces the metadata-loader argument, indexed-loader argument, opaque sprite render state,
+and alpha sprite render state. Related owner views can also collapse when their offsets agree: the two boss
+projectile variants share one state, and the orbiting-star view is the regular star state with its fixed-point
+offset read as three halfwords.

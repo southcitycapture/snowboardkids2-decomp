@@ -13,38 +13,32 @@
 #include "system/task_scheduler.h"
 #include "text/font_assets.h"
 
-#define TRACK_WALL_VERTEX_X(trackGeom, sectorIndex, vertexField)                               \
-    (((TrackGeometryFaceData *)trackGeom)                                                      \
-         ->vertices[((TrackGeometryFaceData *)trackGeom)->faceGroups[sectorIndex].vertexField] \
-         .x                                                                                    \
-     << 16)
+#define TRACK_WALL_VERTEX_X(trackGeom, sectorIndex, vertexField) \
+    (((TrackData *)trackGeom)->vertices[((TrackData *)trackGeom)->sectors[sectorIndex].vertexField].x << 16)
 
-#define TRACK_WALL_VERTEX_Z(trackGeom, sectorIndex, vertexField)                               \
-    (((TrackGeometryFaceData *)trackGeom)                                                      \
-         ->vertices[((TrackGeometryFaceData *)trackGeom)->faceGroups[sectorIndex].vertexField] \
-         .z                                                                                    \
-     << 16)
+#define TRACK_WALL_VERTEX_Z(trackGeom, sectorIndex, vertexField) \
+    (((TrackData *)trackGeom)->vertices[((TrackData *)trackGeom)->sectors[sectorIndex].vertexField].z << 16)
 
-#define RESOLVE_TRACK_SIDE_WALL(neighborField, startX, startZ, endX, endZ)                        \
-    if (((TrackGeometryFaceData *)trackGeom)->faceGroups[sectorIndex].neighborField < 0) {        \
-        dx = (endX) - (startX);                                                                   \
-        dz = (endZ) - (startZ);                                                                   \
-        relX = workPos.x - (startX);                                                              \
-        zTemp = workPos.z;                                                                        \
-        relZ = zTemp - (startZ);                                                                  \
-        wallLen = isqrt64((((s64)dx) * dx) + (((s64)dz) * dz));                                   \
-        dzNorm = (s32)((((s64)dz) * 0x2000) / wallLen);                                           \
-        dxNorm = (s32)((((s64)dx) * 0x2000) / wallLen);                                           \
-        dz = -dzNorm;                                                                             \
-        dx = (s32)(((((s64)relX) * dz) + (((s64)relZ) * dxNorm)) / 0x2000);                       \
-        if ((-collisionRadius) < dx) {                                                            \
-            dx = (-collisionRadius) - dx;                                                         \
-            result = ((TrackGeometryFaceData *)trackGeom)->faceGroups[sectorIndex].neighborField; \
-            hitWall = 1;                                                                          \
-            workPos.x += (((s64)dx) * dz) / 0x2000;                                               \
-            workPos.z += (((s64)dx) * dxNorm) / 0x2000;                                           \
-            sectorIndex = findTrackSector(trackGeom, sectorIndex, &workPos);                      \
-        }                                                                                         \
+#define RESOLVE_TRACK_SIDE_WALL(neighborField, startX, startZ, endX, endZ)         \
+    if (((TrackData *)trackGeom)->sectors[sectorIndex].neighborField < 0) {        \
+        dx = (endX) - (startX);                                                    \
+        dz = (endZ) - (startZ);                                                    \
+        relX = workPos.x - (startX);                                               \
+        zTemp = workPos.z;                                                         \
+        relZ = zTemp - (startZ);                                                   \
+        wallLen = isqrt64((((s64)dx) * dx) + (((s64)dz) * dz));                    \
+        dzNorm = (s32)((((s64)dz) * 0x2000) / wallLen);                            \
+        dxNorm = (s32)((((s64)dx) * 0x2000) / wallLen);                            \
+        dz = -dzNorm;                                                              \
+        dx = (s32)(((((s64)relX) * dz) + (((s64)relZ) * dxNorm)) / 0x2000);        \
+        if ((-collisionRadius) < dx) {                                             \
+            dx = (-collisionRadius) - dx;                                          \
+            result = ((TrackData *)trackGeom)->sectors[sectorIndex].neighborField; \
+            hitWall = 1;                                                           \
+            workPos.x += (((s64)dx) * dz) / 0x2000;                                \
+            workPos.z += (((s64)dx) * dxNorm) / 0x2000;                            \
+            sectorIndex = findTrackSector(trackGeom, sectorIndex, &workPos);       \
+        }                                                                          \
     }
 
 #define TRACK_WALL_ENDPOINT_COLLIDES()                           \
@@ -65,55 +59,27 @@
     __asm__ volatile("" : : : "t0", "t1", "t2", "t3", "t4", "t5", "t8", "t9", "s0", "s1")
 #endif
 
-#define APPLY_TRACK_DIAGONAL_WALL_PUSH(neighborField, groupOffset, groupIdx, scaleTemp, xDivisor, zDivisor)           \
-    dx = (-collisionRadius) - dx;                                                                                     \
-    result =                                                                                                          \
-        ((TrackFaceGroup *)((groupOffset) + ((s32)((TrackGeometryFaceData *)trackGeom)->faceGroups)))->neighborField; \
-    scaleTemp = 0x2000;                                                                                               \
-    hitWall = 1;                                                                                                      \
-    workPos.x += (((s64)dx) * temp_s7) / (xDivisor);                                                                  \
-    workPos.z += (((s64)dx) * totalDistSq) / (zDivisor);                                                              \
+#define APPLY_TRACK_DIAGONAL_WALL_PUSH(neighborField, groupOffset, groupIdx, scaleTemp, xDivisor, zDivisor) \
+    dx = (-collisionRadius) - dx;                                                                           \
+    result = ((TrackSector *)((groupOffset) + ((s32)((TrackData *)trackGeom)->sectors)))->neighborField;    \
+    scaleTemp = 0x2000;                                                                                     \
+    hitWall = 1;                                                                                            \
+    workPos.x += (((s64)dx) * temp_s7) / (xDivisor);                                                        \
+    workPos.z += (((s64)dx) * totalDistSq) / (zDivisor);                                                    \
     sectorIndex = findTrackSector(trackGeom, groupIdx, &workPos)
 
-#define CULL_SPRITE(s)                                                              \
-    if ((u32)((gActiveViewport->cameraX - (s)->posX) + 0x0FEA0000) > 0x1FD40000U) { \
-        return;                                                                     \
-    }                                                                               \
-    if ((u32)((gActiveViewport->cameraZ - (s)->posZ) + 0x0FEA0000) > 0x1FD40000U) { \
-        return;                                                                     \
-    }                                                                               \
-    if ((u32)((gActiveViewport->cameraY - (s)->posY) + 0x0FEA0000) > 0x1FD40000U) { \
-        return;                                                                     \
+#define CULL_SPRITE(s)                                                                    \
+    if ((u32)((gActiveViewport->cameraX - (s)->position.x) + 0x0FEA0000) > 0x1FD40000U) { \
+        return;                                                                           \
+    }                                                                                     \
+    if ((u32)((gActiveViewport->cameraZ - (s)->position.z) + 0x0FEA0000) > 0x1FD40000U) { \
+        return;                                                                           \
+    }                                                                                     \
+    if ((u32)((gActiveViewport->cameraY - (s)->position.y) + 0x0FEA0000) > 0x1FD40000U) { \
+        return;                                                                           \
     }
 
 USE_OVERLAY(rand);
-
-typedef struct {
-    /* 0x00 */ s32 vertices;
-    /* 0x04 */ s32 posX;
-    /* 0x08 */ s32 posY;
-    /* 0x0C */ s32 posZ;
-    /* 0x10 */ u8 *textureData;
-    /* 0x14 */ u8 *paletteData;
-    /* 0x18 */ u8 width;
-    /* 0x19 */ u8 height;
-    /* 0x1A */ u8 padding[2];
-    /* 0x1C */ Mtx *matrix;
-} TexturedSpriteState;
-
-typedef struct {
-    /* 0x00 */ s32 vertices;
-    /* 0x04 */ s32 posX;
-    /* 0x08 */ s32 posY;
-    /* 0x0C */ s32 posZ;
-    /* 0x10 */ u8 *textureData;
-    /* 0x14 */ u8 *paletteData;
-    /* 0x18 */ u8 width;
-    /* 0x19 */ u8 height;
-    /* 0x1A */ u8 alpha;
-    /* 0x1B */ u8 padding;
-    /* 0x1C */ Mtx *matrix;
-} AlphaSpriteState;
 
 typedef struct {
     DataTable_19E80 *fontDataTable;
@@ -146,33 +112,33 @@ Gfx gAlphaSpriteSetupDL[] = {
 };
 
 void renderCameraRelativeDisplayList(DisplayListObject *arg0);
-void renderTexturedBillboardSprite(TexturedSpriteState *);
-void renderTexturedBillboardSpriteTile(TexturedSpriteState *);
+void renderTexturedBillboardSprite(BillboardSprite *);
+void renderTexturedBillboardSpriteTile(BillboardSprite *);
 void renderRotatedBillboardSprite(RotatedBillboardSprite *);
-void renderAlphaSprite(AlphaSpriteState *);
-void renderAlphaBillboardSprite(AlphaSpriteState *);
+void renderAlphaSprite(BillboardSprite *);
+void renderAlphaBillboardSprite(BillboardSprite *);
 void scheduleGameInitialization(void);
 void initializeFontSystemAndTransitionToMainMenu(void);
 
-void parseGameDataLayout(GameDataLayout *gameData) {
+void parseTrackData(TrackData *trackData) {
     u16 *parser;
     u16 section1Count, section2Count, configValue;
 
-    parser = gameData->dataStart;
+    parser = trackData->serializedData;
     section1Count = parser[0];
     parser = parser + 1;
-    gameData->section1Data = parser;
+    trackData->vertices = (Vec3s *)parser;
 
     parser = parser + section1Count * 3;
     section2Count = parser[0];
     parser = parser + 1;
-    gameData->section2Data = parser;
+    trackData->faces = (TrackFace *)parser;
 
     parser = parser + section2Count * 4;
     configValue = parser[0];
     parser = parser + 1;
-    gameData->section3Data = (void *)parser;
-    gameData->finalValue = configValue;
+    trackData->sectors = (TrackSector *)parser;
+    trackData->sectorCount = configValue;
 }
 
 // cross2d calculates the cross product of two 2d vectors
@@ -188,12 +154,12 @@ s64 cross2d(s32 x0, s32 y0, s32 x1, s32 y1, s32 x2, s32 y2) {
 
 u16 findTrackSector(void *arg0, u16 sectorIndex, void *arg2) {
 #ifdef CC_CHECK
-    TrackGeometryFaceData *trackGeom = (TrackGeometryFaceData *)arg0;
+    TrackData *trackGeom = (TrackData *)arg0;
     Vec3i *pos = (Vec3i *)arg2;
     s16 currentSector;
     s16 i;
 #else
-    register TrackGeometryFaceData *trackGeom __asm__("$19") = (TrackGeometryFaceData *)arg0;
+    register TrackData *trackGeom __asm__("$19") = (TrackData *)arg0;
     register Vec3i *pos __asm__("$20") = (Vec3i *)arg2;
     s16 currentSector;
     register s16 i __asm__("$16");
@@ -215,18 +181,18 @@ u16 findTrackSector(void *arg0, u16 sectorIndex, void *arg2) {
     do {
         {
             s32 idx = currentSector & 0xFFFF;
-            s32 fgAddr = (s32)trackGeom->faceGroups;
-            TrackFaceGroup *group;
+            s32 fgAddr = (s32)trackGeom->sectors;
+            TrackSector *group;
             faceGroupOffset0 = ((idx << 3) + idx) << 2;
-            group = (TrackFaceGroup *)(faceGroupOffset0 + fgAddr);
-            v0x = ((Vec3s *)(group->vertexIdx0 * 6 + (s32)trackGeom->vertices))->x << 16;
-            v0z = ((Vec3s *)(group->vertexIdx0 * 6 + (s32)trackGeom->vertices))->z << 16;
-            v1x = ((Vec3s *)(group->vertexIdx1 * 6 + (s32)trackGeom->vertices))->x << 16;
-            v1z = ((Vec3s *)(group->vertexIdx1 * 6 + (s32)trackGeom->vertices))->z << 16;
+            group = (TrackSector *)(faceGroupOffset0 + fgAddr);
+            v0x = ((Vec3s *)(group->startLeftVertexIndex * 6 + (s32)trackGeom->vertices))->x << 16;
+            v0z = ((Vec3s *)(group->startLeftVertexIndex * 6 + (s32)trackGeom->vertices))->z << 16;
+            v1x = ((Vec3s *)(group->startRightVertexIndex * 6 + (s32)trackGeom->vertices))->x << 16;
+            v1z = ((Vec3s *)(group->startRightVertexIndex * 6 + (s32)trackGeom->vertices))->z << 16;
         }
 
         if (cross2d(pos->x, pos->z, v1x, v1z, v0x, v0z) > 0) {
-            s16 neighbor = ((TrackFaceGroup *)(faceGroupOffset0 + (s32)trackGeom->faceGroups))->neighbor0;
+            s16 neighbor = ((TrackSector *)(faceGroupOffset0 + (s32)trackGeom->sectors))->nextSectorIndex;
             if (neighbor >= 0) {
                 currentSector = neighbor;
                 goto next;
@@ -235,18 +201,18 @@ u16 findTrackSector(void *arg0, u16 sectorIndex, void *arg2) {
 
         {
             s32 idx = currentSector & 0xFFFF;
-            s32 fgAddr = (s32)trackGeom->faceGroups;
-            TrackFaceGroup *group;
+            s32 fgAddr = (s32)trackGeom->sectors;
+            TrackSector *group;
             faceGroupOffset1 = ((idx << 3) + idx) << 2;
-            group = (TrackFaceGroup *)(faceGroupOffset1 + fgAddr);
-            v2x = ((Vec3s *)(group->vertexIdx2 * 6 + (s32)trackGeom->vertices))->x << 16;
-            v2z = ((Vec3s *)(group->vertexIdx2 * 6 + (s32)trackGeom->vertices))->z << 16;
-            v3x = ((Vec3s *)(group->vertexIdx3 * 6 + (s32)trackGeom->vertices))->x << 16;
-            v3z = ((Vec3s *)(group->vertexIdx3 * 6 + (s32)trackGeom->vertices))->z << 16;
+            group = (TrackSector *)(faceGroupOffset1 + fgAddr);
+            v2x = ((Vec3s *)(group->endLeftVertexIndex * 6 + (s32)trackGeom->vertices))->x << 16;
+            v2z = ((Vec3s *)(group->endLeftVertexIndex * 6 + (s32)trackGeom->vertices))->z << 16;
+            v3x = ((Vec3s *)(group->endRightVertexIndex * 6 + (s32)trackGeom->vertices))->x << 16;
+            v3z = ((Vec3s *)(group->endRightVertexIndex * 6 + (s32)trackGeom->vertices))->z << 16;
         }
 
         if (cross2d(pos->x, pos->z, v2x, v2z, v3x, v3z) > 0) {
-            s16 neighbor = ((TrackFaceGroup *)(faceGroupOffset1 + (s32)trackGeom->faceGroups))->neighbor1;
+            s16 neighbor = ((TrackSector *)(faceGroupOffset1 + (s32)trackGeom->sectors))->previousSectorIndex;
             if (neighbor >= 0) {
                 currentSector = neighbor;
                 goto next;
@@ -255,8 +221,8 @@ u16 findTrackSector(void *arg0, u16 sectorIndex, void *arg2) {
 
         if (cross2d(pos->x, pos->z, v3x, v3z, v1x, v1z) > 0) {
             s32 idx = currentSector & 0xFFFF;
-            s32 fgAddr = (s32)trackGeom->faceGroups;
-            s16 neighbor = ((TrackFaceGroup *)(((idx << 3) + idx) * 4 + fgAddr))->neighbor2;
+            s32 fgAddr = (s32)trackGeom->sectors;
+            s16 neighbor = ((TrackSector *)(((idx << 3) + idx) * 4 + fgAddr))->rightSectorIndex;
             if (neighbor >= 0) {
                 currentSector = neighbor;
                 goto next;
@@ -265,8 +231,8 @@ u16 findTrackSector(void *arg0, u16 sectorIndex, void *arg2) {
 
         if (cross2d(pos->x, pos->z, v0x, v0z, v2x, v2z) > 0) {
             s32 idx = currentSector & 0xFFFF;
-            s32 fgAddr = (s32)trackGeom->faceGroups;
-            s16 neighbor = ((TrackFaceGroup *)(((idx << 3) + idx) * 4 + fgAddr))->neighbor3;
+            s32 fgAddr = (s32)trackGeom->sectors;
+            s16 neighbor = ((TrackSector *)(((idx << 3) + idx) * 4 + fgAddr))->leftSectorIndex;
             if (neighbor < 0) {
                 break;
             }
@@ -335,26 +301,26 @@ s32 resolveTrackWallCollision(
     result = 0;
     do {
         hitWall = 0;
-        v2x = TRACK_WALL_VERTEX_X(trackGeom, sectorIndex, vertexIdx2);
-        v2z = TRACK_WALL_VERTEX_Z(trackGeom, sectorIndex, vertexIdx2);
-        v3x = TRACK_WALL_VERTEX_X(trackGeom, sectorIndex, vertexIdx3);
-        v3z = TRACK_WALL_VERTEX_Z(trackGeom, sectorIndex, vertexIdx3);
-        RESOLVE_TRACK_SIDE_WALL(neighbor1, v2x, v2z, v3x, v3z);
-        v0x = TRACK_WALL_VERTEX_X(trackGeom, sectorIndex, vertexIdx0);
-        v0z = TRACK_WALL_VERTEX_Z(trackGeom, sectorIndex, vertexIdx0);
-        v1x = TRACK_WALL_VERTEX_X(trackGeom, sectorIndex, vertexIdx1);
-        v1z = TRACK_WALL_VERTEX_Z(trackGeom, sectorIndex, vertexIdx1);
-        RESOLVE_TRACK_SIDE_WALL(neighbor0, v1x, v1z, v0x, v0z);
+        v2x = TRACK_WALL_VERTEX_X(trackGeom, sectorIndex, endLeftVertexIndex);
+        v2z = TRACK_WALL_VERTEX_Z(trackGeom, sectorIndex, endLeftVertexIndex);
+        v3x = TRACK_WALL_VERTEX_X(trackGeom, sectorIndex, endRightVertexIndex);
+        v3z = TRACK_WALL_VERTEX_Z(trackGeom, sectorIndex, endRightVertexIndex);
+        RESOLVE_TRACK_SIDE_WALL(previousSectorIndex, v2x, v2z, v3x, v3z);
+        v0x = TRACK_WALL_VERTEX_X(trackGeom, sectorIndex, startLeftVertexIndex);
+        v0z = TRACK_WALL_VERTEX_Z(trackGeom, sectorIndex, startLeftVertexIndex);
+        v1x = TRACK_WALL_VERTEX_X(trackGeom, sectorIndex, startRightVertexIndex);
+        v1z = TRACK_WALL_VERTEX_Z(trackGeom, sectorIndex, startRightVertexIndex);
+        RESOLVE_TRACK_SIDE_WALL(nextSectorIndex, v1x, v1z, v0x, v0z);
         {
-            TrackFaceGroup *new_var3;
+            TrackSector *new_var3;
             s32 groupIdx2;
             s32 groupOffset2;
             int new_var;
 
             groupIdx2 = sectorIndex;
-            new_var3 = ((TrackGeometryFaceData *)trackGeom)->faceGroups;
+            new_var3 = ((TrackData *)trackGeom)->sectors;
             groupOffset2 = ((groupIdx2 << 3) + groupIdx2) << 2;
-            if (((TrackFaceGroup *)(groupOffset2 + ((s32)new_var3)))->neighbor2 < 0) {
+            if (((TrackSector *)(groupOffset2 + ((s32)new_var3)))->rightSectorIndex < 0) {
                 dx = v1x - v3x;
                 dz = v1z - v3z;
                 relX = workPos.x - v3x;
@@ -374,7 +340,7 @@ s32 resolveTrackWallCollision(
                     do {
                         if (((dz > 0) && (dz < wallLen)) || (dx >= 0)) {
                             APPLY_TRACK_DIAGONAL_WALL_PUSH(
-                                neighbor2,
+                                rightSectorIndex,
                                 groupOffset2,
                                 groupIdx2,
                                 new_var,
@@ -384,7 +350,7 @@ s32 resolveTrackWallCollision(
                         } else {
                             TRACK_WALL_ENDPOINT_COLLIDES() {
                                 APPLY_TRACK_DIAGONAL_WALL_PUSH(
-                                    neighbor2,
+                                    rightSectorIndex,
                                     groupOffset2,
                                     groupIdx2,
                                     new_var,
@@ -397,14 +363,14 @@ s32 resolveTrackWallCollision(
                 }
             }
             {
-                TrackFaceGroup *new_var2;
+                TrackSector *new_var2;
                 s32 groupIdx3;
                 s32 groupOffset3;
 
                 groupIdx3 = sectorIndex;
-                new_var2 = ((TrackGeometryFaceData *)trackGeom)->faceGroups;
+                new_var2 = ((TrackData *)trackGeom)->sectors;
                 groupOffset3 = ((groupIdx3 << 3) + groupIdx3) << 2;
-                if (((TrackFaceGroup *)(groupOffset3 + ((s32)new_var2)))->neighbor3 < 0) {
+                if (((TrackSector *)(groupOffset3 + ((s32)new_var2)))->leftSectorIndex < 0) {
                     dx = v2x - v0x;
                     dz = v2z - v0z;
                     relX = workPos.x - v0x;
@@ -422,7 +388,7 @@ s32 resolveTrackWallCollision(
                     if ((-collisionRadius) < dx) {
                         if (((dz > 0) && (dz < wallLen)) || (dx >= 0)) {
                             APPLY_TRACK_DIAGONAL_WALL_PUSH(
-                                neighbor3,
+                                leftSectorIndex,
                                 groupOffset3,
                                 groupIdx3,
                                 new_var6,
@@ -432,7 +398,7 @@ s32 resolveTrackWallCollision(
                         } else {
                             TRACK_WALL_ENDPOINT_COLLIDES() {
                                 APPLY_TRACK_DIAGONAL_WALL_PUSH(
-                                    neighbor3,
+                                    leftSectorIndex,
                                     groupOffset3,
                                     groupIdx3,
                                     new_var6,
@@ -455,7 +421,7 @@ s32 resolveTrackWallCollision(
 }
 
 s32 getTrackHeightAtPosition(void *trackGeom_void, u16 groupIdx, void *pos_void) {
-    TrackGeometryFaceData *trackGeom = (TrackGeometryFaceData *)trackGeom_void;
+    TrackData *trackGeom = (TrackData *)trackGeom_void;
     Vec3i *pos = (Vec3i *)pos_void;
     s32 sp1C;
     s32 sp24;
@@ -480,19 +446,19 @@ s32 getTrackHeightAtPosition(void *trackGeom_void, u16 groupIdx, void *pos_void)
     s32 var_fp;
     s32 temp_v1;
     s32 idx;
-    TrackFaceGroup *base;
-    TrackFaceGroup *temp_v0;
-    TrackFaceGroup *temp_v0_2;
+    TrackSector *base;
+    TrackSector *temp_v0;
+    TrackSector *temp_v0_2;
 
     idx = groupIdx;
-    base = trackGeom->faceGroups;
+    base = trackGeom->sectors;
     temp_v1 = ((idx << 3) + idx) << 2;
-    temp_v0 = (TrackFaceGroup *)(temp_v1 + (s32)base);
-    sp1C = temp_v0->baseIndex;
+    temp_v0 = (TrackSector *)(temp_v1 + (s32)base);
+    sp1C = temp_v0->baseFaceIndex;
     var_fp = sp1C << 3;
     sp24 = temp_v1;
 
-    if (sp1C < sp1C + temp_v0->count) {
+    if (sp1C < sp1C + temp_v0->faceCount) {
         do {
             temp_a0 = (TrackFace *)(var_fp + (s32)trackGeom->faces);
             temp_a1 = trackGeom->vertices;
@@ -535,17 +501,17 @@ s32 getTrackHeightAtPosition(void *trackGeom_void, u16 groupIdx, void *pos_void)
                 }
             }
 
-            temp_v0_2 = (TrackFaceGroup *)(sp24 + (s32)trackGeom->faceGroups);
+            temp_v0_2 = (TrackSector *)(sp24 + (s32)trackGeom->sectors);
             var_fp += 8;
             sp1C += 1;
-        } while (sp1C < temp_v0_2->baseIndex + temp_v0_2->count);
+        } while (sp1C < temp_v0_2->baseFaceIndex + temp_v0_2->faceCount);
     }
 
     return -0x3E800000;
 }
 
 s32 getTrackHeightWithNormalAtPosition(void *trackGeom_void, u16 groupIdx, void *pos_void, s32 arg3) {
-    TrackGeometryFaceData *trackGeom = (TrackGeometryFaceData *)trackGeom_void;
+    TrackData *trackGeom = (TrackData *)trackGeom_void;
     Vec3i *pos;
     s32 *outNormal;
     s32 sp24;
@@ -568,21 +534,21 @@ s32 getTrackHeightWithNormalAtPosition(void *trackGeom_void, u16 groupIdx, void 
     s32 sp1C;
     s32 temp_v1;
     s32 idx;
-    TrackFaceGroup *base;
-    TrackFaceGroup *temp_v0;
-    TrackFaceGroup *temp_v0_2;
+    TrackSector *base;
+    TrackSector *temp_v0;
+    TrackSector *temp_v0_2;
 
     idx = groupIdx;
-    base = trackGeom->faceGroups;
+    base = trackGeom->sectors;
     temp_v1 = ((idx << 3) + idx) << 2;
-    temp_v0 = (TrackFaceGroup *)(temp_v1 + (s32)base);
-    sp1C = temp_v0->baseIndex;
+    temp_v0 = (TrackSector *)(temp_v1 + (s32)base);
+    sp1C = temp_v0->baseFaceIndex;
     outNormal = (s32 *)arg3;
     var_fp = sp1C << 3;
     pos = (Vec3i *)pos_void;
     sp24 = temp_v1;
 
-    if (sp1C < sp1C + temp_v0->count) {
+    if (sp1C < sp1C + temp_v0->faceCount) {
         do {
             temp_a0 = (TrackFace *)(var_fp + (s32)trackGeom->faces);
             temp_a1 = trackGeom->vertices;
@@ -627,16 +593,16 @@ s32 getTrackHeightWithNormalAtPosition(void *trackGeom_void, u16 groupIdx, void 
                 }
             }
 
-            temp_v0_2 = (TrackFaceGroup *)(sp24 + (s32)trackGeom->faceGroups);
+            temp_v0_2 = (TrackSector *)(sp24 + (s32)trackGeom->sectors);
             sp1C += 1;
             var_fp += 8;
-        } while (sp1C < temp_v0_2->baseIndex + temp_v0_2->count);
+        } while (sp1C < temp_v0_2->baseFaceIndex + temp_v0_2->faceCount);
     }
 
     return -0x3E800000;
 }
 
-s32 projectPositionOntoTrackSegment(TrackGeometryData *arg0, u16 arg1, Vec3i *arg2) {
+s32 projectPositionOntoTrackSegment(TrackData *arg0, u16 arg1, Vec3i *arg2) {
     s32 dz;
     s32 dx;
     Vec3s *verts;
@@ -651,9 +617,9 @@ s32 projectPositionOntoTrackSegment(TrackGeometryData *arg0, u16 arg1, Vec3i *ar
     s32 unitZ;
     s32 result;
 
-    idx0 = arg0->elements[arg1].vertexIdx1;
+    idx0 = arg0->sectors[arg1].startCenterVertexIndex;
     verts = arg0->vertices;
-    idx1 = arg0->elements[arg1].vertexIdx2;
+    idx1 = arg0->sectors[arg1].endCenterVertexIndex;
 
     dx = verts[idx0].x - verts[idx1].x;
     dz = verts[idx0].z - verts[idx1].z;
@@ -665,7 +631,7 @@ s32 projectPositionOntoTrackSegment(TrackGeometryData *arg0, u16 arg1, Vec3i *ar
     temp = (dz << 13) / dist;
     unitZ = temp;
 
-    idx1 = arg0->elements[arg1].vertexIdx2;
+    idx1 = arg0->sectors[arg1].endCenterVertexIndex;
     temp = arg2->x >> 16;
     dx = temp;
     vertsTemp = arg0->vertices;
@@ -683,11 +649,11 @@ s32 projectPositionOntoTrackSegment(TrackGeometryData *arg0, u16 arg1, Vec3i *ar
     return (result << 3) >> 16;
 }
 
-s16 getTrackSegmentFinishZoneFlag(GameDataLayout *gameData, u16 index) {
-    return gameData->section3Data[index].finishZoneFlag;
+s16 getTrackLapProgressRemaining(TrackData *trackData, u16 sectorIndex) {
+    return trackData->sectors[sectorIndex].lapProgressRemaining;
 }
 
-s32 computeSectorTrackHeight(TrackGeometryFaceData *geom, u16 groupIdx, Vec3i *pos, s32 yOffset) {
+s32 computeSectorTrackHeight(TrackData *geom, u16 groupIdx, Vec3i *pos, s32 yOffset) {
     s32 i;
     s32 v0x;
     s32 v0z;
@@ -708,8 +674,8 @@ s32 computeSectorTrackHeight(TrackGeometryFaceData *geom, u16 groupIdx, Vec3i *p
     s32 result;
     s32 defaultVal = 0x3E800000;
 
-    for (i = geom->faceGroups[groupIdx].baseIndex2;
-         i < geom->faceGroups[groupIdx].baseIndex2 + geom->faceGroups[groupIdx].count2;
+    for (i = geom->sectors[groupIdx].baseHeightFaceIndex;
+         i < geom->sectors[groupIdx].baseHeightFaceIndex + geom->sectors[groupIdx].heightFaceCount;
          i++) {
         face = (TrackFace *)((i * sizeof(TrackFace)) + (s32)geom->faces);
         verts = geom->vertices;
@@ -754,7 +720,7 @@ s32 computeSectorTrackHeight(TrackGeometryFaceData *geom, u16 groupIdx, Vec3i *p
 u16 getTrackEndInfo(void *arg0, void *arg1) {
     s32 var_v1;
     s32 temp_v0;
-    TrackSegmentElement *elements;
+    TrackSector *sectors;
     Vec3s *verts;
     u16 idx0;
     u16 idx1;
@@ -762,57 +728,57 @@ u16 getTrackEndInfo(void *arg0, void *arg1) {
     Vec3s *vert1;
 
     var_v1 = 0;
-    elements = ((TrackGeometryData *)arg0)->elements;
+    sectors = ((TrackData *)arg0)->sectors;
 
     while (1) {
-        temp_v0 = elements[var_v1].nextElementIdx;
+        temp_v0 = sectors[var_v1].nextSectorIndex;
         if (temp_v0 < 0) {
             break;
         }
         var_v1 = temp_v0;
     }
 
-    ((Vec3i *)arg1)->x = ((TrackGeometryData *)arg0)->vertices[(elements + var_v1)->vertexIdx2].x << 16;
-    ((Vec3i *)arg1)->y =
-        ((TrackGeometryData *)arg0)->vertices[(((TrackGeometryData *)arg0)->elements + var_v1)->vertexIdx2].y << 16;
-    ((Vec3i *)arg1)->z =
-        ((TrackGeometryData *)arg0)->vertices[(((TrackGeometryData *)arg0)->elements + var_v1)->vertexIdx2].z << 16;
+    ((Vec3i *)arg1)->x = ((TrackData *)arg0)->vertices[(sectors + var_v1)->endCenterVertexIndex].x << 16;
+    ((Vec3i *)arg1)->y = ((TrackData *)arg0)->vertices[(((TrackData *)arg0)->sectors + var_v1)->endCenterVertexIndex].y
+                         << 16;
+    ((Vec3i *)arg1)->z = ((TrackData *)arg0)->vertices[(((TrackData *)arg0)->sectors + var_v1)->endCenterVertexIndex].z
+                         << 16;
 
-    idx0 = (((TrackGeometryData *)arg0)->elements + var_v1)->vertexIdx1;
-    verts = ((TrackGeometryData *)arg0)->vertices;
-    idx1 = (((TrackGeometryData *)arg0)->elements + var_v1)->vertexIdx2;
+    idx0 = (((TrackData *)arg0)->sectors + var_v1)->startCenterVertexIndex;
+    verts = ((TrackData *)arg0)->vertices;
+    idx1 = (((TrackData *)arg0)->sectors + var_v1)->endCenterVertexIndex;
     vert0 = (Vec3s *)((s32)idx0 * sizeof(Vec3s) + (s32)verts);
     vert1 = (Vec3s *)((s32)idx1 * sizeof(Vec3s) + (s32)verts);
 
     return (computeAngleToPosition(vert0->x, vert0->z, vert1->x, vert1->z) - 0x1000) & 0xFFFF;
 }
 
-u16 findFaceGroupAtPosition(TrackGeometryFaceData *geom, Vec3i *pos) {
+u16 findFaceGroupAtPosition(TrackData *geom, Vec3i *pos) {
     s16 i;
     s32 numFaceGroups;
     s32 v0x, v0z, v1x, v1z, v2x, v2z, v3x, v3z;
     TrackFace *faceEntry;
     Vec3s *vertexIdx;
 
-    vertexIdx = geom->unk0;
-    vertexIdx = (Vec3s *)(u32)((u16)geom->unk0->x);
+    vertexIdx = (Vec3s *)geom->serializedData;
+    vertexIdx = (Vec3s *)(u32)geom->serializedData[0];
     faceEntry = (TrackFace *)&geom->vertices[(s32)(vertexIdx)];
     faceEntry = &geom->faces[(u16)((Vec3s *)faceEntry)->x];
     numFaceGroups = faceEntry->v0;
 
     i = 0;
     do {
-        v0x = geom->vertices[geom->faceGroups[i].vertexIdx0].x << 16;
-        v0z = geom->vertices[geom->faceGroups[i].vertexIdx0].z << 16;
+        v0x = geom->vertices[geom->sectors[i].startLeftVertexIndex].x << 16;
+        v0z = geom->vertices[geom->sectors[i].startLeftVertexIndex].z << 16;
 
-        v1x = geom->vertices[geom->faceGroups[i].vertexIdx1].x << 16;
-        v1z = geom->vertices[geom->faceGroups[i].vertexIdx1].z << 16;
+        v1x = geom->vertices[geom->sectors[i].startRightVertexIndex].x << 16;
+        v1z = geom->vertices[geom->sectors[i].startRightVertexIndex].z << 16;
 
-        v2x = geom->vertices[geom->faceGroups[i].vertexIdx2].x << 16;
-        v2z = geom->vertices[geom->faceGroups[i].vertexIdx2].z << 16;
+        v2x = geom->vertices[geom->sectors[i].endLeftVertexIndex].x << 16;
+        v2z = geom->vertices[geom->sectors[i].endLeftVertexIndex].z << 16;
 
-        v3x = geom->vertices[geom->faceGroups[i].vertexIdx3].x << 16;
-        v3z = geom->vertices[geom->faceGroups[i].vertexIdx3].z << 16;
+        v3x = geom->vertices[geom->sectors[i].endRightVertexIndex].x << 16;
+        v3z = geom->vertices[geom->sectors[i].endRightVertexIndex].z << 16;
 
         if (cross2d(pos->x, pos->z, v1x, v1z, v0x, v0z) > 0)
             continue;
@@ -831,7 +797,7 @@ found:
     return i;
 }
 
-void findTrackFaceAtPosition(TrackGeometryFaceData *arg0, u16 arg1, Vec3i *arg2, u8 *arg3, u8 *arg4) {
+void findTrackFaceAtPosition(TrackData *arg0, u16 arg1, Vec3i *arg2, u8 *arg3, u8 *arg4) {
     s32 sp24;
     s32 sp2C;
     s32 temp_fp;
@@ -846,20 +812,20 @@ void findTrackFaceAtPosition(TrackGeometryFaceData *arg0, u16 arg1, Vec3i *arg2,
     Vec3s *temp_v0_2;
     Vec3s *temp_v0_3;
     Vec3s *temp_v0_4;
-    TrackFaceGroup *temp_v0;
-    TrackFaceGroup *temp_v0_5;
+    TrackSector *temp_v0;
+    TrackSector *temp_v0_5;
     s32 temp_v1;
     s32 idx;
-    TrackFaceGroup *base;
+    TrackSector *base;
 
     idx = arg1;
-    base = arg0->faceGroups;
+    base = arg0->sectors;
     temp_v1 = ((idx << 3) + idx) << 2;
-    temp_v0 = (TrackFaceGroup *)(temp_v1 + (s32)base);
-    var_s3 = temp_v0->baseIndex;
+    temp_v0 = (TrackSector *)(temp_v1 + (s32)base);
+    var_s3 = temp_v0->baseFaceIndex;
     sp2C = temp_v1;
     var_s2 = var_s3 << 3;
-    if (var_s3 < (var_s3 + temp_v0->count)) {
+    if (var_s3 < (var_s3 + temp_v0->faceCount)) {
         do {
             temp_a0 = (TrackFace *)(var_s2 + (s32)arg0->faces);
             temp_a1 = arg0->vertices;
@@ -885,14 +851,14 @@ void findTrackFaceAtPosition(TrackGeometryFaceData *arg0, u16 arg1, Vec3i *arg2,
                     }
                 }
             }
-            temp_v0_5 = (TrackFaceGroup *)(sp2C + (s32)arg0->faceGroups);
+            temp_v0_5 = (TrackSector *)(sp2C + (s32)arg0->sectors);
             var_s3 += 1;
             var_s2 += 8;
-        } while (var_s3 < (temp_v0_5->baseIndex + temp_v0_5->count));
+        } while (var_s3 < (temp_v0_5->baseFaceIndex + temp_v0_5->faceCount));
     }
 }
 
-u16 getTrackSegmentWaypoints(TrackGeometryData *trackGeom, u16 waypointIdx, void *waypointStart, void *waypointEnd) {
+u16 getTrackSegmentWaypoints(TrackData *trackGeom, u16 waypointIdx, void *waypointStart, void *waypointEnd) {
     Vec3i *startPos = (Vec3i *)waypointStart;
     Vec3i *endPos = (Vec3i *)waypointEnd;
     Vec3s *verts;
@@ -901,28 +867,28 @@ u16 getTrackSegmentWaypoints(TrackGeometryData *trackGeom, u16 waypointIdx, void
     Vec3s *startVert;
     Vec3s *endVert;
 
-    startPos->x = trackGeom->vertices[trackGeom->elements[waypointIdx].vertexIdx1].x << 16;
-    startPos->y = trackGeom->vertices[trackGeom->elements[waypointIdx].vertexIdx1].y << 16;
-    startPos->z = trackGeom->vertices[trackGeom->elements[waypointIdx].vertexIdx1].z << 16;
+    startPos->x = trackGeom->vertices[trackGeom->sectors[waypointIdx].startCenterVertexIndex].x << 16;
+    startPos->y = trackGeom->vertices[trackGeom->sectors[waypointIdx].startCenterVertexIndex].y << 16;
+    startPos->z = trackGeom->vertices[trackGeom->sectors[waypointIdx].startCenterVertexIndex].z << 16;
 
-    endPos->x = trackGeom->vertices[trackGeom->elements[waypointIdx].vertexIdx2].x << 16;
-    endPos->y = trackGeom->vertices[trackGeom->elements[waypointIdx].vertexIdx2].y << 16;
-    endPos->z = trackGeom->vertices[trackGeom->elements[waypointIdx].vertexIdx2].z << 16;
+    endPos->x = trackGeom->vertices[trackGeom->sectors[waypointIdx].endCenterVertexIndex].x << 16;
+    endPos->y = trackGeom->vertices[trackGeom->sectors[waypointIdx].endCenterVertexIndex].y << 16;
+    endPos->z = trackGeom->vertices[trackGeom->sectors[waypointIdx].endCenterVertexIndex].z << 16;
 
-    startVertexIdx = trackGeom->elements[waypointIdx].vertexIdx1;
+    startVertexIdx = trackGeom->sectors[waypointIdx].startCenterVertexIndex;
     verts = trackGeom->vertices;
-    endVertexIdx = trackGeom->elements[waypointIdx].vertexIdx2;
+    endVertexIdx = trackGeom->sectors[waypointIdx].endCenterVertexIndex;
     startVert = (Vec3s *)((s32)startVertexIdx * sizeof(Vec3s) + (s32)verts);
     endVert = (Vec3s *)((s32)endVertexIdx * sizeof(Vec3s) + (s32)verts);
 
     return (computeAngleToPosition(startVert->x, startVert->z, endVert->x, endVert->z) - 0x1000) & 0xFFFF;
 }
 
-s32 resolveTrackSegmentIndex(TrackSegmentEntry **arg0, u16 index) {
+s32 resolveTrackSegmentIndex(TrackSector **arg0, u16 index) {
     s16 linkedIdx;
     s16 result = index;
 
-    linkedIdx = arg0[3][index].linkedSegmentIdx;
+    linkedIdx = arg0[3][index].nextSectorIndex;
 
     if (linkedIdx >= 0) {
         result = linkedIdx;
@@ -2168,7 +2134,7 @@ void enqueueCameraRelativeDisplayList(s32 arg0, DisplayListObject *arg1) {
     pushViewportCallbackBySlot(arg0 & 0xFFFF, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderCameraRelativeDisplayList, arg1);
 }
 
-void renderTexturedBillboardSprite(TexturedSpriteState *state) {
+void renderTexturedBillboardSprite(BillboardSprite *state) {
     CULL_SPRITE(state);
 
     if (state->matrix == NULL) {
@@ -2176,7 +2142,7 @@ void renderTexturedBillboardSprite(TexturedSpriteState *state) {
         if (state->matrix == NULL) {
             return;
         }
-        memcpy(&gScaleMatrix.translation, &state->posX, sizeof(Vec3i));
+        memcpy(&gScaleMatrix.translation, &state->position, sizeof(Vec3i));
         transform3DToMtx(&gScaleMatrix, state->matrix);
     }
 
@@ -2189,8 +2155,8 @@ void renderTexturedBillboardSprite(TexturedSpriteState *state) {
             gDisplayListAllocPtr++,
             state->textureData,
             G_IM_FMT_CI,
-            state->width,
-            state->height,
+            state->textureWidth,
+            state->textureHeight,
             0,
             G_TX_CLAMP,
             G_TX_CLAMP,
@@ -2210,8 +2176,8 @@ void renderTexturedBillboardSprite(TexturedSpriteState *state) {
                 gDisplayListAllocPtr++,
                 state->textureData,
                 G_IM_FMT_CI,
-                state->width,
-                state->height,
+                state->textureWidth,
+                state->textureHeight,
                 0,
                 G_TX_CLAMP,
                 G_TX_CLAMP,
@@ -2237,7 +2203,7 @@ void renderTexturedBillboardSprite(TexturedSpriteState *state) {
     gSP2Triangles(gDisplayListAllocPtr++, 0, 3, 2, 0, 2, 1, 0, 0);
 }
 
-void enqueueTexturedBillboardSprite(s32 arg0, TexturedBillboardSprite *arg1) {
+void enqueueTexturedBillboardSprite(s32 arg0, BillboardSprite *arg1) {
     arg1->matrix = NULL;
     pushViewportCallbackBySlot(arg0 & 0xFFFF, VIEWPORT_CALLBACK_LAYER_SPRITES, &renderTexturedBillboardSprite, arg1);
 }
@@ -2323,7 +2289,7 @@ void enqueueRotatedBillboardSprite(s32 arg0, RotatedBillboardSprite *arg1) {
     pushViewportCallbackBySlot(arg0 & 0xFFFF, VIEWPORT_CALLBACK_LAYER_SPRITES, &renderRotatedBillboardSprite, arg1);
 }
 
-void renderTexturedBillboardSpriteTile(TexturedSpriteState *state) {
+void renderTexturedBillboardSpriteTile(BillboardSprite *state) {
     CULL_SPRITE(state);
 
     if (state->matrix == NULL) {
@@ -2331,7 +2297,7 @@ void renderTexturedBillboardSpriteTile(TexturedSpriteState *state) {
         if (state->matrix == NULL) {
             return;
         }
-        memcpy(&gScaleMatrix.translation, &state->posX, sizeof(Vec3i));
+        memcpy(&gScaleMatrix.translation, &state->position, sizeof(Vec3i));
         transform3DToMtx(&gScaleMatrix, state->matrix);
     }
 
@@ -2344,12 +2310,12 @@ void renderTexturedBillboardSpriteTile(TexturedSpriteState *state) {
             gDisplayListAllocPtr++,
             state->textureData,
             G_IM_FMT_CI,
-            state->width,
-            state->height,
+            state->textureWidth,
+            state->textureHeight,
             0,
             0,
-            state->width,
-            state->height,
+            state->textureWidth,
+            state->textureHeight,
             0,
             G_TX_CLAMP,
             G_TX_CLAMP,
@@ -2369,12 +2335,12 @@ void renderTexturedBillboardSpriteTile(TexturedSpriteState *state) {
                 gDisplayListAllocPtr++,
                 state->textureData,
                 G_IM_FMT_CI,
-                state->width,
-                state->height,
+                state->textureWidth,
+                state->textureHeight,
                 0,
                 0,
-                state->width,
-                state->height,
+                state->textureWidth,
+                state->textureHeight,
                 0,
                 G_TX_CLAMP,
                 G_TX_CLAMP,
@@ -2400,7 +2366,7 @@ void renderTexturedBillboardSpriteTile(TexturedSpriteState *state) {
     gSP2Triangles(gDisplayListAllocPtr++, 0, 3, 2, 0, 2, 1, 0, 0);
 }
 
-void enqueueTexturedBillboardSpriteTile(u16 arg0, TexturedBillboardSprite *arg1) {
+void enqueueTexturedBillboardSpriteTile(u16 arg0, BillboardSprite *arg1) {
     arg1->matrix = NULL;
     pushViewportCallbackBySlot(
         arg0 & 0xFFFF,
@@ -2410,7 +2376,7 @@ void enqueueTexturedBillboardSpriteTile(u16 arg0, TexturedBillboardSprite *arg1)
     );
 }
 
-void renderAlphaBillboardSprite(AlphaSpriteState *state) {
+void renderAlphaBillboardSprite(BillboardSprite *state) {
     CULL_SPRITE(state);
 
     if (state->matrix == NULL) {
@@ -2418,7 +2384,7 @@ void renderAlphaBillboardSprite(AlphaSpriteState *state) {
         if (state->matrix == NULL) {
             return;
         }
-        memcpy(&gScaleMatrix.translation, &state->posX, sizeof(Vec3i));
+        memcpy(&gScaleMatrix.translation, &state->position, sizeof(Vec3i));
         transform3DToMtx(&gScaleMatrix, state->matrix);
     }
 
@@ -2431,8 +2397,8 @@ void renderAlphaBillboardSprite(AlphaSpriteState *state) {
             gDisplayListAllocPtr++,
             state->textureData,
             G_IM_FMT_CI,
-            state->width,
-            state->height,
+            state->textureWidth,
+            state->textureHeight,
             0,
             G_TX_CLAMP,
             G_TX_CLAMP,
@@ -2455,8 +2421,8 @@ void renderAlphaBillboardSprite(AlphaSpriteState *state) {
                 gDisplayListAllocPtr++,
                 state->textureData,
                 G_IM_FMT_CI,
-                state->width,
-                state->height,
+                state->textureWidth,
+                state->textureHeight,
                 0,
                 G_TX_CLAMP,
                 G_TX_CLAMP,
@@ -2488,12 +2454,12 @@ void renderAlphaBillboardSprite(AlphaSpriteState *state) {
     gSP2Triangles(gDisplayListAllocPtr++, 0, 3, 2, 0, 2, 1, 0, 0);
 }
 
-void enqueueAlphaBillboardSprite(s32 arg0, loadAssetMetadata_arg *arg1) {
-    (arg1 + 1)->assetTemplate = 0;
+void enqueueAlphaBillboardSprite(s32 arg0, BillboardSprite *arg1) {
+    arg1->matrix = NULL;
     pushViewportCallbackBySlot(arg0 & 0xFFFF, VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY, &renderAlphaBillboardSprite, arg1);
 }
 
-void renderAlphaSprite(AlphaSpriteState *state) {
+void renderAlphaSprite(BillboardSprite *state) {
     CULL_SPRITE(state);
 
     if (state->matrix == NULL) {
@@ -2501,7 +2467,7 @@ void renderAlphaSprite(AlphaSpriteState *state) {
         if (state->matrix == NULL) {
             return;
         }
-        memcpy(&gScaleMatrix.translation, &state->posX, sizeof(Vec3i));
+        memcpy(&gScaleMatrix.translation, &state->position, sizeof(Vec3i));
         transform3DToN64Mtx(&gScaleMatrix, state->matrix);
     }
 
@@ -2515,8 +2481,8 @@ void renderAlphaSprite(AlphaSpriteState *state) {
             gDisplayListAllocPtr++,
             state->textureData,
             G_IM_FMT_CI,
-            state->width,
-            state->height,
+            state->textureWidth,
+            state->textureHeight,
             0,
             G_TX_CLAMP,
             G_TX_CLAMP,
@@ -2539,8 +2505,8 @@ void renderAlphaSprite(AlphaSpriteState *state) {
                 gDisplayListAllocPtr++,
                 state->textureData,
                 G_IM_FMT_CI,
-                state->width,
-                state->height,
+                state->textureWidth,
+                state->textureHeight,
                 0,
                 G_TX_CLAMP,
                 G_TX_CLAMP,
@@ -2572,34 +2538,29 @@ void renderAlphaSprite(AlphaSpriteState *state) {
     gSP2Triangles(gDisplayListAllocPtr++, 0, 3, 2, 0, 2, 1, 0, 0);
 }
 
-void enqueueAlphaSprite(s32 arg0, loadAssetMetadata_arg *arg1) {
-    (arg1 + 1)->assetTemplate = 0;
+void enqueueAlphaSprite(s32 arg0, BillboardSprite *arg1) {
+    arg1->matrix = NULL;
     pushViewportCallbackBySlot(arg0, VIEWPORT_CALLBACK_LAYER_ALPHA_OVERLAY, &renderAlphaSprite, arg1);
 }
 
-void loadAssetMetadata(loadAssetMetadata_arg *arg0, void *arg1, s32 arg2) {
+void loadAssetMetadata(BillboardSprite *arg0, void *arg1, s32 arg2) {
     OutputStruct_19E80 result;
 
     getTableEntryByU16Index(arg1, (s16)arg2, &result);
-    arg0->data_ptr = result.data_ptr;
-    arg0->index_ptr = result.index_ptr;
-    arg0->unk18 = result.width;
-    arg0->unk19 = result.height;
+    arg0->textureData = result.data_ptr;
+    arg0->paletteData = result.index_ptr;
+    arg0->textureWidth = result.width;
+    arg0->textureHeight = result.height;
 }
 
-void loadAssetMetadataByIndex(
-    loadAssetMetadataByIndex_arg *arg0,
-    DataTable_19E80 *table,
-    s32 entry_index,
-    s32 sub_index
-) {
+void loadAssetMetadataByIndex(BillboardSprite *arg0, DataTable_19E80 *table, s32 entry_index, s32 sub_index) {
     OutputStruct_19E80 result;
 
     getTableEntryByIndex(table, (u16)entry_index, (u8)sub_index, &result);
-    arg0->data_ptr = result.data_ptr;
-    arg0->index_ptr = result.index_ptr;
-    arg0->unk18 = result.width;
-    arg0->unk19 = result.height;
+    arg0->textureData = result.data_ptr;
+    arg0->paletteData = result.index_ptr;
+    arg0->textureWidth = result.width;
+    arg0->textureHeight = result.height;
 }
 
 void initializeOverlaySystem(void) {

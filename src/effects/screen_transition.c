@@ -28,21 +28,8 @@ typedef struct {
         s32 posZ;
     } *positionData;
     DataTable_19E80 *modelData;
-    loadAssetMetadataByIndex_arg assetMetadata;
-    s32 offsetX;
-    /* sprite2 is accessed as an embedded loadAssetMetadata_arg via cast */
-    loadAssetMetadata_arg *sprite2;
-    /* These fields serve as sprite2.position when accessed through the cast */
-    s32 spriteOffsetX;
-    s32 spriteOffsetY;
-    s32 spriteOffsetZ;
-    u8 *dataPtr;
-    TableEntry_19E80 *indexPtr;
-    u8 alpha;
-    u8 animFrame;
-    u8 alphaDecay;
-    u8 padding43;
-    s32 unk44;
+    BillboardSprite assetMetadata;
+    BillboardSprite sprite2;
     s32 sprite1OffsetX;
     s32 sprite1OffsetY;
     s32 sprite1OffsetZ;
@@ -153,22 +140,22 @@ void initTrickSpriteEffectTask(TrickSpriteEffectInitState *initState) {
 
 void updateTrickSpriteEffect(TrickSpriteEffectUpdateState *state) {
     loadAssetMetadataByIndex(&state->assetMetadata, state->modelData, state->frameIndex, state->effectParam);
-    state->dataPtr = state->assetMetadata.data_ptr;
-    state->indexPtr = state->assetMetadata.index_ptr;
-    state->alpha = state->assetMetadata.unk18;
-    state->animFrame = state->assetMetadata.unk19;
-    state->assetMetadata.unk4 = state->sprite1OffsetX + state->positionData->posX;
-    state->assetMetadata.unk8 = state->sprite1OffsetY + state->positionData->posY;
-    state->assetMetadata.unkC = state->sprite1OffsetZ + state->positionData->posZ;
-    state->spriteOffsetX = state->sprite2OffsetX + state->positionData->posX;
-    state->spriteOffsetY = state->sprite2OffsetY + state->positionData->posY;
-    state->spriteOffsetZ = state->sprite2OffsetZ + state->positionData->posZ;
+    state->sprite2.textureData = state->assetMetadata.textureData;
+    state->sprite2.paletteData = state->assetMetadata.paletteData;
+    state->sprite2.textureWidth = state->assetMetadata.textureWidth;
+    state->sprite2.textureHeight = state->assetMetadata.textureHeight;
+    state->assetMetadata.position.x = state->sprite1OffsetX + state->positionData->posX;
+    state->assetMetadata.position.y = state->sprite1OffsetY + state->positionData->posY;
+    state->assetMetadata.position.z = state->sprite1OffsetZ + state->positionData->posZ;
+    state->sprite2.position.x = state->sprite2OffsetX + state->positionData->posX;
+    state->sprite2.position.y = state->sprite2OffsetY + state->positionData->posY;
+    state->sprite2.position.z = state->sprite2OffsetZ + state->positionData->posZ;
 
-    enqueueAlphaSprite(0, (loadAssetMetadata_arg *)&state->assetMetadata);
-    enqueueAlphaSprite(0, (loadAssetMetadata_arg *)&state->sprite2);
+    enqueueAlphaSprite(0, &state->assetMetadata);
+    enqueueAlphaSprite(0, &state->sprite2);
 
     state->assetMetadata.alpha -= 0x14;
-    state->alphaDecay -= 0x14;
+    state->sprite2.alpha -= 0x14;
 
     if (++state->frameIndex == 8) {
         terminateCurrentTask();

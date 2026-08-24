@@ -8,8 +8,8 @@
 #include "system/task_scheduler.h"
 
 // Macro definitions
-#define SEC3(gs) ((Section3Entry *)((gs)->gameData.section3Data))
-#define SEC1(gs) ((Vec3s *)((gs)->gameData.section1Data))
+#define SEC3(gs) ((gs)->gameData.sectors)
+#define SEC1(gs) ((gs)->gameData.vertices)
 
 // AI path choice values
 #define PATH_CHOICE_MAIN 0
@@ -38,45 +38,12 @@
                 (posPtr)[(wpArr)[idx].startField].z)                                                       \
                << 16
 
-// Struct definitions
-typedef struct {
-    /* 0x00 */ s16 next;
-    /* 0x02 */ s16 pad02;
-    /* 0x04 */ s16 alt2;
-    /* 0x06 */ s16 alt;
-    /* 0x08 */ char pad08[0x0C];
-    /* 0x14 */ u16 mainNegEndIdx; // main path end pos index for negative factor
-    /* 0x16 */ u16 mainBaseIdx;   // main path base pos index (interpolation start)
-    /* 0x18 */ u16 mainPosEndIdx; // main path end pos index for positive factor
-    /* 0x1A */ u16 altNegEndIdx;  // alt path end pos index for negative factor
-    /* 0x1C */ u16 altBaseIdx;    // alt path base pos index (interpolation start)
-    /* 0x1E */ u16 altPosEndIdx;  // alt path end pos index for positive factor
-    /* 0x20 */ char pad20[0x04];
-} Waypoint; // size = 0x24
-
-typedef struct {
-    /* 0x00 */ char pad00[0x04];
-    /* 0x04 */ Vec3s *positions;
-    /* 0x08 */ char pad08[0x04];
-    /* 0x0C */ Waypoint *waypoints;
-    /* 0x10 */ char pad10[0x1C];
-    /* 0x2C */ u8 defaultPosIndex;
-} CourseData;
-
 typedef struct {
     /* 0x00 */ s8 pathChoice;
     /* 0x01 */ u8 lateralFactor;
     /* 0x02 */ u8 factor;
     /* 0x03 */ s8 pathPreference;
 } AIPathPreference;
-
-typedef struct {
-    u8 pad14[0x14];
-    u16 trackStartIdx;
-    u8 pad16[0x2];
-    u16 trackEndIdx;
-    u8 pad1A[0xA];
-} Section3Entry;
 
 typedef struct {
     s32 dirX;
@@ -89,8 +56,8 @@ typedef struct {
 extern u8 gShortcutChanceByMemoryPool[];
 
 // Function declarations
-void computeAIWaypointLateralPosition(Player *, CourseData *, s16, Vec3i *);
-void computeAIWaypointPosition(Player *, CourseData *, s16, Vec3i *);
+void computeAIWaypointLateralPosition(Player *, TrackData *, s16, Vec3i *);
+void computeAIWaypointPosition(Player *, TrackData *, s16, Vec3i *);
 
 void calculateAITargetPosition(Player *player) {
     Vec3i finalWaypointPos;
@@ -98,7 +65,7 @@ void calculateAITargetPosition(Player *player) {
     Vec3i nextWaypointPos;
     Vec3i rotatedPos;
     Vec3i projectedPlayerPos;
-    CourseData *courseData;
+    TrackData *trackData;
     LevelConfig *levelConfig;
     s32 *pathChoiceData;
     s32 currentSectorIndex;
@@ -108,16 +75,16 @@ void calculateAITargetPosition(Player *player) {
     s32 maxDistance;
     GameState *gs;
     gs = getCurrentAllocation();
-    courseData = (CourseData *)(&gs->gameData);
+    trackData = &gs->gameData;
     currentSectorIndex = player->sectorIndex;
-    if (courseData->waypoints[currentSectorIndex].next < 0) {
-        levelConfig = getLevelConfig(courseData->defaultPosIndex);
+    if (trackData->sectors[currentSectorIndex].nextSectorIndex < 0) {
+        levelConfig = getLevelConfig(gs->memoryPoolId);
         player->aiTarget.x = levelConfig->liftEntryPosX;
         player->aiTarget.z = levelConfig->liftEntryPosZ;
         return;
     }
-    computeAIWaypointLateralPosition(player, courseData, (s16)currentSectorIndex, &currentWaypointPos);
-    computeAIWaypointPosition(player, courseData, (s16)currentSectorIndex, &nextWaypointPos);
+    computeAIWaypointLateralPosition(player, trackData, (s16)currentSectorIndex, &currentWaypointPos);
+    computeAIWaypointPosition(player, trackData, (s16)currentSectorIndex, &nextWaypointPos);
     projectedPlayerPos.x = player->worldPos.x - currentWaypointPos.x;
     projectedPlayerPos.z = player->worldPos.z - currentWaypointPos.z;
     pathAngle =
@@ -128,7 +95,7 @@ void calculateAITargetPosition(Player *player) {
     projectedPlayerPos.x += currentWaypointPos.x;
     projectedPlayerPos.z += currentWaypointPos.z;
     while (1) {
-        computeAIWaypointPosition(player, courseData, (s16)currentSectorIndex, &nextWaypointPos);
+        computeAIWaypointPosition(player, trackData, (s16)currentSectorIndex, &nextWaypointPos);
         new_var = nextWaypointPos.z - projectedPlayerPos.z;
         finalWaypointPos.x = nextWaypointPos.x - projectedPlayerPos.x;
         finalWaypointPos.z = new_var;
@@ -139,28 +106,28 @@ void calculateAITargetPosition(Player *player) {
             finalWaypointPos.z = (((s64)finalWaypointPos.z) * maxDistance) / distanceToWaypoint;
             break;
         }
-        if (courseData->waypoints[currentSectorIndex].next < 0) {
+        if (trackData->sectors[currentSectorIndex].nextSectorIndex < 0) {
             break;
         }
         pathChoiceData = (s32 *)player->aiPathData;
         if (pathChoiceData != 0) {
             if ((*((s8 *)(&pathChoiceData[currentSectorIndex]))) == (-1)) {
-                currentSectorIndex = courseData->waypoints[currentSectorIndex].alt;
+                currentSectorIndex = trackData->sectors[currentSectorIndex].leftSectorIndex;
             }
             if ((*((s8 *)(&pathChoiceData[currentSectorIndex]))) == 0) {
-                currentSectorIndex = courseData->waypoints[currentSectorIndex].next;
+                currentSectorIndex = trackData->sectors[currentSectorIndex].nextSectorIndex;
             }
             if ((*((s8 *)(&pathChoiceData[currentSectorIndex]))) == 1) {
-                currentSectorIndex = courseData->waypoints[currentSectorIndex].alt2;
+                currentSectorIndex = trackData->sectors[currentSectorIndex].rightSectorIndex;
             }
         } else {
-            currentSectorIndex = courseData->waypoints[currentSectorIndex].next;
+            currentSectorIndex = trackData->sectors[currentSectorIndex].nextSectorIndex;
         }
     }
 
     finalWaypointPos.x += projectedPlayerPos.x;
     finalWaypointPos.z += projectedPlayerPos.z;
-    computeAIWaypointLateralPosition(player, courseData, (s16)currentSectorIndex, &currentWaypointPos);
+    computeAIWaypointLateralPosition(player, trackData, (s16)currentSectorIndex, &currentWaypointPos);
     finalWaypointPos.x -= currentWaypointPos.x;
     finalWaypointPos.z -= currentWaypointPos.z;
     pathAngle =
@@ -174,7 +141,7 @@ void calculateAITargetPosition(Player *player) {
     player->aiTarget.z = finalWaypointPos.z;
 }
 
-void computeAIWaypointPosition(Player *player, CourseData *courseData, s16 sectorIdx, Vec3i *result) {
+void computeAIWaypointPosition(Player *player, TrackData *trackData, s16 sectorIdx, Vec3i *result) {
     AIPathPreference *pathData;
     s16 waypointIdx;
     s8 factor;
@@ -187,45 +154,45 @@ void computeAIWaypointPosition(Player *player, CourseData *courseData, s16 secto
 
         switch (pathChoice) {
             case -1:
-                waypointIdx = courseData->waypoints[sectorIdx].alt;
+                waypointIdx = trackData->sectors[sectorIdx].leftSectorIndex;
                 if ((s8)factorRaw >= 0) {
                     factor = (s8)factorRaw;
                     LERP_X(
                         result,
-                        courseData->waypoints,
+                        trackData->sectors,
                         waypointIdx,
-                        courseData->positions,
-                        altPosEndIdx,
-                        altBaseIdx,
+                        trackData->vertices,
+                        endRightVertexIndex,
+                        endCenterVertexIndex,
                         factor
                     );
                     LERP_Z(
                         result,
-                        courseData->waypoints,
+                        trackData->sectors,
                         waypointIdx,
-                        courseData->positions,
-                        altPosEndIdx,
-                        altBaseIdx,
+                        trackData->vertices,
+                        endRightVertexIndex,
+                        endCenterVertexIndex,
                         factor
                     );
                 } else {
                     factor = (s8)(-factorRaw);
                     LERP_X(
                         result,
-                        courseData->waypoints,
+                        trackData->sectors,
                         waypointIdx,
-                        courseData->positions,
-                        altNegEndIdx,
-                        altBaseIdx,
+                        trackData->vertices,
+                        endLeftVertexIndex,
+                        endCenterVertexIndex,
                         factor
                     );
                     LERP_Z(
                         result,
-                        courseData->waypoints,
+                        trackData->sectors,
                         waypointIdx,
-                        courseData->positions,
-                        altNegEndIdx,
-                        altBaseIdx,
+                        trackData->vertices,
+                        endLeftVertexIndex,
+                        endCenterVertexIndex,
                         factor
                     );
                 }
@@ -235,84 +202,84 @@ void computeAIWaypointPosition(Player *player, CourseData *courseData, s16 secto
                     factor = (s8)factorRaw;
                     LERP_X(
                         result,
-                        courseData->waypoints,
+                        trackData->sectors,
                         sectorIdx,
-                        courseData->positions,
-                        mainPosEndIdx,
-                        mainBaseIdx,
+                        trackData->vertices,
+                        startRightVertexIndex,
+                        startCenterVertexIndex,
                         factor
                     );
                     LERP_Z(
                         result,
-                        courseData->waypoints,
+                        trackData->sectors,
                         sectorIdx,
-                        courseData->positions,
-                        mainPosEndIdx,
-                        mainBaseIdx,
+                        trackData->vertices,
+                        startRightVertexIndex,
+                        startCenterVertexIndex,
                         factor
                     );
                 } else {
                     factor = (s8)(-factorRaw);
                     LERP_X(
                         result,
-                        courseData->waypoints,
+                        trackData->sectors,
                         sectorIdx,
-                        courseData->positions,
-                        mainNegEndIdx,
-                        mainBaseIdx,
+                        trackData->vertices,
+                        startLeftVertexIndex,
+                        startCenterVertexIndex,
                         factor
                     );
                     LERP_Z(
                         result,
-                        courseData->waypoints,
+                        trackData->sectors,
                         sectorIdx,
-                        courseData->positions,
-                        mainNegEndIdx,
-                        mainBaseIdx,
+                        trackData->vertices,
+                        startLeftVertexIndex,
+                        startCenterVertexIndex,
                         factor
                     );
                 }
                 break;
             case 1:
-                waypointIdx = courseData->waypoints[sectorIdx].alt2;
+                waypointIdx = trackData->sectors[sectorIdx].rightSectorIndex;
                 if ((s8)factorRaw >= 0) {
                     factor = (s8)factorRaw;
                     LERP_X(
                         result,
-                        courseData->waypoints,
+                        trackData->sectors,
                         waypointIdx,
-                        courseData->positions,
-                        altPosEndIdx,
-                        altBaseIdx,
+                        trackData->vertices,
+                        endRightVertexIndex,
+                        endCenterVertexIndex,
                         factor
                     );
                     LERP_Z(
                         result,
-                        courseData->waypoints,
+                        trackData->sectors,
                         waypointIdx,
-                        courseData->positions,
-                        altPosEndIdx,
-                        altBaseIdx,
+                        trackData->vertices,
+                        endRightVertexIndex,
+                        endCenterVertexIndex,
                         factor
                     );
                 } else {
                     factor = (s8)(-factorRaw);
                     LERP_X(
                         result,
-                        courseData->waypoints,
+                        trackData->sectors,
                         waypointIdx,
-                        courseData->positions,
-                        altNegEndIdx,
-                        altBaseIdx,
+                        trackData->vertices,
+                        endLeftVertexIndex,
+                        endCenterVertexIndex,
                         factor
                     );
                     LERP_Z(
                         result,
-                        courseData->waypoints,
+                        trackData->sectors,
                         waypointIdx,
-                        courseData->positions,
-                        altNegEndIdx,
-                        altBaseIdx,
+                        trackData->vertices,
+                        endLeftVertexIndex,
+                        endCenterVertexIndex,
                         factor
                     );
                 }
@@ -333,17 +300,49 @@ void computeAIWaypointPosition(Player *player, CourseData *courseData, s16 secto
 
         if ((s8)factorRaw >= 0) {
             factor = (s8)factorRaw;
-            LERP_X(result, courseData->waypoints, sectorIdx, courseData->positions, mainPosEndIdx, mainBaseIdx, factor);
-            LERP_Z(result, courseData->waypoints, sectorIdx, courseData->positions, mainPosEndIdx, mainBaseIdx, factor);
+            LERP_X(
+                result,
+                trackData->sectors,
+                sectorIdx,
+                trackData->vertices,
+                startRightVertexIndex,
+                startCenterVertexIndex,
+                factor
+            );
+            LERP_Z(
+                result,
+                trackData->sectors,
+                sectorIdx,
+                trackData->vertices,
+                startRightVertexIndex,
+                startCenterVertexIndex,
+                factor
+            );
         } else {
             factor = (s8)(-factorRaw);
-            LERP_X(result, courseData->waypoints, sectorIdx, courseData->positions, mainNegEndIdx, mainBaseIdx, factor);
-            LERP_Z(result, courseData->waypoints, sectorIdx, courseData->positions, mainNegEndIdx, mainBaseIdx, factor);
+            LERP_X(
+                result,
+                trackData->sectors,
+                sectorIdx,
+                trackData->vertices,
+                startLeftVertexIndex,
+                startCenterVertexIndex,
+                factor
+            );
+            LERP_Z(
+                result,
+                trackData->sectors,
+                sectorIdx,
+                trackData->vertices,
+                startLeftVertexIndex,
+                startCenterVertexIndex,
+                factor
+            );
         }
     }
 }
 
-void computeAIWaypointLateralPosition(Player *player, CourseData *courseData, s16 sectorIdx, Vec3i *result) {
+void computeAIWaypointLateralPosition(Player *player, TrackData *trackData, s16 sectorIdx, Vec3i *result) {
     AIPathPreference *pathData;
     s8 factor;
     s32 factorRaw = 0;
@@ -365,12 +364,44 @@ void computeAIWaypointLateralPosition(Player *player, CourseData *courseData, s1
 
     if ((s8)factorRaw >= 0) {
         factor = (s8)factorRaw;
-        LERP_X(result, courseData->waypoints, sectorIdx, courseData->positions, altPosEndIdx, altBaseIdx, factor);
-        LERP_Z(result, courseData->waypoints, sectorIdx, courseData->positions, altPosEndIdx, altBaseIdx, factor);
+        LERP_X(
+            result,
+            trackData->sectors,
+            sectorIdx,
+            trackData->vertices,
+            endRightVertexIndex,
+            endCenterVertexIndex,
+            factor
+        );
+        LERP_Z(
+            result,
+            trackData->sectors,
+            sectorIdx,
+            trackData->vertices,
+            endRightVertexIndex,
+            endCenterVertexIndex,
+            factor
+        );
     } else {
         factor = (s8)(-factorRaw);
-        LERP_X(result, courseData->waypoints, sectorIdx, courseData->positions, altNegEndIdx, altBaseIdx, factor);
-        LERP_Z(result, courseData->waypoints, sectorIdx, courseData->positions, altNegEndIdx, altBaseIdx, factor);
+        LERP_X(
+            result,
+            trackData->sectors,
+            sectorIdx,
+            trackData->vertices,
+            endLeftVertexIndex,
+            endCenterVertexIndex,
+            factor
+        );
+        LERP_Z(
+            result,
+            trackData->sectors,
+            sectorIdx,
+            trackData->vertices,
+            endLeftVertexIndex,
+            endCenterVertexIndex,
+            factor
+        );
     }
 }
 
@@ -391,13 +422,13 @@ s8 determineAIPathChoice(Player *player) {
 
     if (player->aiPathData != NULL &&
         ((AIPathPreference *)player->aiPathData)[player->sectorIndex].pathPreference != 0) {
-        trackDirX = SEC1(gs)[SEC3(gs)[player->sectorIndex].trackStartIdx].x -
-                    SEC1(gs)[SEC3(gs)[player->sectorIndex].trackEndIdx].x;
+        trackDirX = SEC1(gs)[SEC3(gs)[player->sectorIndex].startLeftVertexIndex].x -
+                    SEC1(gs)[SEC3(gs)[player->sectorIndex].startRightVertexIndex].x;
         spill.dirX = trackDirX;
 
         trackLengthSq = trackDirX * trackDirX;
-        trackDirZ = SEC1(gs)[SEC3(gs)[player->sectorIndex].trackStartIdx].z -
-                    SEC1(gs)[SEC3(gs)[player->sectorIndex].trackEndIdx].z;
+        trackDirZ = SEC1(gs)[SEC3(gs)[player->sectorIndex].startLeftVertexIndex].z -
+                    SEC1(gs)[SEC3(gs)[player->sectorIndex].startRightVertexIndex].z;
         spill.dirZ = trackDirZ;
         trackLengthSq += trackDirZ * trackDirZ;
 
@@ -405,10 +436,10 @@ s8 determineAIPathChoice(Player *player) {
         normalizedDirX = (spill.dirX << 13) / trackLength;
         normalizedDirZ = (spill.dirZ << 13) / trackLength;
 
-        playerToStartX = player->worldPos.x - (SEC1(gs)[SEC3(gs)[player->sectorIndex].trackStartIdx].x << 16);
+        playerToStartX = player->worldPos.x - (SEC1(gs)[SEC3(gs)[player->sectorIndex].startLeftVertexIndex].x << 16);
         spill.dirX = playerToStartX;
 
-        playerToStartZ = player->worldPos.z - (SEC1(gs)[SEC3(gs)[player->sectorIndex].trackStartIdx].z << 16);
+        playerToStartZ = player->worldPos.z - (SEC1(gs)[SEC3(gs)[player->sectorIndex].startLeftVertexIndex].z << 16);
         spill.dirZ = playerToStartZ;
 
         // Perpendicular distance from track center line

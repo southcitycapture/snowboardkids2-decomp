@@ -181,7 +181,7 @@ void initAnimatedGhost(AnimatedGhostEntity *ghost) {
     getCurrentAllocation();
 
     ghost->spriteAsset = load_3ECE40();
-    ghost->sprite.assetTemplate = (loadAssetMetadata_arg *)&g_GhostDefaultAssetMetadata;
+    ghost->sprite.vertices = (Vtx *)&g_GhostDefaultAssetMetadata;
     ghost->sprite.alpha = 0;
 
     randomSpeed = randA() & 0xFF;
@@ -498,7 +498,7 @@ void initFloatingBillboard(FloatingBillboard *billboard) {
     s32 initialY;
 
     billboard->spriteAsset = loadSpriteAssetByIndex(9);
-    billboard->sprite.assetTemplate = (loadAssetMetadata_arg *)&g_FloatingBillboardSpriteMetadata;
+    billboard->sprite.vertices = (Vtx *)&g_FloatingBillboardSpriteMetadata;
     billboard->sprite.alpha = 0xFF;
     memcpy(&billboard->sprite.position, &g_FloatingBillboardInitialPos, sizeof(Vec3i));
     initialY = billboard->sprite.position.y + billboard->targetYOffset;
@@ -542,7 +542,7 @@ void updateFloatingBillboard(FloatingBillboard *arg0) {
     loadAssetMetadata(&arg0->sprite, arg0->spriteAsset, 5);
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&arg0->sprite);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)&arg0->sprite);
     }
 }
 
@@ -582,11 +582,11 @@ void initFloatingSpriteEntity(FloatingSpriteEntity *arg0) {
     s16 index;
 
     arg0->spriteAsset = loadSpriteAssetByIndex(9);
-    arg0->sprite.assetTemplate = (loadAssetMetadata_arg *)&D_800BC920_B0610;
+    arg0->sprite.vertices = (Vtx *)&D_800BC920_B0610;
 
     index = arg0->variantIndex;
     if (D_800BC9DC_B06CC[index] == 7) {
-        arg0->sprite.assetTemplate = (loadAssetMetadata_arg *)&D_800BC960_B0650;
+        arg0->sprite.vertices = (Vtx *)&D_800BC960_B0650;
     }
 
     setCleanupCallback(cleanupFloatingSpriteEntity);
@@ -624,7 +624,7 @@ void updateFloatingSpriteEntity(FloatingSpriteEntity *arg0) {
     checkPositionPlayerCollisionWithPull(&arg0->sprite.position.x, 0x140000, 0x300000);
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&arg0->sprite);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)&arg0->sprite);
     }
 }
 

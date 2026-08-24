@@ -39,7 +39,7 @@ void findTrackFaceInSector(void *geom, u16 sectorIndex, void *pos, u8 *surfaceFl
     findTrackFaceAtPosition(geom, sectorIndex, pos, surfaceFlags, surfaceIndex);
 }
 
-s32 getSectorTrackHeight(TrackGeometryFaceData *geom, u16 groupIdx, Vec3i *pos, s32 yOffset) {
+s32 getSectorTrackHeight(TrackData *geom, u16 groupIdx, Vec3i *pos, s32 yOffset) {
     return computeSectorTrackHeight(geom, groupIdx, pos, yOffset);
 }
 

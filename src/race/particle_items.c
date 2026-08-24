@@ -26,9 +26,8 @@ typedef struct {
 } Func43CA4Unk28;
 
 typedef struct {
-    void *assetData;              /* Pointer to asset table */
-    loadAssetMetadata_arg sprite; /* Sprite metadata for rendering */
-    u8 padding[0x2];
+    void *assetData;        /* Pointer to asset table */
+    BillboardSprite sprite; /* Sprite metadata for rendering */
     /* 0x24 */ Func43CA4Unk28 *unk24;
     /* 0x28 */ Func43CA4Unk28 *player;
     Vec3i offset;       /* Offset from player position */
@@ -99,8 +98,7 @@ typedef struct {
 
 struct Func42D54Arg {
     u8 _pad0[0x4];
-    loadAssetMetadata_arg unk4;
-    void *unk20;
+    BillboardSprite unk4;
     Func43CA4Unk28 *unk24;
     Func43CA4Unk28 *unk28;
     s32 unk2C;
@@ -119,8 +117,7 @@ typedef struct {
 
 typedef struct {
     u8 _pad0[0x4];
-    loadAssetMetadata_arg sprite;
-    u8 _pad20[0x4];
+    BillboardSprite sprite;
     Func43CA4Unk28 *unk24;
     u8 _pad28[0x4];
     s16 unk2C[2];
@@ -245,24 +242,7 @@ struct GoldStealEffectState {
 };
 
 typedef struct {
-    void *unk0;
-    loadAssetMetadata_arg_base sprite;
-    u8 _pad1C[0x2];
-    u8 animFrameIndex;
-    u8 _pad1F[0x1];
-    void *unk20;
-    void *unk24;
-    Func43CA4Unk28 *player;
-    s16 orbitOffset[3];
-    u8 _pad32[0xA];
-    s16 displayTimer;
-    u8 _pad3E[0x2];
-    u16 rotationAngle;
-    u8 playSoundFlag;
-} OrbitStarEffectState;
-
-typedef struct {
-    /* 0x00 */ loadAssetMetadata_arg *unk0;
+    /* 0x00 */ BillboardSprite *unk0;
     /* 0x04 */ Vec3i position;
     /* 0x10 */ u8 *data_ptr;
     /* 0x14 */ void *index_ptr;
@@ -416,7 +396,7 @@ void fadeOutWingsEffect(WingsEffectState *);
 void contractStarEffect(StarEffectState *);
 void updateStarEffect(StarEffectState *);
 void expandStarEffect(ExpandStarEffectState *);
-void orbitStarEffect(OrbitStarEffectState *);
+void orbitStarEffect(StarEffectState *);
 void updateFallingEffect(FallingEffectState *);
 void animateFallingEffectDescent(FallingEffectState *);
 void cleanupSparkleEffect(SparkleEffectState *);
@@ -486,7 +466,7 @@ extern s8 D_8009095C_9155C;
 extern s32 D_80090AA0_916A0;
 extern s32 D_80090AAC_916AC;
 extern s8 D_80090950_91550;
-extern loadAssetMetadata_arg D_800908A0_914A0;
+extern BillboardSprite D_800908A0_914A0;
 extern Vec3i D_800908E0_914E0[];
 extern PushZoneDataEntry gPushZoneData[];
 extern CompressedAssetEntry D_80090AB8_916B8[];
@@ -669,7 +649,7 @@ void setupBurstParticles(BurstEffectState *state) {
     for (i = 0; i < 6; i++) {
         s32 temp;
 
-        loadAssetMetadata((loadAssetMetadata_arg *)&state->particles[i], state->assetTable, state->particleType);
+        loadAssetMetadata((BillboardSprite *)&state->particles[i], state->assetTable, state->particleType);
         state->particles[i].unk20 = D_800908E0_914E0[i].y;
         state->particles[i].position.x += D_800908E0_914E0[i].x;
         state->particles[i].position.y += D_800908E0_914E0[i].y;
@@ -703,11 +683,7 @@ void updateBurstParticles(BurstEffectState *arg0) {
         }
 
         if ((arg0->unkDD & 3) == 0) {
-            loadAssetMetadata(
-                (loadAssetMetadata_arg *)arg0,
-                arg0->assetTable,
-                arg0->particleType + ((s8)arg0->unkDD >> 2)
-            );
+            loadAssetMetadata((BillboardSprite *)arg0, arg0->assetTable, arg0->particleType + ((s8)arg0->unkDD >> 2));
 
             for (i = 1; i < 6; i++) {
                 arg0->particles[i].data_ptr = arg0->particles[0].data_ptr;
@@ -726,13 +702,13 @@ void updateBurstParticles(BurstEffectState *arg0) {
     if (arg0->particleType != 0x2F) {
         for (i = 0; i < 4; i++) {
             for (j = 0; j < 6; j++) {
-                enqueueAlphaBillboardSprite(i, (loadAssetMetadata_arg *)&arg0->particles[j]);
+                enqueueAlphaBillboardSprite(i, (BillboardSprite *)&arg0->particles[j]);
             }
         }
     } else {
         for (i = 0; i < 4; i++) {
             for (j = 0; j < 6; j++) {
-                enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&arg0->particles[j]);
+                enqueueTexturedBillboardSprite(i, (BillboardSprite *)&arg0->particles[j]);
             }
         }
     }
@@ -1195,7 +1171,7 @@ void updateStarEffect(StarEffectState *state) {
         state->offset.z = 0;
         state->animFrameIndex = 0;
         state->playSoundFlag = 1;
-        state->sprite.assetTemplate = (void *)((u8 *)assetTable + 0xF00);
+        state->sprite.vertices = (void *)((u8 *)assetTable + 0xF00);
         updateStarEffectAnimation(state);
 
         if (state->immediateMode != 0) {
@@ -1281,7 +1257,7 @@ void contractStarEffect(StarEffectState *state) {
     }
 }
 
-void orbitStarEffect(OrbitStarEffectState *arg0) {
+void orbitStarEffect(StarEffectState *arg0) {
     EffectTaskState *gameState;
     s32 i;
     s32 pad;
@@ -1289,9 +1265,9 @@ void orbitStarEffect(OrbitStarEffectState *arg0) {
 
     gameState = (EffectTaskState *)getCurrentAllocation();
     if (gameState->paused == 0) {
-        updateStarEffectAnimation((StarEffectState *)arg0);
+        updateStarEffectAnimation(arg0);
         arg0->rotationAngle += 0x100;
-        rotateVectorY(arg0->orbitOffset, arg0->rotationAngle, &rotated);
+        rotateVectorY((s16 *)&arg0->offset, arg0->rotationAngle, &rotated);
         transformVector((s16 *)&rotated, arg0->player->orientationHeadingTransform, &arg0->sprite.position);
         if (arg0->playSoundFlag != 0) {
             arg0->playSoundFlag = 0;
@@ -1299,14 +1275,14 @@ void orbitStarEffect(OrbitStarEffectState *arg0) {
         }
         if (arg0->displayTimer != 0) {
             arg0->displayTimer--;
-        } else if (arg0->animFrameIndex == 0x40) {
+        } else if (arg0->sprite.alpha == 0x40) {
             arg0->player->slowdownLevel--;
             terminateCurrentTask();
         }
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueAlphaBillboardSprite(i, (loadAssetMetadata_arg *)&arg0->sprite);
+        enqueueAlphaBillboardSprite(i, (BillboardSprite *)&arg0->sprite);
     }
 }
 
@@ -1601,11 +1577,7 @@ void advanceAnimationFrameLooping(GoldStealEffectState *arg0, s8 *arg1) {
     arg0->frameTimer = temp;
 
     if ((temp << 16) == 0) {
-        loadAssetMetadata(
-            (loadAssetMetadata_arg *)((s32)arg0 + 4),
-            (void *)arg0->unk0,
-            arg1[arg0->animFrameIndex * 2 + 1]
-        );
+        loadAssetMetadata((BillboardSprite *)((s32)arg0 + 4), (void *)arg0->unk0, arg1[arg0->animFrameIndex * 2 + 1]);
         arg0->frameTimer = arg1[arg0->animFrameIndex * 2];
         temp = (u16)arg0->animFrameIndex + 1;
         arg0->animFrameIndex = temp;
@@ -1670,7 +1642,7 @@ void animateGoldStealApproach(GoldStealEffectState *arg0) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&arg0->unk4);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)&arg0->unk4);
     }
 }
 
@@ -1694,7 +1666,7 @@ void animateGoldStealLoop(GoldStealEffectState *arg0) {
     transformVector((s16 *)&arg0->unk2C, arg0->recipientPlayer->orientationHeadingTransform, &arg0->position);
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&arg0->unk4);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)&arg0->unk4);
     }
 }
 
@@ -1739,7 +1711,7 @@ transform_and_loop:
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&arg0->unk4);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)&arg0->unk4);
     }
 }
 
@@ -1760,7 +1732,7 @@ void animateGoldStealRetreat(GoldStealEffectState *arg0) {
     transformVector((s16 *)&arg0->unk2C, arg0->victimPlayer->orientationHeadingTransform, &arg0->position);
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&arg0->unk4);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)&arg0->unk4);
     }
 }
 
@@ -1778,7 +1750,7 @@ void animateGoldStealFinish(GoldStealEffectState *arg0) {
     transformVector((s16 *)&arg0->unk2C, arg0->victimPlayer->orientationHeadingTransform, &arg0->position);
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)&arg0->unk4);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)&arg0->unk4);
     }
 }
 

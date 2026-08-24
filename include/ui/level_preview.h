@@ -11,30 +11,30 @@
 #include "ui/level_preview_3d.h"
 
 typedef struct {
-    s32 posX;                // 0x00
-    s32 posY;                // 0x04
-    s32 posZ;                // 0x08
-    s32 targetX;             // 0x0C
-    s32 targetY;             // 0x10
-    s32 targetZ;             // 0x14
-    GameDataLayout gameData; // 0x18
-    void *sceneModel;        // 0x2C
-    Transform3D transform;   // 0x30
-    u16 currentWaypoint;     // 0x50
-    u16 startWaypoint;       // 0x52
-    s16 animationPhase;      // 0x54
-    u16 currentRotation;     // 0x56
-    u8 _pad58[0x2];          // 0x58
-    u16 targetRotation;      // 0x5A
-    s32 cameraHorzOffset;    // 0x5C
-    s32 cameraDistance;      // 0x60
-    s32 heightOffset;        // 0x64
-    s32 altHeightOffset;     // 0x68
-    u16 turnSpeed;           // 0x6C
-    u8 _pad6E[0x4];          // 0x6E
-    u16 frameTimer;          // 0x72
-    u16 extraRotation;       // 0x74
-    u8 turnDirection;        // 0x76
+    s32 posX;              // 0x00
+    s32 posY;              // 0x04
+    s32 posZ;              // 0x08
+    s32 targetX;           // 0x0C
+    s32 targetY;           // 0x10
+    s32 targetZ;           // 0x14
+    TrackData gameData;    // 0x18
+    void *sceneModel;      // 0x2C
+    Transform3D transform; // 0x30
+    u16 currentWaypoint;   // 0x50
+    u16 startWaypoint;     // 0x52
+    s16 animationPhase;    // 0x54
+    u16 currentRotation;   // 0x56
+    u8 _pad58[0x2];        // 0x58
+    u16 targetRotation;    // 0x5A
+    s32 cameraHorzOffset;  // 0x5C
+    s32 cameraDistance;    // 0x60
+    s32 heightOffset;      // 0x64
+    s32 altHeightOffset;   // 0x68
+    u16 turnSpeed;         // 0x6C
+    u8 _pad6E[0x4];        // 0x6E
+    u16 frameTimer;        // 0x72
+    u16 extraRotation;     // 0x74
+    u8 turnDirection;      // 0x76
 } LevelPreviewCharacterState;
 
 typedef struct {
@@ -59,7 +59,7 @@ typedef struct {
     s32 vertices;
     Transform3D transform;
     u8 *textureData;
-    TableEntry_19E80 *paletteData;
+    u16 *paletteData;
     u8 textureWidth;
     u8 textureHeight;
     u8 alpha;

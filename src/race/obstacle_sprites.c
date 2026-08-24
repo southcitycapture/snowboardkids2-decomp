@@ -176,7 +176,7 @@ void initSlapstickProjectileTask(Struct_52880 *arg0) {
 void loadSlapstickProjectileAsset(Struct_52880 *arg0) {
     Alloc_52880 *alloc = getCurrentAllocation();
     void *ptr;
-    loadAssetMetadata((loadAssetMetadata_arg *)arg0, arg0->assetData, 2);
+    loadAssetMetadata((BillboardSprite *)arg0, arg0->assetData, 2);
     ptr = alloc->unk44;
     arg0->hitCount = 0;
     arg0->turnRate = 0;
@@ -271,7 +271,7 @@ void launchSlapstickProjectile(Struct_52880 *arg0) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)arg0);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)arg0);
     }
 }
 
@@ -367,7 +367,7 @@ void updateSlapstickProjectile(Struct_52880 *arg0) {
 
     i = 0;
     do {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)arg0);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)arg0);
         i++;
     } while (i < 4);
 }
@@ -396,7 +396,7 @@ void initParachuteProjectileTask(Struct_52880 *arg0) {
 void loadParachuteProjectileAsset(Struct_52880 *arg0) {
     Alloc_52880 *alloc = getCurrentAllocation();
     void *ptr;
-    loadAssetMetadata((loadAssetMetadata_arg *)arg0, arg0->assetData, 3);
+    loadAssetMetadata((BillboardSprite *)arg0, arg0->assetData, 3);
     ptr = alloc->unk44;
     arg0->hitCount = 0;
     arg0->turnRate = 0;
@@ -486,7 +486,7 @@ void launchParachuteProjectile(Struct_52880 *arg0) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)arg0);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)arg0);
     }
 }
 
@@ -582,7 +582,7 @@ void updateParachuteProjectile(Struct_52880 *arg0) {
 
     i = 0;
     do {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)arg0);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)arg0);
         i++;
     } while (i < 4);
 }
@@ -607,7 +607,7 @@ void initFryingPanProjectileTask(Struct_52880 *arg0) {
 void loadFryingPanProjectileAsset(Struct_52880 *arg0) {
     Alloc_52880 *alloc = getCurrentAllocation();
     void *ptr;
-    loadAssetMetadata((loadAssetMetadata_arg *)arg0, arg0->assetData, 4);
+    loadAssetMetadata((BillboardSprite *)arg0, arg0->assetData, 4);
     ptr = alloc->unk44;
     arg0->hitCount = 0;
     arg0->turnRate = 0;
@@ -705,7 +705,7 @@ void launchFryingPanProjectile(Struct_52880 *arg0) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)arg0);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)arg0);
     }
 }
 
@@ -801,7 +801,7 @@ void updateFryingPanProjectile(Struct_52880 *arg0) {
 
     i = 0;
     do {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)arg0);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)arg0);
         i++;
     } while (i < 4);
 }
@@ -826,7 +826,7 @@ void initSnowmanProjectileTask(Struct_52880 *arg0) {
 void loadSnowmanProjectileAsset(Struct_52880 *arg0) {
     Alloc_52880 *alloc = getCurrentAllocation();
     void *ptr;
-    loadAssetMetadata((loadAssetMetadata_arg *)arg0, arg0->assetData, 5);
+    loadAssetMetadata((BillboardSprite *)arg0, arg0->assetData, 5);
     ptr = alloc->unk44;
     arg0->hitCount = 0;
     arg0->turnRate = 0;
@@ -936,7 +936,7 @@ void launchSnowmanProjectile(Struct_52880 *arg0) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)arg0);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)arg0);
     }
 }
 
@@ -1068,7 +1068,7 @@ void initStarProjectileTask(Struct_52880 *arg0) {
 void loadStarProjectileAsset(Struct_52880 *arg0) {
     Alloc_52880 *alloc = getCurrentAllocation();
     void *ptr;
-    loadAssetMetadata((loadAssetMetadata_arg *)arg0, arg0->assetData, 6);
+    loadAssetMetadata((BillboardSprite *)arg0, arg0->assetData, 6);
     ptr = alloc->unk44;
     arg0->hitCount = 0;
     arg0->turnRate = 0;
@@ -1156,7 +1156,7 @@ void launchStarProjectile(Struct_52880 *arg0) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)arg0);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)arg0);
     }
 }
 
@@ -1251,7 +1251,7 @@ void updateStarProjectile(Struct_52880 *arg0) {
 
     i = 0;
     do {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)arg0);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)arg0);
         i++;
     } while (i < 4);
 }
@@ -1277,7 +1277,7 @@ void initHomingPanelProjectileTask(Struct_52880 *arg0) {
 void loadHomingPanelProjectileAsset(Struct_52880 *arg0) {
     Alloc_52880 *alloc = getCurrentAllocation();
     void *ptr;
-    loadAssetMetadata((loadAssetMetadata_arg *)arg0, arg0->assetData, 7);
+    loadAssetMetadata((BillboardSprite *)arg0, arg0->assetData, 7);
     ptr = alloc->unk44;
     arg0->hitCount = 0;
     arg0->turnRate = 0;
@@ -1367,7 +1367,7 @@ void launchHomingPanelProjectile(Struct_52880 *arg0) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)arg0);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)arg0);
     }
 }
 
@@ -1470,7 +1470,7 @@ void updateHomingPanelProjectile(Struct_52880 *arg0) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)arg0);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)arg0);
     }
 }
 
@@ -1524,7 +1524,7 @@ void loadFallingStarProjectileAsset(Struct_52880 *arg0) {
     s32 pad[4];
 
     alloc = getCurrentAllocation();
-    loadAssetMetadata((loadAssetMetadata_arg *)arg0, arg0->assetData, 6);
+    loadAssetMetadata((BillboardSprite *)arg0, arg0->assetData, 6);
     ptr = alloc->unk44;
     arg0->unk40 = 0x65;
     arg0->hitCount = 0;
@@ -1576,7 +1576,7 @@ void updateFallingStarProjectile(Struct_52880 *projectile) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)projectile);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)projectile);
     }
 }
 
@@ -1617,7 +1617,7 @@ void loadPlayerGuidedStarProjectile(Struct_52880 *arg0) {
     alloc = getCurrentAllocation();
     playerIdxPtr = &arg0->ownerPlayerIdx;
     arg0->unk40 = alloc->unk10[arg0->ownerPlayerIdx].sectorIndex;
-    loadAssetMetadata((loadAssetMetadata_arg *)arg0, arg0->assetData, 6);
+    loadAssetMetadata((BillboardSprite *)arg0, arg0->assetData, 6);
 
     arg0->unk0 = alloc->unk44;
     arg0->hitCount = 0;
@@ -1707,7 +1707,7 @@ void updatePlayerGuidedStarProjectile(Struct_52880 *arg0) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)arg0);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)arg0);
     }
 }
 
@@ -1731,7 +1731,7 @@ void initRandomEffectProjectileTask(RandomEffectProjectile *arg0) {
 void loadRandomEffectProjectileAsset(Struct_52880 *arg0) {
     Alloc_52880 *alloc = getCurrentAllocation();
     void *ptr;
-    loadAssetMetadata((loadAssetMetadata_arg *)arg0, arg0->assetData, 0x69);
+    loadAssetMetadata((BillboardSprite *)arg0, arg0->assetData, 0x69);
     ptr = alloc->unk44;
     arg0->hitCount = 0;
     arg0->turnRate = 0;
@@ -1865,7 +1865,7 @@ void launchRandomEffectProjectile(Struct_52880 *arg0) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)arg0);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)arg0);
     }
 }
 
@@ -1964,7 +1964,7 @@ void updateRandomEffectProjectile(RandomEffectProjectileUpdate *arg0) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)arg0);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)arg0);
     }
 }
 
@@ -1992,7 +1992,7 @@ void initGhostTargetProjectileTask(Struct_52880 *arg0) {
 void loadGhostTargetProjectileAsset(Struct_52880 *arg0) {
     Alloc_52880 *alloc = getCurrentAllocation();
     void *ptr;
-    loadAssetMetadata((loadAssetMetadata_arg *)arg0, arg0->assetData, 0x6E);
+    loadAssetMetadata((BillboardSprite *)arg0, arg0->assetData, 0x6E);
     ptr = alloc->unk44;
     arg0->hitCount = 0;
     arg0->turnRate = 0;
@@ -2036,7 +2036,7 @@ void launchGhostTargetProjectile(Struct_52880 *arg0) {
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)arg0);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)arg0);
     }
 }
 
@@ -2104,7 +2104,7 @@ skip_main:
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)arg0);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)arg0);
     }
 }
 
@@ -2127,7 +2127,7 @@ void initShrinkProjectileTask(Struct_52880 *arg0) {
 void loadShrinkProjectileAsset(Struct_52880 *arg0) {
     Alloc_52880 *alloc = getCurrentAllocation();
     void *ptr;
-    loadAssetMetadata((loadAssetMetadata_arg *)arg0, arg0->assetData, 4);
+    loadAssetMetadata((BillboardSprite *)arg0, arg0->assetData, 4);
     ptr = alloc->unk44;
     arg0->hitCount = 0;
     arg0->turnRate = 0;
@@ -2183,7 +2183,7 @@ void launchShrinkProjectile(Struct_52880 *arg0) {
     i = 0;
 
     do {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)arg0);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)arg0);
         i++;
     } while (i < 4);
 }
@@ -2246,7 +2246,7 @@ void updateShrinkProjectile(Struct_52880 *arg0) {
 
     i = 0;
     do {
-        enqueueTexturedBillboardSprite(i, (TexturedBillboardSprite *)arg0);
+        enqueueTexturedBillboardSprite(i, (BillboardSprite *)arg0);
         i++;
     } while (i < 4);
 }
