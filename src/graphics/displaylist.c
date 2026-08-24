@@ -636,7 +636,7 @@ s32 getTrackHeightWithNormalAtPosition(void *trackGeom_void, u16 groupIdx, void 
     return -0x3E800000;
 }
 
-s32 projectPositionOntoTrackSegment(TrackGeometryData *arg0, u16 arg1, PositionXZ *arg2) {
+s32 projectPositionOntoTrackSegment(TrackGeometryData *arg0, u16 arg1, Vec3i *arg2) {
     s32 dz;
     s32 dx;
     Vec3s *verts;
@@ -666,13 +666,13 @@ s32 projectPositionOntoTrackSegment(TrackGeometryData *arg0, u16 arg1, PositionX
     unitZ = temp;
 
     idx1 = arg0->elements[arg1].vertexIdx2;
-    temp = arg2->x;
+    temp = arg2->x >> 16;
     dx = temp;
     vertsTemp = arg0->vertices;
     roundUp = 0x1FFF;
     verts = vertsTemp;
     dx = dx - verts[idx1].x;
-    dz = arg2->z - verts[idx1].z;
+    dz = (arg2->z >> 16) - verts[idx1].z;
 
     result = (unitX * dx) + (unitZ * dz);
 

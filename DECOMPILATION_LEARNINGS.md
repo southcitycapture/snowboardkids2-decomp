@@ -846,6 +846,12 @@ with `Transform3D`; KMC moved the trailing render-matrix pointer from offset `0x
 modern checker accepted the expected layout. Avoid that union and use the explicit initialization view when
 the original code relies on overlapping storage.
 
+## Express Fixed-Point Integer Extraction with Signed Shifts
+
+For a `Vec3i` containing signed 16.16 coordinates, KMC GCC 2.7.2 compiles `coordinate >> 16` directly to a
+signed halfword load from the coordinate's big-endian address. This preserves the original `lh` access while
+keeping APIs typed as `Vec3i *`; a padded struct exposing only the high halfwords is unnecessary.
+
 ## Reuse Renderer Arguments in Unlock-Screen Tasks
 
 Unlock-screen task payloads contain the canonical renderer arguments directly. The digit, prompt, and sold-out

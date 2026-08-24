@@ -5122,7 +5122,7 @@ void updateAndRenderRaceCharacters(void) {
             player->segmentProgress = projectPositionOntoTrackSegment(
                 (TrackGeometryData *)&gs->gameData,
                 player->sectorIndex,
-                (PositionXZ *)&player->worldPos
+                &player->worldPos
             );
             player->lapProgressRemaining = getTrackSegmentFinishZoneFlag(&gs->gameData, player->sectorIndex);
         }

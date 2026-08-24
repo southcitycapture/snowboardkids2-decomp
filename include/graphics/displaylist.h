@@ -80,12 +80,6 @@ typedef struct {
 } TrackGeometryFaceData;
 
 typedef struct {
-    s16 x;
-    u8 padding[6];
-    s16 z;
-} PositionXZ;
-
-typedef struct {
     /* 0x00 */ s32 vertices;
     /* 0x04 */ Transform3D transform;
     /* 0x24 */ u8 *textureData;
@@ -281,4 +275,4 @@ void renderRotatedBillboardSpriteCI(RotatedBillboardSprite *arg1);
 
 s32 normalizeSurfaceType(s32);
 
-s32 projectPositionOntoTrackSegment(TrackGeometryData *trackGeom, u16 sectorIdx, PositionXZ *pos);
+s32 projectPositionOntoTrackSegment(TrackGeometryData *trackGeom, u16 sectorIdx, Vec3i *pos);
