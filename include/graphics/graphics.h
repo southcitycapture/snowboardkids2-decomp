@@ -135,15 +135,12 @@ typedef struct ViewportNode {
     /* 0xBF */ u8 prevFadeValue;
     /* 0xC0 */ u8 fadeValue;
     /* 0xC1 */ u8 fadeMode;
-    /* 0xC2 */ u8 paddingC2[0x6];
     /* 0xC8 */ Vp viewport;
     /* 0xD8 */ u16 perspNorm;
     /* 0xDA */ u16 viewportId;
-    /* 0xDC */ u8 paddingDC[4];
     /* 0xE0 */ Mtx projectionMatrix;
     /* 0x120 */ Transform3D viewTransform;
     /* 0x140 */ u16 numLights;
-    /* 0x142 */ u8 padding142[6];
     /* 0x148 */ Light lights[8];
     /* 0x1C8 */ s16 fogStartPermille;
     /* 0x1CA */ s16 fogEndPermille;
@@ -152,7 +149,6 @@ typedef struct ViewportNode {
     /* 0x1CE */ u8 fogB;
     /* 0x1CF */ u8 fogA;
     /* 0x1D0 */ f32 scaleY;
-    /* 0x1D4 */ u8 padding1D4[4];
 } ViewportNode;
 
 extern ViewportNode gRootViewport;
