@@ -125,8 +125,8 @@ void transitionToMainMenu(void) {
 }
 
 void setupGameStateTransition(ModelEntity *arg0) {
-    ColorData sp10[3];
-    ColorData sp28;
+    DirectionalLightData sp10[3];
+    AmbientLightData sp28;
 
     initModelEntity(arg0, 0, getCurrentAllocation());
     setCleanupCallback(&cleanupTransitionEffect);

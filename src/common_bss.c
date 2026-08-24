@@ -3,6 +3,7 @@
 #include "audio/audio_manager.h"
 #include "common.h"
 #include "gbi.h"
+#include "graphics/graphics.h"
 #include "math/geometry.h"
 #include "os_message.h"
 #include "os_pi.h"
@@ -48,9 +49,9 @@ s8 gAnalogStickX[3] BSS_ALIGN(1) = { 0 };
 u8 gDebugCameraBaseStep BSS_ALIGN(1) = 0;
 u32 __osViIntrCount BSS = 0;
 s32 gButtonsPressed[4] BSS = { 0 };
-s16 gGraphicsMode[2] BSS = { 0 };
+s16 gGraphicsMode BSS = 0;
 s32 gFrameCounter BSS = 0;
-void *gActiveViewport BSS = 0;
+ViewportNode *gActiveViewport BSS = 0;
 s32 gParallaxFrameCounter BSS = 0;
 s16 gCutsceneSlotIndex[4] BSS = { 0 };
 u8 gMotorState[0x24] BSS = { 0 };
@@ -85,7 +86,7 @@ u8 mainThreadStack[0x820] BSS = { 0 };
 u8 gSerialEventQueue[0x820] BSS = { 0 };
 OSTimer __osEepromTimer BSS = { 0 };
 void *gCachedTextureAddr BSS = 0;
-s16 gTextClipAndOffsetData[6] BSS = { 0 };
+TextClipAndOffsetData gTextClipAndOffsetData BSS = { 0 };
 s16 gTextureEnabled BSS = 0;
 u8 gControllerPollingEnabled BSS_ALIGN(1) = 0;
 static u8 sCommonBssPad_800AFCE3 BSS_ALIGN(1) = 0;

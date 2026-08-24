@@ -13,9 +13,9 @@ typedef struct {
     ViewportNode sceneNode;
     ViewportNode overlayNode;
     ViewportNode uiNode;
-    ColorData lightColors;
+    DirectionalLightData lightColors;
     u8 padding598[0x10];
-    ColorData ambientColor;
+    AmbientLightData ambientLight;
     union {
         CutsceneManager cutsceneManager;
         u8 cutsceneBuffer[0x1224];

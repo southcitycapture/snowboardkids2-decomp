@@ -282,21 +282,21 @@ void initSceneRenderNode(
     setModelCameraTransform(&node->base, 0, 0, -0xA0, -0x78, 0x9F, 0x77);
     setViewportPerspective(&node->base, 40.0f, 1.3333334f, 10.0f, 10000.0f);
 
-    node->state.lighting.lightColor.r2 = 0;
-    node->state.lighting.lightColor.g2 = 0x7F;
-    node->state.lighting.lightColor.b2 = 0x7F;
+    node->state.lighting.lightColor.directionX = 0;
+    node->state.lighting.lightColor.directionY = 0x7F;
+    node->state.lighting.lightColor.directionZ = 0x7F;
     node->state.lighting.lightColor.r = 0;
     node->state.lighting.lightColor.g = 0;
     node->state.lighting.lightColor.b = 0;
-    node->state.lighting.ambientColor.r = 0;
-    node->state.lighting.ambientColor.g = 0;
-    node->state.lighting.ambientColor.b = 0;
+    node->state.lighting.ambientLight.color.r = 0;
+    node->state.lighting.ambientLight.color.g = 0;
+    node->state.lighting.ambientLight.color.b = 0;
 
     setViewportLightColors(
         node->base.viewportId,
         1,
         &node->state.lighting.lightColor,
-        &node->state.lighting.ambientColor
+        &node->state.lighting.ambientLight.color
     );
 
     node->state.anim.renderFlags = 0;

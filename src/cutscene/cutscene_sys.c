@@ -228,8 +228,8 @@ s32 cutsceneSysFadeIn_validate(void) {
 
 void cutsceneSysFadeIn_exec(cutsceneSysFadeIn_exec_arg *fadeParams, ViewportNode *viewport) {
     u8 brightness = gCutsceneFadeBrightnessTable[fadeParams->brightnessIndex];
-    setViewportEnvColor(viewport->unk0.next, brightness, brightness, brightness);
-    setViewportFadeValue(viewport->unk0.next, 0, fadeParams->fadeMode);
+    setViewportEnvColor(viewport->parent, brightness, brightness, brightness);
+    setViewportFadeValue(viewport->parent, 0, fadeParams->fadeMode);
 }
 
 s32 cutsceneSysFadeIn_isDone(void) {
@@ -245,8 +245,8 @@ s32 cutsceneSysFadeOut_validate(void) {
 
 void cutsceneSysFadeOut_exec(cutsceneSysFadeOut_exec_arg *fadeParams, ViewportNode *viewport) {
     u8 brightness = gCutsceneFadeBrightnessTable[fadeParams->brightnessIndex];
-    setViewportEnvColor(viewport->unk0.next, brightness, brightness, brightness);
-    setViewportFadeValue(viewport->unk0.next, 0xFF, fadeParams->fadeMode);
+    setViewportEnvColor(viewport->parent, brightness, brightness, brightness);
+    setViewportFadeValue(viewport->parent, 0xFF, fadeParams->fadeMode);
 }
 
 s32 cutsceneSysFadeOut_isDone(void) {
@@ -419,13 +419,8 @@ s32 cutsceneSysFilter_validate(void) {
 }
 
 void cutsceneSysFilter_exec(cutsceneSysFilter_exec_arg *filterArgs, ViewportNode *viewport) {
-    setViewportEnvColor(
-        viewport->unk0.next,
-        filterArgs->envColorRed,
-        filterArgs->envColorGreen,
-        filterArgs->envColorBlue
-    );
-    setViewportFadeValue(viewport->unk0.next, filterArgs->cameraFilterParam, filterArgs->cameraFilterEnable);
+    setViewportEnvColor(viewport->parent, filterArgs->envColorRed, filterArgs->envColorGreen, filterArgs->envColorBlue);
+    setViewportFadeValue(viewport->parent, filterArgs->cameraFilterParam, filterArgs->cameraFilterEnable);
 }
 
 s32 cutsceneSysFilter_isDone(void) {

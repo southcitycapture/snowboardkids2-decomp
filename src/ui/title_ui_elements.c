@@ -185,8 +185,8 @@ void cleanupPressStartPrompt(TitlePressStartPromptState *state) {
 }
 
 void initTitleEffectModel(ModelEntity *arg0) {
-    ColorData sp10[3];
-    ColorData sp28;
+    DirectionalLightData sp10[3];
+    AmbientLightData sp28;
     TitleScreenState *alloc;
 
     alloc = (TitleScreenState *)getCurrentAllocation();

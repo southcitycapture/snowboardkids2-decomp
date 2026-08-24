@@ -2,24 +2,13 @@
 
 #include "R4300.h"
 #include "common.h"
+#include "graphics/graphics.h"
 #include "os_cache.h"
 #include "os_exception.h"
 #include "os_message.h"
 #include "os_thread.h"
 #include "os_vi.h"
 #include "sptask.h"
-
-// Structs
-
-typedef struct {
-    char padding[61];
-    OSMesg messageQueue;
-    OSMesg message;
-    void *framebuffer;
-    u16 frameIndex;
-    u16 flags;
-    u32 padding2;
-} GfxTask;
 
 typedef struct {
     u32 type;
@@ -314,7 +303,7 @@ static void audioThreadEntry(void *arg) {
         OSMesg message;
     } stack;
     OSMesg audioSpDoneMsg;
-    GfxTask *temp;
+    GraphicsTask *temp;
 
     stack.audioStartMsg = (OSMesg)0xB;
 
@@ -324,7 +313,7 @@ static void audioThreadEntry(void *arg) {
         osRecvMesg(&audioSpDoneQueue, &audioSpDoneMsg, OS_MESG_BLOCK);
 
         temp = stack.message; // force a copy into v0
-        osSendMesg(temp->messageQueue, temp->message, OS_MESG_BLOCK);
+        osSendMesg(temp->messageQueue, temp->completionMessage, OS_MESG_BLOCK);
     }
 }
 
@@ -339,7 +328,7 @@ static void displayThreadEntry(void *arg) {
     void *frameBuffer;
     struct {
         s32 sp10;
-        GfxTask *gfxTask;
+        GraphicsTask *gfxTask;
         s32 temp_a0;
         char padding2[4];
         ViConfig sp20;
@@ -363,7 +352,7 @@ static void displayThreadEntry(void *arg) {
         if (!(stack.gfxTask->flags & 1)) {
             continue;
         }
-        osSendMesg(stack.gfxTask->messageQueue, stack.gfxTask->message, 1);
+        osSendMesg(stack.gfxTask->messageQueue, stack.gfxTask->completionMessage, 1);
 
         while (((frameCounter - frameIndex & 0xFFF) != 0) && (frameCounter - frameIndex & 0xFFF) < 0x800) {
             frameIndex++;

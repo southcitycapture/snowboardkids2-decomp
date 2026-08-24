@@ -190,14 +190,14 @@ void updateCutscenePlayback(void) {
             setupModelEntityLighting(
                 &state->cutsceneData.cutsceneManager.modelEntity,
                 &state->lightColors,
-                &state->ambientColor
+                &state->ambientLight
             );
             osViExtendVStart(0);
             prepareCutsceneForPlayback(
                 &state->cutsceneData.cutsceneManager,
                 &state->sceneNode,
                 &state->lightColors,
-                &state->ambientColor,
+                &state->ambientLight,
                 0,
                 0
             );

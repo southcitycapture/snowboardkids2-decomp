@@ -116,34 +116,29 @@ void spawnCreditsCharacter(CreditsState *);
 void initCreditsCharacter(CreditsCharacter *character);
 
 void initSceneLighting(CreditsState *arg0) {
-    arg0->sceneLights[0].r2 = 0;
-    arg0->sceneLights[0].g2 = 0x7F;
+    arg0->sceneLights[0].directionX = 0;
+    arg0->sceneLights[0].directionY = 0x7F;
     arg0->sceneLights[0].r = 0xE0;
     arg0->sceneLights[0].b = 0xA0;
     arg0->sceneLights[0].g = 0xE0;
     arg0->sceneLights[1].r = 0x32;
     arg0->sceneLights[1].g = 0x32;
     arg0->sceneLights[1].b = 0x32;
-    arg0->sceneLights[2].r2 = -0x7F;
+    arg0->sceneLights[2].directionX = -0x7F;
     arg0->sceneLights[2].r = 0x65;
     arg0->sceneLights[2].g = 0x65;
     arg0->sceneLights[2].b = 0x65;
-    arg0->ambientLightR = 0x80;
-    arg0->ambientLightB = 0xA0;
-    arg0->sceneLights[0].b2 = 0x7F;
-    arg0->sceneLights[1].r2 = 0x7F;
-    arg0->sceneLights[1].g2 = 0x7F;
-    arg0->sceneLights[1].b2 = 0;
-    arg0->sceneLights[2].g2 = 0x7F;
-    arg0->sceneLights[2].b2 = 0;
-    arg0->ambientLightG = 0x90;
+    arg0->ambientLight.r = 0x80;
+    arg0->ambientLight.b = 0xA0;
+    arg0->sceneLights[0].directionZ = 0x7F;
+    arg0->sceneLights[1].directionX = 0x7F;
+    arg0->sceneLights[1].directionY = 0x7F;
+    arg0->sceneLights[1].directionZ = 0;
+    arg0->sceneLights[2].directionY = 0x7F;
+    arg0->sceneLights[2].directionZ = 0;
+    arg0->ambientLight.g = 0x90;
 
-    setViewportLightColors(
-        arg0->characterViewport.viewportId,
-        3,
-        &arg0->sceneLights[0],
-        (ColorData *)&arg0->ambientLightR
-    );
+    setViewportLightColors(arg0->characterViewport.viewportId, 3, &arg0->sceneLights[0], &arg0->ambientLight);
 }
 
 void initCreditsController(void) {

@@ -187,8 +187,8 @@ void resetAllSlotTransforms(CutsceneManager *manager) {
 void prepareCutsceneForPlayback(
     CutsceneManager *manager,
     ViewportNode *uiResource,
-    ColorData *lightColors,
-    ColorData *ambientColor,
+    DirectionalLightData *lightColors,
+    AmbientLightData *ambientLight,
     u16 maxFrame,
     u8 showDebugInfo
 ) {
@@ -198,7 +198,7 @@ void prepareCutsceneForPlayback(
 
     manager->uiResource = uiResource;
     manager->lightColors = lightColors;
-    manager->ambientColor = ambientColor;
+    manager->ambientLight = ambientLight;
     manager->currentFrame = 0;
     manager->maxFrame = maxFrame;
     manager->endFrame = getCutsceneDefaultEndFrame();

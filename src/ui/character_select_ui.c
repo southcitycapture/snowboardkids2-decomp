@@ -25,12 +25,12 @@ USE_ASSET(playerCountSelectSprites);
 USE_ASSET(tiledSnowmanAsset);
 USE_ASSET(uiFontSpriteSheet);
 
-ColorData charSelectDimLight = { 0x50, 0x50, 0x50, 0x00, 0x00, 0x50, 0x50, 0x00 };
-char charSelectDimAmbientStr[] = "PPP";
-ColorData charSelectNormalLight = { 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x50, 0x50, 0x00 };
-s32 charSelectNormalAmbient = 0x7F7F7F00;
-ColorData charSelectFlashLight = { 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x50, 0x50, 0x00 };
-s32 charSelectFlashAmbient = (s32)0xFFFFFF00;
+DirectionalLightData charSelectDimLight = { 0x50, 0x50, 0x50, 0x00, 0x00, 0x50, 0x50, 0x00 };
+RgbColor charSelectDimAmbient = { 0x50, 0x50, 0x50, 0x00 };
+DirectionalLightData charSelectNormalLight = { 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x50, 0x50, 0x00 };
+RgbColor charSelectNormalAmbient = { 0x7F, 0x7F, 0x7F, 0x00 };
+DirectionalLightData charSelectFlashLight = { 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x50, 0x50, 0x00 };
+RgbColor charSelectFlashAmbient = { 0xFF, 0xFF, 0xFF, 0x00 };
 
 u16 charRowConfirmSoundIds[] = { 0x012C, 0x012D, 0x012B, 0x012E };
 
@@ -446,7 +446,7 @@ void updateCharacterSelect(void) {
                         state->playerViewports[i].viewportId,
                         1,
                         &charSelectDimLight,
-                        (ColorData *)charSelectDimAmbientStr
+                        &charSelectDimAmbient
                     );
                     terminateTasksByTypeAndID(1, i & 0xFF);
                 } else if (state->cursorIndices[i] == (state->maxMenuOption - 3)) {
@@ -472,7 +472,7 @@ void updateCharacterSelect(void) {
                         state->playerViewports[i].viewportId,
                         1,
                         &charSelectNormalLight,
-                        (ColorData *)(&charSelectNormalAmbient)
+                        &charSelectNormalAmbient
                     );
                     if (gGameSessionContext->snowboardIds[i] < 9) {
                         state->characterCategories[i] = gGameSessionContext->snowboardIds[i] / 3;
@@ -606,7 +606,7 @@ void updateCharacterSelect(void) {
                         state->playerViewports[i].viewportId,
                         1,
                         &charSelectNormalLight,
-                        (ColorData *)(&charSelectNormalAmbient)
+                        &charSelectNormalAmbient
                     );
                 }
                 break;
@@ -739,14 +739,14 @@ void updateCharacterSelect(void) {
                         state->playerViewports[i].viewportId,
                         1,
                         &charSelectFlashLight,
-                        (ColorData *)(&charSelectFlashAmbient)
+                        &charSelectFlashAmbient
                     );
                 } else {
                     setViewportLightColors(
                         state->playerViewports[i].viewportId,
                         1,
                         &charSelectNormalLight,
-                        (ColorData *)(&charSelectNormalAmbient)
+                        &charSelectNormalAmbient
                     );
                 }
                 if (state->frameCounters[i] == 0x10) {

@@ -53,6 +53,12 @@ typedef struct {
     /* 0x7A4 */ u8 viewMode;
 } BoardShopState;
 
+typedef struct {
+    /* 0x000 */ ViewportNode viewport;
+    /* 0x1D8 */ u16 timer;
+    /* 0x1DA */ u8 padding1DA[6];
+} StoryMapLocationIntroState;
+
 s16 boardShopPrices[] = { 0x0064, 0x0064, 0x0064, 0x00FA, 0x00FA, 0x012C, 0x012C, 0x0190,
                           0x0190, 0x01C2, 0x01C2, 0x01F4, 0x01F4, 0x0320, 0x03E8, 0x04B0 };
 
@@ -708,28 +714,28 @@ void advanceBoardDisplaySlots(void) {
 }
 
 void initStoryMapLocationIntro(void) {
-    BoardShopState *temp_s0 = (BoardShopState *)allocateTaskMemory(0x1E0);
+    StoryMapLocationIntroState *state = (StoryMapLocationIntroState *)allocateTaskMemory(0x1E0);
     setupTaskSchedulerNodes(0x14, 0, 0, 0, 0, 0, 0, 0);
-    temp_s0->secondaryViewport.unk0.counter = 0;
-    initMenuCameraNode((ViewportNode *)temp_s0, 0, 0xA, 0);
+    state->timer = 0;
+    initMenuCameraNode(&state->viewport, 0, 0xA, 0);
     setViewportFadeValue(0, 0, 8);
     scheduleTask(&storyMapLocationTextTask, 0U, 0U, 0x5AU);
     setGameStateHandler(&awaitStoryMapLocationIntro);
 }
 
 void awaitStoryMapLocationIntro(void) {
-    ViewportNode *state = (ViewportNode *)getCurrentAllocation();
+    StoryMapLocationIntroState *state = (StoryMapLocationIntroState *)getCurrentAllocation();
 
-    state[1].unk0.counter++;
+    state->timer++;
 
     do {
         if (gControllerInputs[0] & A_BUTTON) {
-            state[1].unk0.counter = 0x3C;
+            state->timer = 0x3C;
         }
     } while (0);
 
-    if (state[1].unk0.counter >= 0x3C) {
-        unlinkNode(state);
+    if (state->timer >= 0x3C) {
+        unlinkNode(&state->viewport);
         terminateSchedulerWithCallback(&onStoryMapLocationIntroComplete);
     }
 }

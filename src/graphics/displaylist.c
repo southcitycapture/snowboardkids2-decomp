@@ -68,15 +68,15 @@
     workPos.z += (((s64)dx) * totalDistSq) / (zDivisor);                                                    \
     sectorIndex = findTrackSector(trackGeom, groupIdx, &workPos)
 
-#define CULL_SPRITE(s)                                                                    \
-    if ((u32)((gActiveViewport->cameraX - (s)->position.x) + 0x0FEA0000) > 0x1FD40000U) { \
-        return;                                                                           \
-    }                                                                                     \
-    if ((u32)((gActiveViewport->cameraZ - (s)->position.z) + 0x0FEA0000) > 0x1FD40000U) { \
-        return;                                                                           \
-    }                                                                                     \
-    if ((u32)((gActiveViewport->cameraY - (s)->position.y) + 0x0FEA0000) > 0x1FD40000U) { \
-        return;                                                                           \
+#define CULL_SPRITE(s)                                                                                        \
+    if ((u32)((gActiveViewport->viewTransform.translation.x - (s)->position.x) + 0x0FEA0000) > 0x1FD40000U) { \
+        return;                                                                                               \
+    }                                                                                                         \
+    if ((u32)((gActiveViewport->viewTransform.translation.z - (s)->position.z) + 0x0FEA0000) > 0x1FD40000U) { \
+        return;                                                                                               \
+    }                                                                                                         \
+    if ((u32)((gActiveViewport->viewTransform.translation.y - (s)->position.y) + 0x0FEA0000) > 0x1FD40000U) { \
+        return;                                                                                               \
     }
 
 USE_OVERLAY(rand);
@@ -933,7 +933,7 @@ void prepareDisplayListRenderState(DisplayListObject *obj) {
         }
 
         matrixToEulerAngles(
-            (Transform3D *)&gActiveViewport->cameraRotationMatrix,
+            &gActiveViewport->viewTransform,
             &obj->transform,
             &lookAtX,
             &lookAtY,
@@ -1040,7 +1040,7 @@ void setupDisplayListMatrix(DisplayListObject *arg0) {
         }
 
         matrixToEulerAngles(
-            (Transform3D *)&gActiveViewport->cameraRotationMatrix,
+            &gActiveViewport->viewTransform,
             &arg0->transform,
             &sp70,
             &sp74,
@@ -1330,16 +1330,7 @@ void setupBillboardDisplayListMatrix(DisplayListObject *obj) {
             return;
         }
 
-        matrixToEulerAngles(
-            (Transform3D *)&gActiveViewport->cameraRotationMatrix,
-            &obj->transform,
-            &eyeX,
-            &eyeY,
-            &eyeZ,
-            &upX,
-            &upY,
-            &upZ
-        );
+        matrixToEulerAngles(&gActiveViewport->viewTransform, &obj->transform, &eyeX, &eyeY, &eyeZ, &upX, &upY, &upZ);
         guLookAtReflect(&lookAtMatrix, lookAt, 0.0f, 0.0f, 0.0f, eyeX, eyeY, eyeZ, upX, upY, upZ);
         gSPLookAt(gDisplayListAllocPtr++, lookAt);
     }
@@ -1521,7 +1512,7 @@ void setupMultiPartObjectRenderState(DisplayListObject *arg0, s32 arg1) {
         }
 
         matrixToEulerAngles(
-            (Transform3D *)&gActiveViewport->cameraRotationMatrix,
+            &gActiveViewport->viewTransform,
             &arg0->transform,
             &sp70,
             &sp74,
@@ -1701,16 +1692,7 @@ void prepareDisplayListRenderStateWithLights(DisplayListObject *obj) {
             return;
         }
 
-        matrixToEulerAngles(
-            (Transform3D *)&gActiveViewport->cameraRotationMatrix,
-            &obj->transform,
-            &sp70,
-            &sp74,
-            &sp78,
-            &sp7C,
-            &sp80,
-            &sp84
-        );
+        matrixToEulerAngles(&gActiveViewport->viewTransform, &obj->transform, &sp70, &sp74, &sp78, &sp7C, &sp80, &sp84);
         guLookAtReflect(&sp30, lookat, 0.0f, 0.0f, 0.0f, sp70, sp74, sp78, sp7C, sp80, sp84);
         gSPLookAt(gDisplayListAllocPtr++, lookat);
     }
@@ -1763,15 +1745,15 @@ void renderOpaqueDisplayListWithLights(DisplayListObject *arg0) {
     gSPLightColor(
         gDisplayListAllocPtr++,
         LIGHT_1,
-        gActiveViewport->defaultLight1R << 0x18 | gActiveViewport->defaultLight1G << 0x10 |
-            gActiveViewport->defaultLight1B << 8
+        gActiveViewport->lights[0].l.col[0] << 0x18 | gActiveViewport->lights[0].l.col[1] << 0x10 |
+            gActiveViewport->lights[0].l.col[2] << 8
     );
 
     gSPLightColor(
         gDisplayListAllocPtr++,
         LIGHT_2,
-        gActiveViewport->defaultLight2R << 0x18 | gActiveViewport->defaultLight2G << 0x10 |
-            gActiveViewport->defaultLight2B << 8
+        gActiveViewport->lights[1].l.col[0] << 0x18 | gActiveViewport->lights[1].l.col[1] << 0x10 |
+            gActiveViewport->lights[1].l.col[2] << 8
     );
 }
 
@@ -1783,15 +1765,15 @@ void renderTransparentDisplayListWithLights(DisplayListObject *arg0) {
     gSPLightColor(
         gDisplayListAllocPtr++,
         LIGHT_1,
-        gActiveViewport->defaultLight1R << 0x18 | gActiveViewport->defaultLight1G << 0x10 |
-            gActiveViewport->defaultLight1B << 8
+        gActiveViewport->lights[0].l.col[0] << 0x18 | gActiveViewport->lights[0].l.col[1] << 0x10 |
+            gActiveViewport->lights[0].l.col[2] << 8
     );
 
     gSPLightColor(
         gDisplayListAllocPtr++,
         LIGHT_2,
-        gActiveViewport->defaultLight2R << 0x18 | gActiveViewport->defaultLight2G << 0x10 |
-            gActiveViewport->defaultLight2B << 8
+        gActiveViewport->lights[1].l.col[0] << 0x18 | gActiveViewport->lights[1].l.col[1] << 0x10 |
+            gActiveViewport->lights[1].l.col[2] << 8
     );
 }
 
@@ -1803,15 +1785,15 @@ void renderOverlayDisplayListWithLights(DisplayListObject *arg0) {
     gSPLightColor(
         gDisplayListAllocPtr++,
         LIGHT_1,
-        gActiveViewport->defaultLight1R << 0x18 | gActiveViewport->defaultLight1G << 0x10 |
-            gActiveViewport->defaultLight1B << 8
+        gActiveViewport->lights[0].l.col[0] << 0x18 | gActiveViewport->lights[0].l.col[1] << 0x10 |
+            gActiveViewport->lights[0].l.col[2] << 8
     );
 
     gSPLightColor(
         gDisplayListAllocPtr++,
         LIGHT_2,
-        gActiveViewport->defaultLight2R << 0x18 | gActiveViewport->defaultLight2G << 0x10 |
-            gActiveViewport->defaultLight2B << 8
+        gActiveViewport->lights[1].l.col[0] << 0x18 | gActiveViewport->lights[1].l.col[1] << 0x10 |
+            gActiveViewport->lights[1].l.col[2] << 8
     );
 }
 
@@ -1873,15 +1855,15 @@ void renderMultiPartOpaqueDisplayListsWithLights(DisplayListObject *displayObjec
     gSPLightColor(
         gDisplayListAllocPtr++,
         LIGHT_1,
-        gActiveViewport->defaultLight1R << 0x18 | gActiveViewport->defaultLight1G << 0x10 |
-            gActiveViewport->defaultLight1B << 8
+        gActiveViewport->lights[0].l.col[0] << 0x18 | gActiveViewport->lights[0].l.col[1] << 0x10 |
+            gActiveViewport->lights[0].l.col[2] << 8
     );
 
     gSPLightColor(
         gDisplayListAllocPtr++,
         LIGHT_2,
-        gActiveViewport->defaultLight2R << 0x18 | gActiveViewport->defaultLight2G << 0x10 |
-            gActiveViewport->defaultLight2B << 8
+        gActiveViewport->lights[1].l.col[0] << 0x18 | gActiveViewport->lights[1].l.col[1] << 0x10 |
+            gActiveViewport->lights[1].l.col[2] << 8
     );
 }
 
@@ -1922,15 +1904,15 @@ void renderMultiPartTransparentDisplayListsWithLights(DisplayListObject *display
     gSPLightColor(
         gDisplayListAllocPtr++,
         LIGHT_1,
-        gActiveViewport->defaultLight1R << 0x18 | gActiveViewport->defaultLight1G << 0x10 |
-            gActiveViewport->defaultLight1B << 8
+        gActiveViewport->lights[0].l.col[0] << 0x18 | gActiveViewport->lights[0].l.col[1] << 0x10 |
+            gActiveViewport->lights[0].l.col[2] << 8
     );
 
     gSPLightColor(
         gDisplayListAllocPtr++,
         LIGHT_2,
-        gActiveViewport->defaultLight2R << 0x18 | gActiveViewport->defaultLight2G << 0x10 |
-            gActiveViewport->defaultLight2B << 8
+        gActiveViewport->lights[1].l.col[0] << 0x18 | gActiveViewport->lights[1].l.col[1] << 0x10 |
+            gActiveViewport->lights[1].l.col[2] << 8
     );
 }
 
@@ -1971,15 +1953,15 @@ void renderMultiPartOverlayDisplayListsWithLights(DisplayListObject *displayObje
     gSPLightColor(
         gDisplayListAllocPtr++,
         LIGHT_1,
-        gActiveViewport->defaultLight1R << 0x18 | gActiveViewport->defaultLight1G << 0x10 |
-            gActiveViewport->defaultLight1B << 8
+        gActiveViewport->lights[0].l.col[0] << 0x18 | gActiveViewport->lights[0].l.col[1] << 0x10 |
+            gActiveViewport->lights[0].l.col[2] << 8
     );
 
     gSPLightColor(
         gDisplayListAllocPtr++,
         LIGHT_2,
-        gActiveViewport->defaultLight2R << 0x18 | gActiveViewport->defaultLight2G << 0x10 |
-            gActiveViewport->defaultLight2B << 8
+        gActiveViewport->lights[1].l.col[0] << 0x18 | gActiveViewport->lights[1].l.col[1] << 0x10 |
+            gActiveViewport->lights[1].l.col[2] << 8
     );
 }
 
@@ -2056,7 +2038,7 @@ void renderCameraRelativeDisplayList(DisplayListObject *displayListObj) {
         return;
     }
 
-    memcpy(&gScaleMatrix.translation, &gActiveViewport->cameraX, sizeof(Vec3i));
+    memcpy(&gScaleMatrix.translation, &gActiveViewport->viewTransform.translation.x, sizeof(Vec3i));
     transform3DToMtx(&gScaleMatrix, displayListObj->transformMatrix);
 
     if (displayListObj->displayLists->flags & 1) {
@@ -2066,7 +2048,7 @@ void renderCameraRelativeDisplayList(DisplayListObject *displayListObj) {
         }
 
         matrixToEulerAngles(
-            (Transform3D *)&gActiveViewport->cameraRotationMatrix,
+            &gActiveViewport->viewTransform,
             &displayListObj->transform,
             &lookAtX,
             &lookAtY,
@@ -2209,13 +2191,16 @@ void enqueueTexturedBillboardSprite(s32 arg0, BillboardSprite *arg1) {
 }
 
 void renderRotatedBillboardSprite(RotatedBillboardSprite *state) {
-    if ((u32)((gActiveViewport->cameraX - state->transform.translation.x) + 0x0FEA0000) > 0x1FD40000U) {
+    if ((u32)((gActiveViewport->viewTransform.translation.x - state->transform.translation.x) + 0x0FEA0000) >
+        0x1FD40000U) {
         return;
     }
-    if ((u32)((gActiveViewport->cameraZ - state->transform.translation.z) + 0x0FEA0000) > 0x1FD40000U) {
+    if ((u32)((gActiveViewport->viewTransform.translation.z - state->transform.translation.z) + 0x0FEA0000) >
+        0x1FD40000U) {
         return;
     }
-    if ((u32)((gActiveViewport->cameraY - state->transform.translation.y) + 0x0FEA0000) > 0x1FD40000U) {
+    if ((u32)((gActiveViewport->viewTransform.translation.y - state->transform.translation.y) + 0x0FEA0000) >
+        0x1FD40000U) {
         return;
     }
 

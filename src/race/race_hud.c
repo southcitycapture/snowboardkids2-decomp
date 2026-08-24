@@ -735,15 +735,15 @@ void renderSkyDisplayListsWithCourseFog(SkyRenderTaskState *skyRenderState) {
         if (player->sectorIndex < 0x39) {
             enqueueCameraRelativeDisplayList(viewportId, (DisplayListObject *)&skyRenderState->courseFogTransform);
             levelData = getLevelConfig(gameState->memoryPoolId);
-            courseFogR = levelData->fogColors.r2;
+            courseFogR = levelData->environmentColors.fog.r;
             nodeIdForFog = fogNodeId;
             setViewportFogById(
                 nodeIdForFog,
                 0x3E3,
                 0x3E7,
                 courseFogR,
-                levelData->fogColors.g2,
-                levelData->fogColors.b2
+                levelData->environmentColors.fog.g,
+                levelData->environmentColors.fog.b
             );
         } else {
             enqueueCameraRelativeDisplayList(viewportId, (DisplayListObject *)&skyRenderState->defaultFogTransform);

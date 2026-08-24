@@ -459,16 +459,30 @@ void loadLevelPreview(void) {
         poolId = poolIdRaw;
         item = getLevelConfig(poolId);
 
-        setViewportLightColors(100, 1, &item->lightColors, &item->fogColors);
+        setViewportLightColors(100, 1, &item->lightColors, &item->environmentColors.ambient);
 
         if (poolId == 11) {
             node = &allocation->previewNode;
             setViewportPerspective(node, 50.0f, ASPECT_RATIO, 10.0f, 1000.0f);
-            setViewportFogById(100, 900, 999, item->fogColors.r2, item->fogColors.g2, item->fogColors.b2);
+            setViewportFogById(
+                100,
+                900,
+                999,
+                item->environmentColors.fog.r,
+                item->environmentColors.fog.g,
+                item->environmentColors.fog.b
+            );
             spawnConfettiEffect(node);
         } else {
             setViewportPerspective(&allocation->previewNode, 50.0f, ASPECT_RATIO, 10.0f, 4000.0f);
-            setViewportFogById(100, 995, 999, item->fogColors.r2, item->fogColors.g2, item->fogColors.b2);
+            setViewportFogById(
+                100,
+                995,
+                999,
+                item->environmentColors.fog.r,
+                item->environmentColors.fog.g,
+                item->environmentColors.fog.b
+            );
         }
 
         scheduleTask(&initLevelPreviewCharacter, 0, 0, 0x5B);

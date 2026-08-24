@@ -646,7 +646,7 @@ s32 osVoiceCheckWord(u8 *data) {
     return 0xE;
 }
 
-void setupModelEntityLighting(ModelEntity *entity, ColorData *lightColors, ColorData *ambientColor) {
+void setupModelEntityLighting(ModelEntity *entity, DirectionalLightData *lightColors, AmbientLightData *ambientLight) {
     s32 temp_v0;
     s32 quarterAverage;
     int colorSum;
@@ -669,9 +669,9 @@ void setupModelEntityLighting(ModelEntity *entity, ColorData *lightColors, Color
     if (average < 0) {
         average += 3;
     }
-    lightColors[0].r2 = 0;
-    lightColors[0].g2 = 0x7F;
-    lightColors[0].b2 = 0x7F;
+    lightColors[0].directionX = 0;
+    lightColors[0].directionY = 0x7F;
+    lightColors[0].directionZ = 0x7F;
     lightColors[0].r = config->diffuseColorR;
     lightColors[0].g = config->diffuseColorG;
     quarterAverage = average >> 2;
@@ -679,19 +679,19 @@ void setupModelEntityLighting(ModelEntity *entity, ColorData *lightColors, Color
     lightColors[1].r = quarterAverage;
     lightColors[1].g = quarterAverage;
     lightColors[1].b = quarterAverage;
-    lightColors[1].r2 = 0x7F;
-    lightColors[1].g2 = 0x7F;
-    lightColors[1].b2 = 0;
-    lightColors[2].r2 = -0x7F;
-    lightColors[2].g2 = 0x7F;
-    lightColors[2].b2 = 0;
+    lightColors[1].directionX = 0x7F;
+    lightColors[1].directionY = 0x7F;
+    lightColors[1].directionZ = 0;
+    lightColors[2].directionX = -0x7F;
+    lightColors[2].directionY = 0x7F;
+    lightColors[2].directionZ = 0;
     lightColors[2].r = halfAverage;
     lightColors[2].g = halfAverage;
     lightColors[2].b = halfAverage;
-    ambientColor[0].r = config->ambientColorR;
-    ambientColor[0].g = config->ambientColorG;
-    ambientColor[0].b = config->ambientColorB;
-    setViewportLightColors(entity->viewport->viewportId, 3, lightColors, ambientColor);
+    ambientLight->color.r = config->ambientColorR;
+    ambientLight->color.g = config->ambientColorG;
+    ambientLight->color.b = config->ambientColorB;
+    setViewportLightColors(entity->viewport->viewportId, 3, lightColors, &ambientLight->color);
 }
 
 typedef struct {

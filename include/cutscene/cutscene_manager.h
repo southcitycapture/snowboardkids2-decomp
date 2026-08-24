@@ -324,8 +324,8 @@ typedef struct {
 
 typedef struct CutsceneManager {
     /* 0x0 */ ViewportNode *uiResource;
-    /* 0x4 */ ColorData *lightColors;
-    /* 0x8 */ ColorData *ambientColor;
+    /* 0x4 */ DirectionalLightData *lightColors;
+    /* 0x8 */ AmbientLightData *ambientLight;
     /* 0xC */ void *sceneContext;
     /* 0x10 */ ModelEntity modelEntity;
     /* 0x98 */ u16 currentFrame;
@@ -363,8 +363,8 @@ void resetAllSlotTransforms(CutsceneManager *manager);
 void prepareCutsceneForPlayback(
     CutsceneManager *manager,
     ViewportNode *uiResource,
-    ColorData *lightColors,
-    ColorData *ambientColor,
+    DirectionalLightData *lightColors,
+    AmbientLightData *ambientLight,
     u16 maxFrame,
     u8 showDebugInfo
 );

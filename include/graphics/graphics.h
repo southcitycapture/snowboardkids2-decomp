@@ -37,83 +37,60 @@ typedef enum {
 #define gCallbackEntrySegment (*(u16 *)((u8 *)&gCurrentDoubleBufferIndex + 2))
 
 typedef struct {
-    u8 light1R;
-    u8 light1G;
-    u8 light1B;
-    u8 pad14B;
-    u8 light1R_dup;
-    u8 light1G_dup;
-    u8 light1B_dup;
-    u8 unk14F;
-    u8 light2R;
-    u8 light2G;
-    u8 light2B;
-    u8 padding[0x5];
-} ViewportNode_ColorData;
+    u8 r;
+    u8 g;
+    u8 b;
+    u8 padding3;
+} RgbColor;
+
+typedef struct {
+    u8 r;
+    u8 g;
+    u8 b;
+    u8 padding3;
+    s8 directionX;
+    s8 directionY;
+    s8 directionZ;
+    u8 padding7;
+} DirectionalLightData;
+
+typedef struct {
+    RgbColor ambient;
+    RgbColor fog;
+} EnvironmentColorData;
+
+typedef struct {
+    RgbColor color;
+    u8 padding4[4];
+} AmbientLightData;
 
 /* Render callback pool entry — linked list of draw callbacks */
 typedef struct CallbackEntry {
     struct CallbackEntry *next;
     void *callback;
     void *callbackData;
-    u8 _padC[3];
+    u8 paddingC[3];
     u8 callbackLayer;
 } CallbackEntry;
 
-/* RSP task message sent to the scheduler for each viewport group */
 typedef struct {
-    OSTask t;
-    OSMesgQueue *msgQueue;
-    s32 msgData;
-    void *auxBuffer;
-    u16 scanlineValue;
-    u16 taskFlags;
-} FrameCallbackMsg;
+    /* 0x00 */ OSTask task;
+    /* 0x40 */ OSMesgQueue *messageQueue;
+    /* 0x44 */ OSMesg completionMessage;
+    /* 0x48 */ void *framebuffer;
+    /* 0x4C */ u16 frameIndex;
+    /* 0x4E */ u16 flags;
+} GraphicsTask;
 
 typedef struct {
-    /* 0x00 */ u32 type;
-    /* 0x04 */ u32 flags;
-    /* 0x08 */ void *ucode_boot;
-    /* 0x0C */ u32 ucode_boot_size;
-    /* 0x10 */ void *ucode;
-    /* 0x14 */ u32 ucode_size;
-    /* 0x18 */ void *output_buff_size;
-    /* 0x1C */ u32 ucode_data_size;
-    /* 0x20 */ void *ucode_data;
-    /* 0x24 */ u32 dram_stack_size;
-    /* 0x28 */ void *dram_stack;
-    /* 0x2C */ u32 task_2C;
-    /* 0x30 */ void *data_ptr;
-    /* 0x34 */ u32 data_size;
-    /* 0x38 */ void *output_buff;
-    /* 0x3C */ u32 yield_data_size;
-    /* 0x40 */ u32 pad40[2];
-    /* 0x48 */ void *yield_data_ptr;
-    /* 0x4C */ u16 unk4C;
-    /* 0x4E */ u16 unk4E;
-    /* 0x50 */ Gfx displayList[15];
-    u32 pad[34];
-} DisplayBufferMsg;
+    /* 0x000 */ GraphicsTask graphicsTask;
+    /* 0x050 */ Gfx displayList[32];
+} DisplayBufferTask;
 
 typedef struct {
     u64 *ucode;
     u64 *ucode_data;
 } UcodeEntry;
-
-typedef struct {
-    s16 clipLeft;
-    s16 clipTop;
-    s16 clipRight;
-    s16 clipBottom;
-    u8 displayFlags;
-    u8 overlayR;
-    u8 overlayG;
-    u8 overlayB;
-    u8 envR;
-    u8 envG;
-    u8 envB;
-    u8 envA;
-} BorderData;
 
 typedef struct {
     /* 0x00 */ s16 clipLeft;
@@ -125,23 +102,17 @@ typedef struct {
 } TextClipAndOffsetData;
 
 typedef struct ViewportNode {
-    /* 0x00 */ union {
-        struct ViewportNode *next;
-        u16 counter;
-    } unk0;
-    /* 0x04 */ struct ViewportNode *prev;
-    /* 0x08 */ union {
-        struct ViewportNode *list2_next;
-        u16 counter;
-    } unk8;
-    /* 0x0C */ struct ViewportNode *list2_prev;
-    /* 0x10 */ struct ViewportNode *list3_next;
+    /* 0x00 */ struct ViewportNode *parent;
+    /* 0x04 */ struct ViewportNode *hierarchyPrev;
+    /* 0x08 */ struct ViewportNode *nextSibling;
+    /* 0x0C */ struct ViewportNode *renderPrev;
+    /* 0x10 */ struct ViewportNode *renderNext;
     /* 0x14 */ s8 renderOrder;
     /* 0x15 */ u8 uses3DRendering;
     /* 0x16 */ u16 callbackSlotIndex;
     /* 0x18 */ CallbackEntry callbackLayers[VIEWPORT_CALLBACK_LAYER_COUNT];
     /* 0x98 */ void *displayListPtr;
-    /* 0x9C */ FrameCallbackMsg *frameCallbackMsg;
+    /* 0x9C */ GraphicsTask *graphicsTask;
     /* 0xA0 */ s16 originX;
     /* 0xA2 */ s16 originY;
     /* 0xA4 */ s16 viewportLeft;   // Center-relative extent
@@ -165,61 +136,24 @@ typedef struct ViewportNode {
     /* 0xC0 */ u8 fadeValue;
     /* 0xC1 */ u8 fadeMode;
     /* 0xC2 */ u8 paddingC2[0x6];
-    /* 0xC8 */ s16 viewportWidth;
-    /* 0xCA */ s16 viewportHeight;
-    /* 0xCC */ s16 unkCC;
-    /* 0xCE */ s16 unkCE;
-    /* 0xD0 */ s16 unkD0;
-    /* 0xD2 */ s16 unkD2;
-    /* 0xD4 */ s16 unkD4;
-    /* 0xD6 */ s16 unkD6;
+    /* 0xC8 */ Vp viewport;
     /* 0xD8 */ u16 perspNorm;
     /* 0xDA */ u16 viewportId;
-    /* 0xDC */ s16 unkDC;
-    /* 0xDE */ s16 unkDE;
+    /* 0xDC */ u8 paddingDC[4];
     /* 0xE0 */ Mtx projectionMatrix;
-    Transform3D viewTransform;
-    u16 numLights;
-    u8 padding140[6];
-    ViewportNode_ColorData unk148[1];
-    u8 padding158[0x70];
-    s16 fogStartPermille;
-    s16 fogEndPermille;
-    u8 fogR;
-    u8 fogG;
-    u8 fogB;
-    u8 fogA;
-    f32 scaleY;
-    u8 padding1D0[0x2];
+    /* 0x120 */ Transform3D viewTransform;
+    /* 0x140 */ u16 numLights;
+    /* 0x142 */ u8 padding142[6];
+    /* 0x148 */ Light lights[8];
+    /* 0x1C8 */ s16 fogStartPermille;
+    /* 0x1CA */ s16 fogEndPermille;
+    /* 0x1CC */ u8 fogR;
+    /* 0x1CD */ u8 fogG;
+    /* 0x1CE */ u8 fogB;
+    /* 0x1CF */ u8 fogA;
+    /* 0x1D0 */ f32 scaleY;
+    /* 0x1D4 */ u8 padding1D4[4];
 } ViewportNode;
-
-typedef struct {
-    u8 padding[0x120];
-    s32 cameraRotationMatrix;
-    u8 padding2[0x10];
-    u32 cameraX;
-    u32 cameraY;
-    u32 cameraZ;
-    u8 padding3[0x8];
-    u8 defaultLight1R;
-    u8 defaultLight1G;
-    u8 defaultLight1B;
-    u8 padding4[0xD];
-    u8 defaultLight2R;
-    u8 defaultLight2G;
-    u8 defaultLight2B;
-} ActiveViewportState;
-
-typedef struct {
-    /* 0x0 */ u8 r;
-    /* 0x1 */ u8 g;
-    /* 0x2 */ u8 b;
-    /* 0x3 */ u8 pad;
-    /* 0x4 */ s8 r2;
-    /* 0x5 */ s8 g2;
-    /* 0x6 */ s8 b2;
-    /* 0x7 */ u8 pad2;
-} ColorData;
 
 extern ViewportNode gRootViewport;
 extern s32 gCurrentDoubleBufferIndex;
@@ -232,7 +166,7 @@ extern s32 gFrameBufferFlags[];
 extern s32 gFrameBufferCounters[];
 extern s32 gFrameCounter;
 extern s32 gBufferedFrameCounter;
-extern ActiveViewportState *gActiveViewport;
+extern ViewportNode *gActiveViewport;
 extern s16 gGraphicsMode;
 extern s16 gCurrentPoolIndex;
 extern s32 gCallbackCounter;
@@ -326,4 +260,4 @@ void disableViewportDisplayList(ViewportNode *arg0);
 
 void setViewportOverlayRgbAndEnable(ViewportNode *arg0, s8 r, s8 g, s8 b);
 
-void setViewportLightColors(u16 viewportId, u16 colorCount, ColorData *lightColors, ColorData *ambientColor);
+void setViewportLightColors(u16 viewportId, u16 lightCount, DirectionalLightData *lightData, RgbColor *ambientColor);

@@ -388,19 +388,19 @@ void storyMapHandlePlayerInput(void) {
 
 void storyMapAwaitFadeOutAndCleanup(void) {
     void *exitCallback;
-    ViewportNode *state = (ViewportNode *)getCurrentAllocation();
+    UnlockScreenState *state = (UnlockScreenState *)getCurrentAllocation();
 
     if (getViewportFadeMode(0) == 0) {
-        unlinkNode(&state[0]);
-        unlinkNode(&state[1]);
-        unlinkNode(&state[2]);
+        unlinkNode(&state->viewports[0]);
+        unlinkNode(&state->viewports[1]);
+        unlinkNode(&state->viewports[2]);
 
         osViExtendVStart(0);
 
-        state[3].unk0.next = freeNodeMemory(state[3].unk0.next);
-        state[3].prev = freeNodeMemory(state[3].prev);
+        state->modeData.storyMap.portraitAsset = freeNodeMemory(state->modeData.storyMap.portraitAsset);
+        state->modeData.storyMap.imageAsset = freeNodeMemory(state->modeData.storyMap.imageAsset);
 
-        if (state[3].unk8.counter != 0) {
+        if (state->modeData.storyMap.stateTimer != 0) {
             exitCallback = &onStoryMapExitToMainMenu;
         } else {
             exitCallback = &onStoryMapNormalExit;

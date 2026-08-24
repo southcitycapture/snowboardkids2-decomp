@@ -47,8 +47,8 @@ typedef struct {
     /* 0x020 */ ViewportNode overlayViewport;
     /* 0x1F8 */ ViewportNode fadeViewport;
     /* 0x3D0 */ ViewportNode menuViewport;
-    /* 0x5A8 */ ColorData lightColors[3];
-    /* 0x5C0 */ u8 ambientColor[4];
+    /* 0x5A8 */ DirectionalLightData lightColors[3];
+    /* 0x5C0 */ RgbColor ambientColor;
     /* 0x5C4 */ TileMapTextureAsset *backgroundTileMapAsset;
     /* 0x5C8 */ TileMapScrollRenderState backgroundTileMap;
     /* 0x5F4 */ TileMapTextureAsset *overlayTileMapAsset;

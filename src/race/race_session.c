@@ -161,9 +161,9 @@ OverlayEntry Overlays[16] = {
 #include "generated/course_definitions/overlays.inc"
 };
 
-ColorData D_80090774_91374 = { 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x50, 0xB0, 0x00 };
+DirectionalLightData D_80090774_91374 = { 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x50, 0xB0, 0x00 };
 
-u32 D_8009077C_9137C = 0xA0A0A000;
+RgbColor gRaceIntroAmbientColor = { 0xA0, 0xA0, 0xA0, 0x00 };
 
 IntroFrameData sIntroFrameEvents[] = {
     { 1,   1 },
@@ -684,9 +684,9 @@ void initRaceViewports(void) {
         setViewportId(&gs->playerRootViewports[i], (u16)(i + 0x64));
 
         if (gs->raceType == RACE_TYPE_INTRO) {
-            setViewportLightColors(i + 0x64, 1, &D_80090774_91374, (ColorData *)&D_8009077C_9137C);
+            setViewportLightColors(i + 0x64, 1, &D_80090774_91374, &gRaceIntroAmbientColor);
         } else {
-            setViewportLightColors(i + 0x64, 1, &levelConfig->lightColors, &levelConfig->fogColors);
+            setViewportLightColors(i + 0x64, 1, &levelConfig->lightColors, &levelConfig->environmentColors.ambient);
         }
 
         if (gs->memoryPoolId != 0xB) {
@@ -694,18 +694,18 @@ void initRaceViewports(void) {
                 i + 0x64,
                 0x3E3,
                 0x3E7,
-                levelConfig->fogColors.r2,
-                levelConfig->fogColors.g2,
-                levelConfig->fogColors.b2
+                levelConfig->environmentColors.fog.r,
+                levelConfig->environmentColors.fog.g,
+                levelConfig->environmentColors.fog.b
             );
         } else {
             setViewportFogById(
                 i + 0x64,
                 0x384,
                 0x3E7,
-                levelConfig->fogColors.r2,
-                levelConfig->fogColors.g2,
-                levelConfig->fogColors.b2
+                levelConfig->environmentColors.fog.r,
+                levelConfig->environmentColors.fog.g,
+                levelConfig->environmentColors.fog.b
             );
         }
     }

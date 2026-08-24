@@ -15,7 +15,7 @@ typedef struct {
     /* 0x87 */ s8 isVisible;
 } ModelEntity;
 
-void setupModelEntityLighting(ModelEntity *entity, ColorData *lightColors, ColorData *ambientColor);
+void setupModelEntityLighting(ModelEntity *entity, DirectionalLightData *lightColors, AmbientLightData *ambientLight);
 
 s32 initModelEntity(ModelEntity *entity, s16 index, ViewportNode *viewport);
 

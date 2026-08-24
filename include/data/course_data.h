@@ -12,8 +12,8 @@ typedef struct {
     /* 0x8 */ u16 liftEntryYawOffset;
     /* 0xA */ s16 padding;
     /* 0xC */ Vec3i courseStartPos;
-    /* 0x18 */ ColorData lightColors;
-    /* 0x20 */ ColorData fogColors;
+    /* 0x18 */ DirectionalLightData lightColors;
+    /* 0x20 */ EnvironmentColorData environmentColors;
     /* 0x28 */ s16 musicTrack;
     /* 0x2A */ u8 padding2[0x2];
 } LevelConfig;

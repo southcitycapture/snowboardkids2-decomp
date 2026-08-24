@@ -8,8 +8,11 @@
 #include "story/rare_event_npcs.h"
 #include "system/task_scheduler.h"
 
-ColorData gMenuLightColor = { 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x50, 0x50, 0x00 };
-ColorData gMenuAmbientColor = { 0x7F, 0x7F, 0x7F, 0x00, 0x00, 0x00, 0x00, 0x00 };
+DirectionalLightData gMenuLightColor = { 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x50, 0x50, 0x00 };
+AmbientLightData gMenuAmbientLight = {
+    { 0x7F, 0x7F, 0x7F, 0x00 },
+    { 0x00, 0x00, 0x00, 0x00 }
+};
 
 u8 gStoryMapRareEventTypes[6][10] = {
     { 0x02, 0x03, 0x05, 0x06, 0x08, 0x06, 0x05, 0x03, 0x02, 0x08 },
@@ -95,7 +98,7 @@ void initMenuCameraNode(ViewportNode *node, s32 slotIndex, s32 priority, s32 isS
     setViewportTransformById(node->viewportId, &lightSettings);
     setViewportEnvColor(node, 0, 0, 0);
     setViewportFadeValue(node, 0, 0);
-    setViewportLightColors(node->viewportId, 1, &gMenuLightColor, &gMenuAmbientColor);
+    setViewportLightColors(node->viewportId, 1, &gMenuLightColor, &gMenuAmbientLight.color);
 }
 
 void initSplitScreen2P(ViewportNode *viewports, s32 baseSlotIndex, u8 priority, u8 isSecondary) {
@@ -115,7 +118,7 @@ void initSplitScreen2P(ViewportNode *viewports, s32 baseSlotIndex, u8 priority, 
         setViewportId(viewports, viewportId);
         createViewportTransform(&transform, 0, 0, 0x200000, 0, 0, 0);
         setViewportTransformById(viewports->viewportId, &transform);
-        setViewportLightColors(viewportId, 1, &gMenuLightColor, &gMenuAmbientColor);
+        setViewportLightColors(viewportId, 1, &gMenuLightColor, &gMenuAmbientLight.color);
         setViewportFogById(viewportId, 0x3E3, 0x3E7, 100, 100, 100);
         setViewportEnvColor(viewports, 0, 0, 0);
         setViewportFadeValue(viewports, 0, 0);
@@ -148,7 +151,7 @@ void initSplitScreen3P4P(ViewportNode *viewports, s32 baseSlotIndex, u8 priority
         setViewportId(viewports, viewportId);
         createViewportTransform(&transform, 0, 0, 0x200000, 0, 0, 0);
         setViewportTransformById(viewports->viewportId, &transform);
-        setViewportLightColors(viewportId, 1, &gMenuLightColor, &gMenuAmbientColor);
+        setViewportLightColors(viewportId, 1, &gMenuLightColor, &gMenuAmbientLight.color);
         setViewportFogById(viewportId, 0x3E3, 0x3E7, 100, 100, 100);
         setViewportEnvColor(viewports, 0, 0, 0);
         setViewportFadeValue(viewports, 0, 0);

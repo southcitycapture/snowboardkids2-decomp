@@ -142,7 +142,9 @@ def render_level_config(course: dict) -> list[str]:
     env = course["environment"]
     course_start = ", ".join(c_int(value) for value in env["course_start_position"])
     light = ", ".join(c_int(value) for value in env["light_colors"])
-    fog = ", ".join(c_int(value) for value in env["fog_colors"])
+    environment_colors = [c_int(value) for value in env["fog_colors"]]
+    ambient = ", ".join(environment_colors[:4])
+    fog = ", ".join(environment_colors[4:])
     return [
         "    {",
         f"        .liftEntryPosX = {c_int(env['lift_entry_position'][0])},",
@@ -151,7 +153,7 @@ def render_level_config(course: dict) -> list[str]:
         "        .padding = 0,",
         f"        .courseStartPos = {{ {course_start} }},",
         f"        .lightColors = {{ {light} }},",
-        f"        .fogColors = {{ {fog} }},",
+        f"        .environmentColors = {{ {{ {ambient} }}, {{ {fog} }} }},",
         f"        .musicTrack = {c_int(env['music_track'])},",
         "        .padding2 = { 0 },",
         "    },",
@@ -298,7 +300,9 @@ def generate_recomp(courses: list[dict], out_dir: Path) -> None:
         render = course["render"]
         course_start = ", ".join(c_int(value) for value in env["course_start_position"])
         light = ", ".join(c_int(value) for value in env["light_colors"])
-        fog = ", ".join(c_int(value) for value in env["fog_colors"])
+        environment_colors = [c_int(value) for value in env["fog_colors"]]
+        ambient = ", ".join(environment_colors[:4])
+        fog = ", ".join(environment_colors[4:])
         lines.extend(
             [
                 "    {",
@@ -321,7 +325,7 @@ def generate_recomp(courses: list[dict], out_dir: Path) -> None:
                 "            .padding = 0,",
                 f"            .courseStartPos = {{ {course_start} }},",
                 f"            .lightColors = {{ {light} }},",
-                f"            .fogColors = {{ {fog} }},",
+                f"            .environmentColors = {{ {{ {ambient} }}, {{ {fog} }} }},",
                 f"            .musicTrack = {c_int(env['music_track'])},",
                 "            .padding2 = { 0 },",
                 "        },",

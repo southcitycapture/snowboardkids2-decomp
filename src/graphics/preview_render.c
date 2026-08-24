@@ -534,7 +534,7 @@ void animateBoardShopSnowParticles(SnowParticleState *arg0) {
 }
 
 void cleanupBoardShopSnowParticles(SnowParticleState *arg0) {
-    ((ViewportNode *)arg0->particles)->prev = freeNodeMemory(((ViewportNode *)arg0->particles)->prev);
+    arg0->particles[0].sprite = freeNodeMemory(arg0->particles[0].sprite);
     arg0->particles = freeNodeMemory(arg0->particles);
 }
 

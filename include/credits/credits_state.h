@@ -86,11 +86,8 @@ typedef struct CreditsState {
     /* 0xE30 */ TextRenderArg rightBottomCornerSprite;
     /* 0xE40 */ s16 nextCharacterConfigIndex;
     /* 0xE42 */ s16 characterLaneIndex;
-    /* 0xE44 */ ColorData sceneLights[3];
-    /* 0xE5C */ u8 ambientLightR;
-    /* 0xE5D */ u8 ambientLightG;
-    /* 0xE5E */ u8 ambientLightB;
-    /* 0xE5F */ u8 padE5F;
+    /* 0xE44 */ DirectionalLightData sceneLights[3];
+    /* 0xE5C */ RgbColor ambientLight;
     /* 0xE60 */ s16 nextCharacterSpawnFrame;
     /* 0xE62 */ u8 padE62[6];
 } CreditsState;

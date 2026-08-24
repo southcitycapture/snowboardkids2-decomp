@@ -7,8 +7,8 @@ typedef struct {
     /* 0x000 */ ViewportNode base;
     union {
         struct {
-            /* 0x1D8 */ ColorData lightColor;
-            /* 0x1E0 */ ColorData ambientColor;
+            /* 0x1D8 */ DirectionalLightData lightColor;
+            /* 0x1E0 */ AmbientLightData ambientLight;
         } lighting;
         struct {
             /* 0x1D8 */ u8 pad1D8[0x0C];
