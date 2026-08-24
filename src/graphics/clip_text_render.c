@@ -179,7 +179,7 @@ void renderTintedSpriteGrid(
 }
 
 void renderTiledSprite3x3(
-    void *asset,
+    SpriteSheetData *spriteData,
     s16 x,
     s16 y,
     s16 width,
@@ -190,7 +190,7 @@ void renderTiledSprite3x3(
     u8 blue,
     u8 alpha
 ) {
-    renderTintedSpriteGrid(asset, x, y, width, (s32)height, flag, red, 0, 0xFF, 0, green, blue, alpha);
+    renderTintedSpriteGrid(spriteData, x, y, width, (s32)height, flag, red, 0, 0xFF, 0, green, blue, alpha);
 }
 
 void drawColorRectFill(ColorRect *rect) {

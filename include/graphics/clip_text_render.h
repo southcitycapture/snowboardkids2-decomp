@@ -20,7 +20,7 @@ void renderTintedSpriteGrid(
 );
 
 void renderTiledSprite3x3(
-    void *asset,
+    SpriteSheetData *spriteData,
     s16 x,
     s16 y,
     s16 width,
