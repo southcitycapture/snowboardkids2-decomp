@@ -666,7 +666,7 @@ void initLevelPreviewPortraitDisplay(LevelPreviewPortraitState *portraitState) {
             s32 index = (i * 2) + j;
             u8 *base = (u8 *)portraitState;
             LevelPreviewPortraitMatrixInitView *element =
-                (LevelPreviewPortraitMatrixInitView *)(base + (index * sizeof(MatrixEntry_202A0)));
+                (LevelPreviewPortraitMatrixInitView *)(base + (index * sizeof(RotatedBillboardSprite)));
 
             memcpy(&element->transform, &identityMatrix, sizeof(Transform3D));
             portraitState->rotations[index] = i << 0xC;
@@ -734,8 +734,8 @@ void initPortraitRotationFrames(LevelPreviewPortraitState *arg0) {
         } else {
             getTableEntryByU16Index(arg0->portraitAsset, (toLevelFrameBase + (i & 1)) & 0xFFFF, &sp10);
         }
-        arg0->matrices[i].textureData = sp10.data_ptr;
-        arg0->matrices[i].paletteData = (void *)sp10.index_ptr;
+        arg0->billboardSprites[i].textureData = sp10.data_ptr;
+        arg0->billboardSprites[i].paletteData = sp10.index_ptr;
     }
     setCallbackWithContinue(animatePortraitRotation);
 }
@@ -755,8 +755,8 @@ void animatePortraitRotation(LevelPreviewPortraitState *portraitState) {
     for (quadIndex = 0; quadIndex < 4; quadIndex++) {
         rotationAngle = (portraitState->rotations[quadIndex] + angleDelta) & 0x1FFF;
         portraitState->rotations[quadIndex] = rotationAngle;
-        createXRotationMatrix(portraitState->matrices[quadIndex].matrix, rotationAngle);
-        enqueueRotatedBillboardSprite(9, &portraitState->matrices[quadIndex]);
+        createXRotationMatrix(portraitState->billboardSprites[quadIndex].transform.m, rotationAngle);
+        enqueueRotatedBillboardSprite(9, &portraitState->billboardSprites[quadIndex]);
     }
 
     // Check if rotation animation is complete (portrait facing forward)

@@ -2583,7 +2583,7 @@ s32 getModelDisplayDataOffset(SceneModel *model) {
     return 0x90;
 }
 
-void loadAssetSlotTableEntry(MatrixEntry_202A0 *slot, DataTable_19E80 *table, s32 entryIndex) {
+void loadAssetSlotTableEntry(RotatedBillboardSprite *slot, DataTable_19E80 *table, s32 entryIndex) {
     OutputStruct_19E80 result;
 
     getTableEntryByU16Index(table, (s16)entryIndex, &result);

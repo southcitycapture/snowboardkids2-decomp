@@ -67,7 +67,7 @@ typedef struct {
 
 typedef struct {
     /* 0x00 */ SpriteRenderArg portraitEntries[2];
-    /* 0x18 */ MatrixEntry_202A0 matrices[4];
+    /* 0x18 */ RotatedBillboardSprite billboardSprites[4];
     /* 0xE8 */ s16 frameIndices[4];
     /* 0xF0 */ u16 rotations[4];
     /* 0xF8 */ DataTable_19E80 *portraitAsset;

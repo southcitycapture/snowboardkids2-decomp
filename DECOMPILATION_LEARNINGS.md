@@ -835,7 +835,7 @@ assignments when adopting the shared types so KMC retains its original stores.
 
 ## Preserve Overlapping Initialization Views for Renderer State
 
-The level-preview portrait task initializes four `MatrixEntry_202A0` values through `Transform3D` windows that
+The level-preview portrait task initializes four `RotatedBillboardSprite` values through `Transform3D` windows that
 begin four bytes into each matrix entry, while its two `SpriteRenderArg` values occupy the preceding `0x18`
 bytes. The first initialization window therefore begins at state offset `0x1C`, and successive windows overlap
 when measured from their `0x34`-byte slot origins. Keep one canonical render-time state and a documented,

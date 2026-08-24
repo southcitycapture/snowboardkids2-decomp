@@ -81,27 +81,21 @@ typedef struct {
 
 typedef struct {
     s16 x;
-    u8 pad[6];
+    u8 padding[6];
     s16 z;
 } PositionXZ;
 
-void enqueueDisplayListObject(s32 arg0, DisplayListObject *arg1);
-void enqueueDisplayListObjectWithSegments(s32 arg0, DisplayListObject *arg1);
-
-void prepareDisplayListRenderState(DisplayListObject *obj);
-void setupDisplayListMatrix(DisplayListObject *obj);
-void setupBillboardDisplayListMatrix(DisplayListObject *obj);
-void initializeMultiPartDisplayListObjects(DisplayListObject *arg0);
-void setupMultiPartObjectRenderState(DisplayListObject *arg0, s32 arg1);
-
-void renderMultiPartOpaqueDisplayLists(DisplayListObject *displayObjects);
-void renderMultiPartTransparentDisplayLists(DisplayListObject *displayObjects);
-void renderMultiPartOverlayDisplayLists(DisplayListObject *displayObjects);
-void renderTexturedOpaqueSprite(DisplayListObject *arg0);
-void renderTexturedTransparentSprite(DisplayListObject *arg0);
-void renderTexturedOverlaySprite(DisplayListObject *arg0);
-void enqueuePreLitMultiPartDisplayList(s32 arg0, DisplayListObject *arg1, s32 arg2);
-void enqueueMultiPartDisplayList(s32 arg0, DisplayListObject *arg1, s32 arg2);
+typedef struct {
+    /* 0x00 */ s32 vertices;
+    /* 0x04 */ Transform3D transform;
+    /* 0x24 */ u8 *textureData;
+    /* 0x28 */ TableEntry_19E80 *paletteData;
+    /* 0x2C */ u8 textureWidth;
+    /* 0x2D */ u8 textureHeight;
+    /* 0x2E */ u8 alpha;
+    /* 0x2F */ u8 padding;
+    /* 0x30 */ Mtx *matrix;
+} RotatedBillboardSprite;
 
 typedef struct {
     s16 linkedSegmentIdx;
@@ -117,10 +111,6 @@ typedef struct {
     TrackSegmentEntry *section3Data;
     u16 finalValue;
 } GameDataLayout;
-
-void parseGameDataLayout(GameDataLayout *gameData);
-
-void initializeOverlaySystem(void);
 
 /* Base struct without trailing fields - 0x18 bytes */
 typedef struct loadAssetMetadata_arg_base {
@@ -140,6 +130,76 @@ typedef struct loadAssetMetadata_arg {
     u8 unk19;
     u8 alpha;
 } loadAssetMetadata_arg;
+
+typedef struct {
+    /* 0x00 */ s32 vertices;
+    /* 0x04 */ Vec3i position;
+    /* 0x10 */ u8 *textureData;
+    /* 0x14 */ u8 *paletteData;
+    /* 0x18 */ u8 width;
+    /* 0x19 */ u8 height;
+    /* 0x1A */ u8 pad1A[2];
+    /* 0x1C */ Mtx *matrix;
+    /* 0x20 */ s32 unk20;
+    /* 0x24 */ s32 unk24;
+    /* 0x28 */ s32 unk28;
+    /* 0x2C */ s32 unk2C;
+    /* 0x30 */ s16 unk30;
+    /* 0x32 */ s16 unk32;
+} TexturedBillboardSprite;
+
+typedef struct {
+    u8 padding0[4];
+    s32 unk4;
+    s32 unk8;
+    s32 unkC;
+    /* 0x10 */ u8 *data_ptr;
+    /* 0x14 */ TableEntry_19E80 *index_ptr;
+    s8 unk18;
+    u8 unk19;
+    u8 alpha;
+} loadAssetMetadataByIndex_arg;
+
+void loadAssetMetadataByIndex(
+    loadAssetMetadataByIndex_arg *arg0,
+    DataTable_19E80 *table,
+    s32 entry_index,
+    s32 sub_index
+);
+
+void enqueueDisplayListObject(s32 arg0, DisplayListObject *arg1);
+
+void enqueueDisplayListObjectWithSegments(s32 arg0, DisplayListObject *arg1);
+
+void prepareDisplayListRenderState(DisplayListObject *obj);
+
+void setupDisplayListMatrix(DisplayListObject *obj);
+
+void setupBillboardDisplayListMatrix(DisplayListObject *obj);
+
+void initializeMultiPartDisplayListObjects(DisplayListObject *arg0);
+
+void setupMultiPartObjectRenderState(DisplayListObject *arg0, s32 arg1);
+
+void renderMultiPartOpaqueDisplayLists(DisplayListObject *displayObjects);
+
+void renderMultiPartTransparentDisplayLists(DisplayListObject *displayObjects);
+
+void renderMultiPartOverlayDisplayLists(DisplayListObject *displayObjects);
+
+void renderTexturedOpaqueSprite(DisplayListObject *arg0);
+
+void renderTexturedTransparentSprite(DisplayListObject *arg0);
+
+void renderTexturedOverlaySprite(DisplayListObject *arg0);
+
+void enqueuePreLitMultiPartDisplayList(s32 arg0, DisplayListObject *arg1, s32 arg2);
+
+void enqueueMultiPartDisplayList(s32 arg0, DisplayListObject *arg1, s32 arg2);
+
+void parseGameDataLayout(GameDataLayout *gameData);
+
+void initializeOverlaySystem(void);
 
 void loadAssetMetadata(loadAssetMetadata_arg *, void *, s32);
 
@@ -165,46 +225,11 @@ void renderTransparentDisplayList(DisplayListObject *arg0);
 
 void renderOverlayDisplayList(DisplayListObject *arg0);
 
-typedef struct {
-    /* 0x00 */ s32 vertices;
-    /* 0x04 */ Vec3i position;
-    /* 0x10 */ u8 *textureData;
-    /* 0x14 */ u8 *paletteData;
-    /* 0x18 */ u8 width;
-    /* 0x19 */ u8 height;
-    /* 0x1A */ u8 pad1A[2];
-    /* 0x1C */ Mtx *matrix;
-    /* 0x20 */ s32 unk20;
-    /* 0x24 */ s32 unk24;
-    /* 0x28 */ s32 unk28;
-    /* 0x2C */ s32 unk2C;
-    /* 0x30 */ s16 unk30;
-    /* 0x32 */ s16 unk32;
-} TexturedBillboardSprite;
-
 void enqueueTexturedBillboardSprite(s32 arg0, TexturedBillboardSprite *arg1);
+
 void enqueueAlphaBillboardSprite(s32 arg0, loadAssetMetadata_arg *arg1);
 
 void enqueueTexturedBillboardSpriteTile(u16 arg0, TexturedBillboardSprite *arg1);
-
-typedef struct {
-    u8 padding0[4];
-    s32 unk4;
-    s32 unk8;
-    s32 unkC;
-    /* 0x10 */ u8 *data_ptr;
-    /* 0x14 */ TableEntry_19E80 *index_ptr;
-    s8 unk18;
-    u8 unk19;
-    u8 alpha;
-} loadAssetMetadataByIndex_arg;
-
-void loadAssetMetadataByIndex(
-    loadAssetMetadataByIndex_arg *arg0,
-    DataTable_19E80 *table,
-    s32 entry_index,
-    s32 sub_index
-);
 
 void enqueueAlphaSprite(s32, loadAssetMetadata_arg *);
 
@@ -229,12 +254,19 @@ s32 computeSectorTrackHeight(TrackGeometryFaceData *geom, u16 groupIdx, Vec3i *p
 void findTrackFaceAtPosition(TrackGeometryFaceData *arg0, u16 arg1, Vec3i *arg2, u8 *arg3, u8 *arg4);
 
 void prepareDisplayListRenderStateWithLights(DisplayListObject *obj);
+
 void renderOpaqueDisplayListWithLights(DisplayListObject *obj);
+
 void renderTransparentDisplayListWithLights(DisplayListObject *obj);
+
 void renderOverlayDisplayListWithLights(DisplayListObject *obj);
+
 void enqueueDisplayListObjectWithLights(s32 renderLayer, DisplayListObject *displayListObj);
+
 void renderMultiPartOpaqueDisplayListsWithLights(DisplayListObject *displayObjects);
+
 void renderMultiPartTransparentDisplayListsWithLights(DisplayListObject *displayObjects);
+
 void renderMultiPartOverlayDisplayListsWithLights(DisplayListObject *displayObjects);
 
 u16 getTrackSegmentWaypoints(TrackGeometryData *trackGeom, u16 waypointIdx, void *waypointStart, void *waypointEnd);
@@ -243,20 +275,10 @@ s16 getTrackSegmentFinishZoneFlag(GameDataLayout *gameData, u16 index);
 
 s32 resolveTrackSegmentIndex(TrackSegmentEntry **arg0, u16 index);
 
-typedef struct {
-    s32 vertices;
-    s16 matrix[3][3];
-    u8 _pad16[0xE];
-    u8 *textureData;
-    void *paletteData;
-    u8 textureWidth;
-    u8 textureHeight;
-    u8 alpha;
-    u8 _pad2F;
-    Mtx *renderMatrix;
-} MatrixEntry_202A0;
-void enqueueRotatedBillboardSprite(s32 arg0, MatrixEntry_202A0 *arg1);
-void renderRotatedBillboardSpriteCI(MatrixEntry_202A0 *arg1);
+void enqueueRotatedBillboardSprite(s32 arg0, RotatedBillboardSprite *arg1);
+
+void renderRotatedBillboardSpriteCI(RotatedBillboardSprite *arg1);
 
 s32 normalizeSurfaceType(s32);
+
 s32 projectPositionOntoTrackSegment(TrackGeometryData *trackGeom, u16 sectorIdx, PositionXZ *pos);

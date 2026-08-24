@@ -103,21 +103,6 @@ typedef struct {
 
 typedef struct {
     /* 0x00 */ s32 vertices;
-    /* 0x04 */ s16 rotation[3][3];
-    /* 0x16 */ u16 padding;
-    /* 0x18 */ s32 posX;
-    /* 0x1C */ s32 posY;
-    /* 0x20 */ s32 posZ;
-    /* 0x24 */ u8 *textureData;
-    /* 0x28 */ u8 *paletteData;
-    /* 0x2C */ u8 width;
-    /* 0x2D */ u8 height;
-    /* 0x2E */ u8 padding2[2];
-    /* 0x30 */ Mtx *matrix;
-} RotatedBillboardSprite;
-
-typedef struct {
-    /* 0x00 */ s32 vertices;
     /* 0x04 */ s32 posX;
     /* 0x08 */ s32 posY;
     /* 0x0C */ s32 posZ;
@@ -2258,14 +2243,22 @@ void enqueueTexturedBillboardSprite(s32 arg0, TexturedBillboardSprite *arg1) {
 }
 
 void renderRotatedBillboardSprite(RotatedBillboardSprite *state) {
-    CULL_SPRITE(state);
+    if ((u32)((gActiveViewport->cameraX - state->transform.translation.x) + 0x0FEA0000) > 0x1FD40000U) {
+        return;
+    }
+    if ((u32)((gActiveViewport->cameraZ - state->transform.translation.z) + 0x0FEA0000) > 0x1FD40000U) {
+        return;
+    }
+    if ((u32)((gActiveViewport->cameraY - state->transform.translation.y) + 0x0FEA0000) > 0x1FD40000U) {
+        return;
+    }
 
     if (state->matrix == NULL) {
         state->matrix = arenaAlloc16(0x40);
         if (state->matrix == NULL) {
             return;
         }
-        transform3DToMtx(&state->rotation, state->matrix);
+        transform3DToMtx(&state->transform, state->matrix);
     }
 
     if (gGraphicsMode != 6) {
@@ -2277,8 +2270,8 @@ void renderRotatedBillboardSprite(RotatedBillboardSprite *state) {
             gDisplayListAllocPtr++,
             state->textureData,
             G_IM_FMT_CI,
-            state->width,
-            state->height,
+            state->textureWidth,
+            state->textureHeight,
             0,
             G_TX_CLAMP,
             G_TX_CLAMP,
@@ -2298,8 +2291,8 @@ void renderRotatedBillboardSprite(RotatedBillboardSprite *state) {
                 gDisplayListAllocPtr++,
                 state->textureData,
                 G_IM_FMT_CI,
-                state->width,
-                state->height,
+                state->textureWidth,
+                state->textureHeight,
                 0,
                 G_TX_CLAMP,
                 G_TX_CLAMP,
@@ -2325,8 +2318,8 @@ void renderRotatedBillboardSprite(RotatedBillboardSprite *state) {
     gSP2Triangles(gDisplayListAllocPtr++, 0, 3, 2, 0, 2, 1, 0, 0);
 }
 
-void enqueueRotatedBillboardSprite(s32 arg0, MatrixEntry_202A0 *arg1) {
-    arg1->renderMatrix = NULL;
+void enqueueRotatedBillboardSprite(s32 arg0, RotatedBillboardSprite *arg1) {
+    arg1->matrix = NULL;
     pushViewportCallbackBySlot(arg0 & 0xFFFF, VIEWPORT_CALLBACK_LAYER_SPRITES, &renderRotatedBillboardSprite, arg1);
 }
 
