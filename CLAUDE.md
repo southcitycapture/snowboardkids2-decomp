@@ -83,9 +83,9 @@ Before declaring any changes to C code complete (including decompiling functions
 - [ ] Struct sizes match the assembly access patterns
 - [ ] `./tools/build-and-verify.sh` succeeds
 
-### Capture Learnings
+### Decompilation Learnings
 
-Update DECOMPILATION_LEARNINGS.md with any new insights from matching functions in this project. These include compiler behavior, codegen quirks, and patterns specific to KMC GCC 2.7.2.
+`DECOMPILATION_LEARNINGS.md` is a stable reference, not a work log. The project has already been decompiled. Do not update that file during routine work or add function-, attempt-, score-, or commit-specific notes. Edit it only when the user explicitly requests a change to the reference itself.
 
 ## Code Quality Standards
 
@@ -141,4 +141,3 @@ C files should be organised in the following way:
 - Function implementations
 
 You should proactively reorganise code to preserve this structure.
-

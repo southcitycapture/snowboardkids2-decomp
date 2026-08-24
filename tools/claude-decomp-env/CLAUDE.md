@@ -15,7 +15,7 @@ MAKE THE MINIMAL SET OF CHANGES NECESSARY TO COMPILE `base.c`. This is important
 Specifically, the subagent should:
 
 <subagent-instructions>
-1. Explore how $functionName is used in the codebase. Look at ../../src, ../../include as well as the unmatched code (../../asm/nonmatching). Write a summary of what the $functionName is and how it's used to `LEARNINGS.md`.
+1. Explore how $functionName is used in the codebase. Look at ../../src, ../../include as well as the unmatched code (../../asm/nonmatching), and report a concise summary of what the function is and how it is used.
 2. Ensure that base.c compiles successfully. Ensure that any missing types are present. base.c should only depend on "common.h". Any other missing types should be provided inline rather than via #include statements. Do not stop until base.c can be successfuly built. Report status and a brief summary of your findings upon completion.
 3. Report back on its progress and findings
 </subagent-instructions>
@@ -27,7 +27,7 @@ After base.c builds successfully, repeat the following steps:
 1. Run `./build.sh base.c` to build and get a diff against the target assembly. A score of 100% indicates a perfect match.
 2. Come up with a plan to improve the match. Look for areas where the control flow and instructions do not match. Consider what the original developers intended to write given the function's broader purpose.
 3. Create a new file (`base_n.c` where `n` is your attempt number) with changes you expect to improve the match. Start small and work incrementally — if you test multiple changes at once they may interact poorly.
-4. Return to step 2 and continue working to improve the match percentage. Record key learnings in LEARNINGS.md. Keep going until you reach a 100% match or are unable to make progress (e.g. 40 attempts without any improvement to the match percentage).
+4. Return to step 2 and continue working to improve the match percentage. Keep going until you reach a 100% match or are unable to make progress (e.g. 40 attempts without any improvement to the match percentage).
 
 ## Tools
 
@@ -65,7 +65,7 @@ Instead, check if a field exists at that offset in the struct definition that yo
 
 ## Decompilation Strategy
 
-Learnings from past decompilations can be found at `DECOMPILATION_LEARNINGS.md`.
+Generic KMC GCC behavior is summarized in `DECOMPILATION_LEARNINGS.md`. Treat it as a read-only reference and do not append function-specific findings to it.
 
 ### General Approach
 - Think about what the function is *doing* within the game. What is its purpose? Structure the code to fulfill that purpose — this is the surest path to a 100% match.
