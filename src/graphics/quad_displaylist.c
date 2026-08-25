@@ -1,53 +1,9 @@
 #include "graphics/quad_displaylist.h"
 #include "common.h"
+#include "graphics/graphics.h"
 #include "graphics/sprite_table.h"
 #include "math/rand.h"
 #include "system/task_scheduler.h"
-
-typedef struct {
-    u8 _pad[0xC];
-    s16 unkC;
-    u8 _pad2[0x2];
-    struct {
-        u8 padding[0x16];
-        u16 unk16;
-    } *unk10;
-    u8 _pad3[0x18];
-    s32 unk2C;
-    s32 unk30;
-    s32 unk34;
-    u8 _pad4[0x4];
-    s8 isDestroyed;
-    s8 actionMode;
-    s8 unk3E;
-    s8 displayEnabled;
-    u8 _pad5[0x48];
-    s8 unk88;
-} func_80006940_inner;
-
-struct ParticleState {
-    func_80006940_inner *owner;
-    SpriteAssetState spriteState;
-    s32 unk50;
-    s32 unk54;
-    s32 unk58;
-    s32 unk5C;
-    s32 unk60;
-    s32 unk64;
-    s16 unk68;
-    s16 unk6A;
-    s32 unk6C;
-    s32 unk70;
-    s32 unk74;
-    s32 unk78;
-    s32 unk7C;
-    s32 unk80;
-    s16 unk84;
-    s16 unk86;
-    s16 unk88;
-    s16 unk8A;
-    s8 unk8C;
-};
 
 void cleanupTrailingParticle(ParticleState *);
 void updateTrailingParticle(ParticleState *);
@@ -69,19 +25,19 @@ void initFallingParticle(ParticleState *arg0) {
     rand1 = rand1 << 11;
     rand2 = randA();
 
-    arg0->unk5C = rand1 + 0xFFFC0000;
-    arg0->unk60 = 0;
-    arg0->unk64 = (((u8)rand2) << 11) + 0xFFFC0000;
+    arg0->mode.falling.velocity.x = rand1 + 0xFFFC0000;
+    arg0->mode.falling.velocity.y = 0;
+    arg0->mode.falling.velocity.z = (((u8)rand2) << 11) + 0xFFFC0000;
 
     rand3 = randA();
-    arg0->unk6A = (rand3 % 3) + 2;
+    arg0->mode.falling.renderFlags = (rand3 % 3) + 2;
 
     setCleanupCallback(cleanupFallingParticle);
     setCallback(updateFallingParticle);
 }
 
 void updateFallingParticle(ParticleState *arg0) {
-    func_80006940_inner *particleOwner;
+    SceneModel *particleOwner;
     s16 lifetime;
     s16 newLifetime;
     void *sprite;
@@ -91,7 +47,7 @@ void updateFallingParticle(ParticleState *arg0) {
         return;
     }
 
-    lifetime = arg0->unk68;
+    lifetime = arg0->mode.falling.lifetime;
     if (lifetime < 0) {
         terminateCurrentTask();
         return;
@@ -99,29 +55,29 @@ void updateFallingParticle(ParticleState *arg0) {
 
     newLifetime = lifetime - 1;
     sprite = &arg0->spriteState;
-    arg0->unk68 = newLifetime;
+    arg0->mode.falling.lifetime = newLifetime;
     updateSpriteAnimation(sprite, 0x10000);
 
     particleOwner = arg0->owner;
-    if (particleOwner->unk88 != 0) {
+    if (particleOwner->visibilityEnabled != 0) {
         if (particleOwner->displayEnabled != 0) {
             setupAndEnqueueSprite(
                 (SpriteState *)sprite,
-                particleOwner->unk10->unk16,
-                arg0->unk50 + arg0->unk5C,
-                arg0->unk54 + arg0->unk60,
-                arg0->unk58 + arg0->unk64,
+                particleOwner->viewport->callbackSlotIndex,
+                arg0->mode.falling.position.x + arg0->mode.falling.velocity.x,
+                arg0->mode.falling.position.y + arg0->mode.falling.velocity.y,
+                arg0->mode.falling.position.z + arg0->mode.falling.velocity.z,
                 0x18000,
                 0x18000,
                 0,
                 0,
                 0xFF,
-                arg0->unk6A
+                arg0->mode.falling.renderFlags
             );
         }
     }
 
-    arg0->unk60 = arg0->unk60 + 0xFFFEB852;
+    arg0->mode.falling.velocity.y = arg0->mode.falling.velocity.y + 0xFFFEB852;
 }
 
 void cleanupFallingParticle(ParticleState *arg0) {
@@ -132,21 +88,21 @@ void initDriftingParticle(ParticleState *arg0) {
     loadSpriteAsset(&arg0->spriteState, 2);
     setSpriteAnimation(&arg0->spriteState, 0x10000, 0, -1);
 
-    arg0->unk50 = 0x10000;
-    arg0->unk5C = 0;
-    arg0->unk58 = 0;
-    arg0->unk54 = 0;
-    arg0->unk74 = 0;
-    arg0->unk70 = 0;
-    arg0->unk6C = 0;
-    arg0->unk80 = 0;
-    arg0->unk7C = 0;
-    arg0->unk78 = 0;
-    arg0->unk88 = 0;
-    arg0->unk86 = 0;
-    arg0->unk84 = 0;
-    arg0->unk8A = 0;
-    arg0->unk8C = 0;
+    arg0->mode.drifting.scale = 0x10000;
+    arg0->mode.drifting.positionOffset.z = 0;
+    arg0->mode.drifting.positionOffset.y = 0;
+    arg0->mode.drifting.positionOffset.x = 0;
+    arg0->mode.drifting.velocity.z = 0;
+    arg0->mode.drifting.velocity.y = 0;
+    arg0->mode.drifting.velocity.x = 0;
+    arg0->mode.drifting.targetVelocity.z = 0;
+    arg0->mode.drifting.targetVelocity.y = 0;
+    arg0->mode.drifting.targetVelocity.x = 0;
+    arg0->mode.drifting.retargetTimers.z = 0;
+    arg0->mode.drifting.retargetTimers.y = 0;
+    arg0->mode.drifting.retargetTimers.x = 0;
+    arg0->mode.drifting.renderFlags = 0;
+    arg0->mode.drifting.flipHorizontal = 0;
 
     setCleanupCallback(cleanupDriftingParticle);
     setCallback(updateDriftingParticle);
@@ -177,85 +133,88 @@ void updateDriftingParticle(ParticleState *arg0) {
     switch (arg0->owner->actionMode) {
         case 0:
         default:
-            arg0->unk8C = 0;
+            arg0->mode.drifting.flipHorizontal = 0;
             break;
         case 1:
-            arg0->unk8C = 1;
+            arg0->mode.drifting.flipHorizontal = 1;
             break;
         case 2:
-            arg0->unk8A = 0;
+            arg0->mode.drifting.renderFlags = 0;
             break;
         case 3:
-            arg0->unk8A = 1;
+            arg0->mode.drifting.renderFlags = 1;
             break;
     }
 
-    if (arg0->unk84 < 0) {
-        arg0->unk84 = (randA() & 0x1F) + 4;
+    if (arg0->mode.drifting.retargetTimers.x < 0) {
+        arg0->mode.drifting.retargetTimers.x = (randA() & 0x1F) + 4;
         targetVal = signs[randA() & 1] * (((randA() & 0xFF) << 16) % 0x66666);
-        arg0->unk60 = targetVal;
-        arg0->unk78 = (targetVal - arg0->unk54) / arg0->unk84;
+        arg0->mode.drifting.targetOffset.x = targetVal;
+        arg0->mode.drifting.targetVelocity.x =
+            (targetVal - arg0->mode.drifting.positionOffset.x) / arg0->mode.drifting.retargetTimers.x;
     } else {
-        arg0->unk54 += arg0->unk6C;
+        arg0->mode.drifting.positionOffset.x += arg0->mode.drifting.velocity.x;
     }
 
-    if (arg0->unk86 < 0) {
-        arg0->unk86 = (randA() & 0x1F) + 4;
+    if (arg0->mode.drifting.retargetTimers.y < 0) {
+        arg0->mode.drifting.retargetTimers.y = (randA() & 0x1F) + 4;
         targetVal = signs[randA() & 1] * (((randA() & 0xFF) << 16) % 419430);
-        arg0->unk64 = targetVal;
-        arg0->unk7C = (targetVal - arg0->unk58) / arg0->unk86;
+        arg0->mode.drifting.targetOffset.y = targetVal;
+        arg0->mode.drifting.targetVelocity.y =
+            (targetVal - arg0->mode.drifting.positionOffset.y) / arg0->mode.drifting.retargetTimers.y;
     } else {
-        arg0->unk58 += arg0->unk70;
+        arg0->mode.drifting.positionOffset.y += arg0->mode.drifting.velocity.y;
     }
 
-    if (arg0->unk88 < 0) {
-        arg0->unk88 = (randA() & 0x1F) + 4;
+    if (arg0->mode.drifting.retargetTimers.z < 0) {
+        arg0->mode.drifting.retargetTimers.z = (randA() & 0x1F) + 4;
         targetVal = signs[randA() & 1] * (((randA() & 0xFF) << 16) % 419430);
-        *(s32 *)&arg0->unk68 = targetVal;
-        arg0->unk80 = (targetVal - arg0->unk5C) / arg0->unk88;
+        arg0->mode.drifting.targetOffset.z = targetVal;
+        arg0->mode.drifting.targetVelocity.z =
+            (targetVal - arg0->mode.drifting.positionOffset.z) / arg0->mode.drifting.retargetTimers.z;
     } else {
-        arg0->unk5C += arg0->unk74;
+        arg0->mode.drifting.positionOffset.z += arg0->mode.drifting.velocity.z;
     }
 
-    deltaX = (arg0->unk78 - arg0->unk6C) / 4;
-    deltaY = (arg0->unk7C - arg0->unk70) / 4;
-    deltaZ = (arg0->unk80 - arg0->unk74) / 4;
+    deltaX = (arg0->mode.drifting.targetVelocity.x - arg0->mode.drifting.velocity.x) / 4;
+    deltaY = (arg0->mode.drifting.targetVelocity.y - arg0->mode.drifting.velocity.y) / 4;
+    deltaZ = (arg0->mode.drifting.targetVelocity.z - arg0->mode.drifting.velocity.z) / 4;
 
-    arg0->unk6C += deltaX;
-    arg0->unk70 += deltaY;
-    arg0->unk74 += deltaZ;
+    arg0->mode.drifting.velocity.x += deltaX;
+    arg0->mode.drifting.velocity.y += deltaY;
+    arg0->mode.drifting.velocity.z += deltaZ;
 
     if (deltaX == 0) {
-        arg0->unk6C = arg0->unk78;
+        arg0->mode.drifting.velocity.x = arg0->mode.drifting.targetVelocity.x;
     }
     if (deltaY == 0) {
-        arg0->unk70 = arg0->unk7C;
+        arg0->mode.drifting.velocity.y = arg0->mode.drifting.targetVelocity.y;
     }
     if (deltaZ == 0) {
-        arg0->unk74 = arg0->unk80;
+        arg0->mode.drifting.velocity.z = arg0->mode.drifting.targetVelocity.z;
     }
 
-    arg0->unk84--;
-    arg0->unk86--;
-    arg0->unk88--;
-    posX = arg0->owner->unk2C + arg0->unk54;
-    posY = arg0->owner->unk30 + arg0->unk58;
-    posZ = arg0->owner->unk34 + arg0->unk5C;
+    arg0->mode.drifting.retargetTimers.x--;
+    arg0->mode.drifting.retargetTimers.y--;
+    arg0->mode.drifting.retargetTimers.z--;
+    posX = arg0->owner->transform.translation.x + arg0->mode.drifting.positionOffset.x;
+    posY = arg0->owner->transform.translation.y + arg0->mode.drifting.positionOffset.y;
+    posZ = arg0->owner->transform.translation.z + arg0->mode.drifting.positionOffset.z;
     updateSpriteAnimation(&arg0->spriteState, 0x10000);
 
-    if (arg0->owner->unk88 != 0 && arg0->owner->displayEnabled != 0) {
+    if (arg0->owner->visibilityEnabled != 0 && arg0->owner->displayEnabled != 0) {
         setupAndEnqueueSprite(
             (SpriteState *)&arg0->spriteState,
-            arg0->owner->unk10->unk16,
+            arg0->owner->viewport->callbackSlotIndex,
             posX,
             posY,
             posZ,
-            arg0->unk50,
-            arg0->unk50,
+            arg0->mode.drifting.scale,
+            arg0->mode.drifting.scale,
             0,
-            (s32)(u8)arg0->unk8C,
+            (s32)(u8)arg0->mode.drifting.flipHorizontal,
             0xFF,
-            arg0->unk8A
+            arg0->mode.drifting.renderFlags
         );
     }
 }
@@ -265,9 +224,9 @@ void cleanupDriftingParticle(ParticleState *arg0) {
 }
 
 void initTrailingParticle(ParticleState *arg0) {
-    func_80006940_inner *inner = arg0->owner;
+    SceneModel *inner = arg0->owner;
 
-    if (inner->unkC == 0x4F) {
+    if (inner->index == 0x4F) {
         loadSpriteAsset(&arg0->spriteState, 6);
     } else {
         loadSpriteAsset(&arg0->spriteState, 3);
@@ -279,8 +238,8 @@ void initTrailingParticle(ParticleState *arg0) {
 
 void updateTrailingParticle(ParticleState *arg0) {
     s8 unused[2];
-    func_80006940_inner *inner;
-    func_80006940_inner *a0_inner;
+    SceneModel *inner;
+    SceneModel *a0_inner;
     s32 posX;
     s32 posY;
     s32 posZ;
@@ -300,16 +259,26 @@ void updateTrailingParticle(ParticleState *arg0) {
         return;
     }
 
-    posX = inner->unk2C;
-    posY = inner->unk30;
-    posZ = inner->unk34;
+    posX = inner->transform.translation.x;
+    posY = inner->transform.translation.y;
+    posZ = inner->transform.translation.z;
 
     updateSpriteAnimation(&arg0->spriteState, 0x10000);
 
     a0_inner = arg0->owner;
-    if (a0_inner->unk88 != 0) {
+    if (a0_inner->visibilityEnabled != 0) {
         if (a0_inner->displayEnabled != 0) {
-            renderOpaqueSprite(&arg0->spriteState, a0_inner->unk10->unk16, posX, posY, posZ, 0x10000, 0x10000, 0, 0);
+            renderOpaqueSprite(
+                &arg0->spriteState,
+                a0_inner->viewport->callbackSlotIndex,
+                posX,
+                posY,
+                posZ,
+                0x10000,
+                0x10000,
+                0,
+                0
+            );
         }
     }
 }

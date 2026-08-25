@@ -1595,7 +1595,15 @@ void renderFlippedScaledSpriteFrame(FlippedScaledSpriteArg *sprite) {
         }
 
         gDPSetCombineMode(gDisplayListAllocPtr++, G_CC_MODULATEIDECALA_PRIM, G_CC_MODULATEIDECALA_PRIM);
-        gDPSetPrimColor(gDisplayListAllocPtr++, 0, 0, sprite->alpha, sprite->alpha, sprite->alpha, 0xFF);
+        gDPSetPrimColor(
+            gDisplayListAllocPtr++,
+            0,
+            0,
+            sprite->alpha.components.intensity,
+            sprite->alpha.components.intensity,
+            sprite->alpha.components.intensity,
+            0xFF
+        );
 
         {
             s32 textureAddr = (s32)sprite->spriteData + frameEntry->textureOffset;

@@ -21,39 +21,6 @@
 #include "ui/save_data.h"
 
 typedef struct {
-    /* 0x000 */ ViewportNode mainViewport;
-    /* 0x1D8 */ ViewportNode secondaryViewport;
-    /* 0x3B0 */ ViewportNode tertiaryViewport;
-    /* 0x588 */ ViewportNode quaternaryViewport;
-    /* 0x760 */ void *assetSlot0;
-    /* 0x764 */ void *assetSlot1;
-    /* 0x768 */ void *assetSlot2;
-    /* 0x76C */ void *assetSlot3;
-    /* 0x770 */ void *assetSlot4;
-    /* 0x774 */ void *textRenderAsset;
-    /* 0x778 */ void *assetSlot5;
-    /* 0x77C */ u16 delayTimer;
-    /* 0x77E */ u16 shopkeeperAnimIndex;
-    /* 0x780 */ u8 pad780[4];
-    /* 0x784 */ u8 boardDisplayIndices[4];
-    /* 0x788 */ u8 boardIndexMap[13];
-    /* 0x795 */ u8 unlockedBoardsInCategory[3];
-    /* 0x798 */ u8 totalBoardCount;
-    /* 0x799 */ u8 selectedSlot;
-    /* 0x79A */ u8 exitMode;
-    /* 0x79B */ u8 shopState;
-    /* 0x79C */ u8 scrollDirection;
-    /* 0x79D */ s8 transitionDirection;
-    /* 0x79E */ u8 newTransitionIndex;
-    /* 0x79F */ u8 oldTransitionIndex;
-    /* 0x7A0 */ u8 scrollOutBoardIndex;
-    /* 0x7A1 */ s8 selectedCategoryIndex;
-    /* 0x7A2 */ u8 selectedBoardIndex;
-    /* 0x7A3 */ u8 forceShopkeeperAnimUpdate;
-    /* 0x7A4 */ u8 viewMode;
-} BoardShopState;
-
-typedef struct {
     /* 0x000 */ ViewportNode viewport;
     /* 0x1D8 */ u16 timer;
     /* 0x1DA */ u8 padding1DA[6];
@@ -283,7 +250,7 @@ void initBoardShopDisplay(void) {
     state->delayTimer = 0;
     state->selectedSlot = 0;
     state->exitMode = 0;
-    state->selectedBoardIndex = 0;
+    state->selectedBoard.index = 0;
     state->selectedCategoryIndex = 0;
     state->oldTransitionIndex = 0;
     state->newTransitionIndex = 0;
@@ -397,7 +364,7 @@ void updateBoardShop(void) {
                 state->oldTransitionIndex = (s8)oldValue * 3;
                 state->shopState = 0x03;
                 state->transitionDirection = 1;
-                state->selectedBoardIndex = 0;
+                state->selectedBoard.index = 0;
                 state->newTransitionIndex = state->selectedCategoryIndex * 3;
                 scheduleTask(&initBoardShopCharacterTransition, 0, 0, 0x5A);
             } else {
@@ -456,26 +423,26 @@ void updateBoardShop(void) {
 
         case 0x05:
             boardCount = countOwnedBoardsInCategory();
-            oldValue = state->selectedBoardIndex;
+            oldValue = state->selectedBoard.index;
             if (*gControllerInputs & (STICK_LEFT | L_JPAD)) {
                 state->scrollDirection = 0;
-                state->selectedBoardIndex = state->selectedBoardIndex - 1;
-                if ((s8)state->selectedBoardIndex < 0) {
-                    state->selectedBoardIndex = boardCount - 1;
+                state->selectedBoard.index = state->selectedBoard.index - 1;
+                if ((s8)state->selectedBoard.index < 0) {
+                    state->selectedBoard.index = boardCount - 1;
                 }
             } else if (*gControllerInputs & (STICK_RIGHT | R_JPAD)) {
                 state->scrollDirection = 1;
-                state->selectedBoardIndex = state->selectedBoardIndex + 1;
-                if ((s8)state->selectedBoardIndex == (boardCount & 0xFF)) {
-                    state->selectedBoardIndex = 0;
+                state->selectedBoard.index = state->selectedBoard.index + 1;
+                if ((s8)state->selectedBoard.index == (boardCount & 0xFF)) {
+                    state->selectedBoard.index = 0;
                 }
             }
-            if ((s8)oldValue != (s8)state->selectedBoardIndex) {
+            if ((s8)oldValue != (s8)state->selectedBoard.index) {
                 playSoundEffectOnChannelNoPriority(0x2B, 0);
                 state->shopState = 0x03;
                 state->transitionDirection = -1;
                 state->oldTransitionIndex = oldValue + (state->selectedCategoryIndex * 3);
-                state->newTransitionIndex = state->selectedBoardIndex + (state->selectedCategoryIndex * 3);
+                state->newTransitionIndex = state->selectedBoard.index + (state->selectedCategoryIndex * 3);
                 scheduleTask(&initBoardShopCharacterTransition, 0, 0, 0x5A);
             } else {
                 if (*gControllerInputs & (A_BUTTON | START_BUTTON)) {
@@ -601,7 +568,7 @@ void updateBoardShop(void) {
                 boardIdx = state->boardDisplayIndices[state->selectedSlot];
                 boardIdx = state->boardIndexMap[boardIdx];
                 EepromSaveData
-                    ->characterPaletteIds[(state->selectedCategoryIndex * 3) + (s8)state->selectedBoardIndex] =
+                    ->characterPaletteIds[(state->selectedCategoryIndex * 3) + (s8)state->selectedBoard.index] =
                     boardIdx + 1;
             }
             break;

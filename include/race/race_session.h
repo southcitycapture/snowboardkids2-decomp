@@ -4,6 +4,7 @@
 #include "gamestate.h"
 #include "graphics/displaylist.h"
 #include "graphics/graphics.h"
+#include "graphics/sprite_rdp.h"
 #include "math/geometry.h"
 #include "system/memory_allocator.h"
 
@@ -91,22 +92,8 @@ void eepromReadAsync(s32 slotIndex, void *buffer);
 void *pollEepromReadAsync(void);
 
 typedef struct {
-    s16 x;
-    s16 y;
-    void *asset;
-    s16 digitValue;
-    u8 colorStyle;
-    u8 pad;
-} BoardShopGoldDigitState;
-
-typedef struct {
-    BoardShopGoldDigitState digits[7];
-    s16 iconX;
-    s16 iconY;
-    void *iconAsset;
-    s16 unk5C;
-    u8 unk5E;
-    u8 pad;
+    SpriteRenderArg digits[7];
+    SpriteRenderArg icon;
     char goldString[8];
 } BoardShopGoldDisplayState;
 

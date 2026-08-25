@@ -37,6 +37,7 @@ typedef struct {
             u8 alpha;
         } components;
         u16 paletteAndAlpha;
+        s16 paletteAndAlphaSigned;
     } color;
     /* 0x0C */ u8 tileMode;
     /* 0x0D */ u8 overridePaletteCount;
@@ -88,8 +89,13 @@ typedef struct {
     /* 0x0A */ u16 scaleX;
     /* 0x0C */ u16 scaleY;
     /* 0x0E */ s16 rotation;
-    /* 0x10 */ u8 unk10;
-    /* 0x11 */ u8 alpha;
+    /* 0x10 */ union {
+        u16 value;
+        struct {
+            u8 padding;
+            u8 intensity;
+        } components;
+    } alpha;
     /* 0x12 */ u8 tileMode;
     /* 0x13 */ u8 overridePaletteCount;
     /* 0x14 */ u8 flipX;

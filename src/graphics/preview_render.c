@@ -1,3 +1,4 @@
+#include "graphics/preview_render.h"
 #include "assets.h"
 #include "common.h"
 #include "data/asset_metadata.h"
@@ -58,308 +59,48 @@ u16 D_8008F20E_8FE0E = 0xFF98;
 extern const char D_8009E47C_9F07C[];
 extern const char D_8009E480_9F080;
 
-typedef struct {
-    s16 unk0;
-    s16 x;
-    u8 padding[0x4];
-    s16 spriteIndex;
-    u8 padding2[0xE];
-} BoardShopCharacterPortrait;
-
-typedef struct {
-    BoardShopCharacterPortrait portraits[4];
-    u8 padding[0x24];
-    u8 animationFrameCounters[4];
-} BoardShopCharacterPortraitState;
-
-typedef struct {
-    u8 padding[0x77C];
-    u16 frameCounter;
-    u8 padding2[0x6];
-    u8 unk784[4];
-    u8 unk788[17];
-    u8 selectedIconIndex;
-    u8 unk79A;
-    u8 shopState;
-    u8 unk79C;
-    s8 unk79D;
-} BoardShopSelectionAllocation;
-
-typedef struct {
-    u8 padding[0x8];
-    s16 spriteIndex;
-    u8 padding2[0x2];
-    s16 scaleX;
-    s16 scaleY;
-    s16 alpha;
-    s8 unk12;
-    s8 unk13;
-    u8 flipX;
-    u8 padding3[0x3];
-} BoardShopIconDisplayState;
-
-typedef struct {
-    BoardShopIconDisplayState icons[4];
-    u8 padding2[0x18];
-    s16 priceTextX;
-    s16 priceTextY;
-    u8 padding3[0x8];
-    s8 animationCounters[4];
-    char priceTextBuffer;
-} BoardShopIconSelectionState;
-
-typedef struct {
-    ViewportNode *unk0;
-    s32 unk4;
-    u8 padding[0x18];
-    void *unk20;
-    void *unk24;
-    void *unk28;
-    void *unk2C;
-    void *unk30;
-    u8 padding2[0x8];
-    s32 unk3C;
-    u8 unk40[0x10];
-    s32 unk50;
-    s32 unk54;
-    s32 unk58;
-    s32 unk5C;
-    s16 unk60;
-    s16 unk62;
-    s8 unk64;
-} BoardShopCharacterPreviewState;
-
-typedef struct {
-    DisplayListObject unk0;
-    s32 unk3C;
-    u8 unk40[0x10];
-    s32 unk50;
-    s32 unk54;
-    s32 unk58;
-    s32 unk5C;
-    s16 unk60;
-    s16 unk62;
-    s8 unk64;
-} func_80031944_32544_arg;
-
-typedef struct {
-    u8 padding[0x7A4];
-    u8 titleCornersVisible;
-} BoardShopTitleCornersAllocation;
-
-typedef struct {
-    SceneModel *model;
-    Transform3D transform;
-    union {
-        SceneModel *unk20;
-        s32 unk20_s32;
-        s16 animationFrame;
-    } animFrameUnion;
-} BoardShopShopkeeperWaitState;
-
-typedef struct {
-    s16 x;
-    u16 y;
-    void *asset;
-    s16 spriteIndex;
-    s16 alpha;
-    s8 visible;
-    s8 unkD;
-    s16 unkE;
-} BoardShopTitleCornerState;
-
-typedef struct {
-    SceneModel *model;
-    Transform3D transform;
-    s16 animationFrame;
-    u16 animationEndFrame;
-    u8 animationState;
-} BoardShopShopkeeperState;
-
-typedef struct {
-    u8 padding[0x8];
-    void *textAsset;
-} BoardShopTitleTextCleanupArg;
-
-typedef struct {
-    s16 textWidth;
-    s32 textData;
-} BoardShopTitleTextUpdateArg;
-
-typedef struct {
-    s16 textWidth;
-    s16 y;
-    void *textData;
-    void *textAsset;
-    s16 primaryColor;
-    s16 secondaryColor;
-    s8 textStyle;
-} BoardShopTitleTextState;
-
-typedef struct {
-    s16 x;
-    s16 y;
-    u8 padding[0x80];
-    u8 frameCounter;
-} BoardShopSnowflakeAnimState;
-
-typedef struct {
-    char padding;
-    void *unk4;
-    char padding2[78];
-    void *unk58;
-} BoardShopGoldDisplayCleanupArg;
-
-typedef struct {
-    u8 padding[0x79C];
-    u8 unk79C;
-} BoardShopSnowflakeAnimAllocation;
-
-typedef struct {
-    s16 x;
-    s16 y;
-    void *asset;
-    s16 spriteIndex;
-    s16 scaleX;
-    s16 scaleY;
-    s16 rotation;
-    s16 alpha;
-    s8 unk12;
-    s8 unk13;
-    s8 flipX;
-    u8 padding[0x6F];
-    s8 frameCounter;
-} BoardShopSnowflakeSpriteState;
-
-typedef struct {
-    u8 padding[0x77C];
-    s16 unk77C;
-    u8 padding2[0x2];
-    s16 unk780;
-    s16 unk782;
-    u8 unk784[4];
-    u8 unk788[20];
-    u8 unk79C;
-    u8 unk79D;
-    u8 unk79E;
-    u8 unk79F;
-    u8 scrollOutBoardIndex;
-    s8 unk7A1;
-    u8 unk7A2;
-} BoardShopScreenAllocation;
-
-typedef struct {
-    s16 x;
-    s16 y;
-    void *asset;
-    s16 spriteIndex;
-    s16 scaleX;
-    s16 scaleY;
-    s16 rotation;
-    s16 alpha;
-    s8 unk12;
-    s8 unk13;
-    s8 flipX;
-    u8 padding[0x3];
-} BoardShopBoardIconState;
-
-typedef struct {
-    BoardShopBoardIconState icons[4];
-    u8 padding2[0x18];
-    s16 priceTextX;
-    s16 priceTextY;
-    s16 priceTextStyle;
-    u8 padding3[0x2];
-    void *priceTextPtr;
-    s8 animationCounters[4];
-    void *priceTextBuffer;
-} BoardShopBoardIconsState;
-
-typedef struct {
-    u8 padding[0x24];
-    void *unk24;
-    void *unk28;
-    void *unk2C;
-} func_800319C8_325C8_arg;
-
-typedef struct {
-    s16 x;
-    s16 y;
-    u8 padding[0x14];
-} BoardShopSlideOutIconState;
-
-typedef struct {
-    BoardShopSlideOutIconState icons[4];
-    u8 padding2[0x24];
-    u8 slidingIconCount;
-} BoardShopBoardIconsSlideOutState;
-
-typedef struct {
-    u8 padding[0x77C];
-    s16 animationComplete;
-} BoardShopSlideOutAllocation;
-
-typedef TileMapRenderTaskState BoardShopBackgroundState;
-
-typedef struct {
-    u8 padding[0x77C];
-    s16 unk77C;
-} func_80032628_alloc;
-
-typedef struct {
-    u16 x;
-    u16 y;
-    void *sprite;
-    u16 speed;
-} SnowParticle;
-
-typedef struct {
-    SnowParticle *particles;
-    u8 delayTimer;
-} SnowParticleState;
-
 void animateBoardShopSnowParticles(SnowParticleState *);
-void blinkBoardShopBoardIconConfirmation(BoardShopIconSelectionState *arg0);
+void blinkBoardShopBoardIconConfirmation(BoardShopBoardIconsState *arg0);
 void freeBoardShopCharacterPreviewAssets(BoardShopCharacterPreviewState *arg0);
 void waitBoardShopCharacterPreview(void);
 void animateBoardShopCharacterSlideIn(BoardShopCharacterPreviewState *arg0);
 void updateBoardShopCharacterPreview(BoardShopCharacterPreviewState *arg0);
 void loadBoardShopCharacterAssets(BoardShopCharacterPreviewState *arg0);
 void animateBoardShopCharacterSwitch(BoardShopCharacterPreviewState *arg0);
-void freeBoardShopPurchaseAssets(func_800319C8_325C8_arg *arg0);
+void freeBoardShopPurchaseAssets(BoardShopCharacterPreviewState *arg0);
 void animateBoardShopCharacterSlideOut(BoardShopCharacterPreviewState *arg0);
 void loadBoardShopPurchaseAssets(BoardShopCharacterPreviewState *arg0);
 void cleanupBoardShopShopkeeper(BoardShopShopkeeperState *arg0);
-void waitBoardShopShopkeeper(BoardShopShopkeeperWaitState *arg0);
+void waitBoardShopShopkeeper(BoardShopShopkeeperState *arg0);
 void updateBoardShopShopkeeper(BoardShopShopkeeperState *arg0);
-void initBoardShopBackgroundRenderState(BoardShopBackgroundState *arg0);
-void cleanupBoardShopBackground(BoardShopBackgroundState *arg0);
-void cleanupBoardShopColumnSelectorArrow(void *);
+void initBoardShopBackgroundRenderState(TileMapRenderTaskState *arg0);
+void cleanupBoardShopBackground(TileMapRenderTaskState *arg0);
+void cleanupBoardShopColumnSelectorArrow(TextRenderArg *);
 void updateBoardShopExitOverlay(void *arg0);
 void cleanupBoardShopExitOverlay(SpriteRenderArg *arg0);
-void updateBoardShopTitleCorners(BoardShopTitleCornerState *arg0);
-void cleanupBoardShopTitleCorners(BoardShopTitleCornerState *arg0);
-void updateBoardShopTitleText(BoardShopTitleTextUpdateArg *arg0);
-void cleanupBoardShopTitleText(BoardShopTitleTextCleanupArg *arg0);
-void animateBoardShopSnowflakeSlideIn(BoardShopSnowflakeAnimState *arg0);
+void updateBoardShopTitleCorners(TextRenderArg *arg0);
+void cleanupBoardShopTitleCorners(TextRenderArg *arg0);
+void updateBoardShopTitleText(BoardShopTitleTextState *arg0);
+void cleanupBoardShopTitleText(BoardShopTitleTextState *arg0);
+void animateBoardShopSnowflakeSlideIn(BoardShopSnowflakeSpriteState *arg0);
 void queueBoardShopSnowflakeRender(void *);
 void cleanupBoardShopSnowflakeSprite(SpriteRenderArg *);
 void cleanupBoardShopBoardIcons(BoardShopBoardIconsState *arg0);
-void freeBoardShopCharacterTransitionAssets(func_800319C8_325C8_arg *arg0);
-void animateBoardShopCharacterTransition(func_80031944_32544_arg *arg0);
-void enqueueBoardShopBackgroundRender(BoardShopBackgroundState *state);
+void freeBoardShopCharacterTransitionAssets(BoardShopCharacterPreviewState *arg0);
+void animateBoardShopCharacterTransition(BoardShopCharacterPreviewState *arg0);
+void enqueueBoardShopBackgroundRender(TileMapRenderTaskState *state);
 void cleanupBoardShopSnowParticles(SnowParticleState *arg0);
 void waitBoardShopSnowParticles(SnowParticleState *arg0);
-void animateBoardShopCharacterPortraitsSlideIn(BoardShopCharacterPortraitState *arg0);
+void animateBoardShopCharacterPortraitsSlideIn(BoardShopBoardIconsState *arg0);
 void animateBoardShopBoardIconsSlideIn(BoardShopBoardIconsState *arg0);
 void updateBoardShopGoldDisplay(BoardShopGoldDisplayState *arg0);
-void initBoardShopCharacterPortraitsSlideIn(BoardShopCharacterPortraitState *arg0);
-void animateBoardShopBoardIconsSlideOut(BoardShopBoardIconsSlideOutState *arg0);
-void cleanupBoardShopGoldDisplay(BoardShopGoldDisplayCleanupArg *arg0);
+void initBoardShopCharacterPortraitsSlideIn(BoardShopBoardIconsState *arg0);
+void animateBoardShopBoardIconsSlideOut(BoardShopBoardIconsState *arg0);
+void cleanupBoardShopGoldDisplay(BoardShopGoldDisplayState *arg0);
 void cleanupBoardShopPreviewWipe(BoardShopCharacterPreviewState *arg0);
 void animateBoardShopPreviewWipe(BoardShopCharacterPreviewState *arg0);
 void waitBoardShopPreviewWipe(BoardShopCharacterPreviewState *arg0);
-void updateBoardShopBoardIconSelection(BoardShopIconSelectionState *arg0);
+void updateBoardShopBoardIconSelection(BoardShopBoardIconsState *arg0);
 
 void initBoardShopPreviewWipe(BoardShopCharacterPreviewState *arg0) {
     s32 perspectiveParams[8];
@@ -370,7 +111,7 @@ void initBoardShopPreviewWipe(BoardShopCharacterPreviewState *arg0) {
     s32 unused;
     u8 paletteId;
     void *transformMatrix;
-    BoardShopScreenAllocation *state;
+    BoardShopState *state;
     ViewportNode *cameraNode;
     Transform3D *rotationZPtr;
 
@@ -378,18 +119,18 @@ void initBoardShopPreviewWipe(BoardShopCharacterPreviewState *arg0) {
 
     state = getCurrentAllocation();
     cameraNode = allocateNodeMemory(0x1D8);
-    arg0->unk0 = cameraNode;
+    arg0->render.wipe.camera = cameraNode;
     initMenuCameraNode(cameraNode, 1, 0xB, 0);
-    arg0->unk60 = -0x34;
-    arg0->unk62 = 0x34;
-    state->unk780 = (u16)arg0->unk60;
-    state->unk782 = (u16)arg0->unk62;
+    arg0->mode.wipe.left = -0x34;
+    arg0->mode.wipe.right = 0x34;
+    state->previewWipeLeft = arg0->mode.wipe.left;
+    state->previewWipeRight = arg0->mode.wipe.right;
 
-    setModelCameraTransform(arg0->unk0, 0, 0, -0x98, arg0->unk60, 0x97, arg0->unk62);
+    setModelCameraTransform(arg0->render.wipe.camera, 0, 0, -0x98, arg0->mode.wipe.left, 0x97, arg0->mode.wipe.right);
     createViewportTransform(perspectiveParams, 0, 0, 0x580000, 0, 0, 0);
-    setViewportTransformById(arg0->unk0->viewportId, perspectiveParams);
+    setViewportTransformById(arg0->render.wipe.camera->viewportId, perspectiveParams);
 
-    transformMatrix = &arg0->unk40;
+    transformMatrix = &arg0->mode.wipe.baseTransform;
     memcpy(transformMatrix, &identityMatrix, sizeof(Transform3D));
     memcpy(rotationZPtr, transformMatrix, sizeof(Transform3D));
     memcpy(&rotationYX, rotationZPtr, sizeof(Transform3D));
@@ -399,63 +140,63 @@ void initBoardShopPreviewWipe(BoardShopCharacterPreviewState *arg0) {
 
     composeTransform3D(&rotationYX, rotationZPtr, (Transform3D *)transformMatrix);
 
-    arg0->unk5C = 0xFFF80000;
-    charIndex = state->unk7A2 + (state->unk7A1 * 3);
+    arg0->mode.wipe.baseTransform.translation.z = 0xFFF80000;
+    charIndex = state->selectedBoard.index + (state->selectedCategoryIndex * 3);
     paletteId = EepromSaveData->characterPaletteIds[charIndex & 0xFF];
 
-    memcpy(&arg0->unk4, transformMatrix, sizeof(Transform3D));
+    memcpy(&arg0->render.wipe.transform, transformMatrix, sizeof(Transform3D));
 
     charIndex = charIndex & 0xFF;
-    arg0->unk24 = loadAssetByIndex_95728(charIndex);
-    arg0->unk28 = loadAssetByIndex_95500(charIndex);
-    arg0->unk2C = loadAssetByIndex_95590(charIndex);
-    arg0->unk30 = loadAssetByIndex_95668(paletteId - 1);
+    arg0->render.wipe.characterAsset = loadAssetByIndex_95728(charIndex);
+    arg0->render.wipe.modelAsset = loadAssetByIndex_95500(charIndex);
+    arg0->render.wipe.animationAsset = loadAssetByIndex_95590(charIndex);
+    arg0->render.wipe.paletteAsset = loadAssetByIndex_95668(paletteId - 1);
 
     setCleanupCallback(&cleanupBoardShopPreviewWipe);
-    arg0->unk64 = 0xC;
+    arg0->mode.wipe.delayTimer = 0xC;
     setCallback(&waitBoardShopPreviewWipe);
 }
 
 void waitBoardShopPreviewWipe(BoardShopCharacterPreviewState *arg0) {
     u8 delayTimer;
-    arg0->unk64--;
-    delayTimer = arg0->unk64;
+    arg0->mode.wipe.delayTimer--;
+    delayTimer = arg0->mode.wipe.delayTimer;
     if (delayTimer == 0) {
         setCallback(&animateBoardShopPreviewWipe);
     }
-    enableViewportDisplayList(arg0->unk0);
-    enqueueDisplayListObject(1, (DisplayListObject *)&arg0->unk4);
+    enableViewportDisplayList(arg0->render.wipe.camera);
+    enqueueDisplayListObject(1, (DisplayListObject *)&arg0->render.wipe.transform);
 }
 
 void animateBoardShopPreviewWipe(BoardShopCharacterPreviewState *arg0) {
-    BoardShopScreenAllocation *state = getCurrentAllocation();
+    BoardShopState *state = getCurrentAllocation();
 
-    arg0->unk60++;
-    arg0->unk62--;
-    state->unk780 = arg0->unk60;
-    state->unk782 = arg0->unk62;
+    arg0->mode.wipe.left++;
+    arg0->mode.wipe.right--;
+    state->previewWipeLeft = arg0->mode.wipe.left;
+    state->previewWipeRight = arg0->mode.wipe.right;
 
-    setModelCameraTransform(arg0->unk0, 0, 0, -0x98, arg0->unk60, 0x97, arg0->unk62);
+    setModelCameraTransform(arg0->render.wipe.camera, 0, 0, -0x98, arg0->mode.wipe.left, 0x97, arg0->mode.wipe.right);
 
-    if (arg0->unk60 == 0) {
-        state->unk77C = 1;
-        unlinkNode(arg0->unk0);
+    if (arg0->mode.wipe.left == 0) {
+        state->delayTimer = 1;
+        unlinkNode(arg0->render.wipe.camera);
         terminateCurrentTask();
     } else {
-        enableViewportDisplayList(arg0->unk0);
-        enqueueDisplayListObject(1, (DisplayListObject *)&arg0->unk4);
+        enableViewportDisplayList(arg0->render.wipe.camera);
+        enqueueDisplayListObject(1, (DisplayListObject *)&arg0->render.wipe.transform);
     }
 }
 
 void cleanupBoardShopPreviewWipe(BoardShopCharacterPreviewState *arg0) {
-    arg0->unk0 = (ViewportNode *)freeNodeMemory(arg0->unk0);
-    arg0->unk28 = freeNodeMemory(arg0->unk28);
-    arg0->unk2C = freeNodeMemory(arg0->unk2C);
-    arg0->unk30 = freeNodeMemory(arg0->unk30);
+    arg0->render.wipe.camera = freeNodeMemory(arg0->render.wipe.camera);
+    arg0->render.wipe.modelAsset = freeNodeMemory(arg0->render.wipe.modelAsset);
+    arg0->render.wipe.animationAsset = freeNodeMemory(arg0->render.wipe.animationAsset);
+    arg0->render.wipe.paletteAsset = freeNodeMemory(arg0->render.wipe.paletteAsset);
 }
 
 void initBoardShopSnowParticles(SnowParticleState *arg0) {
-    BoardShopScreenAllocation *state;
+    BoardShopState *state;
     void *snowflakeSprite;
     s32 i;
     int new_var;
@@ -472,10 +213,10 @@ void initBoardShopSnowParticles(SnowParticleState *arg0) {
         if (i < 10) {
             arg0->particles[j].x = -0x24 + (i * 6);
             randOffset = (randB() & 7) - 10;
-            arg0->particles[j].y = state->unk780 + randOffset;
+            arg0->particles[j].y = state->previewWipeLeft + randOffset;
         } else {
             arg0->particles[j].x = -0x60 + (i * 6);
-            arg0->particles[j].y = state->unk782 + (new_var = (randB() & 7) - 10);
+            arg0->particles[j].y = state->previewWipeRight + (new_var = (randB() & 7) - 10);
         }
 
         arg0->particles[j].sprite = snowflakeSprite;
@@ -497,7 +238,7 @@ void waitBoardShopSnowParticles(SnowParticleState *arg0) {
 }
 
 void animateBoardShopSnowParticles(SnowParticleState *arg0) {
-    BoardShopScreenAllocation *state;
+    BoardShopState *state;
     s32 i;
     u16 baseY;
     s16 randVal;
@@ -512,9 +253,9 @@ void animateBoardShopSnowParticles(SnowParticleState *arg0) {
     for (i = 0; i < 0x14; i++) {
         if (i < 0xA) {
             randVal = randB() % 8 - 10;
-            arg0->particles[i].y = state->unk780 + randVal;
+            arg0->particles[i].y = state->previewWipeLeft + randVal;
         } else {
-            arg0->particles[i].y = state->unk782 + ((new_var = randB() % 8) - 10);
+            arg0->particles[i].y = state->previewWipeRight + ((new_var = randB() % 8) - 10);
         }
 
         if (arg0->delayTimer == 0) {
@@ -528,7 +269,7 @@ void animateBoardShopSnowParticles(SnowParticleState *arg0) {
         pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderSpriteFrame, &arg0->particles[i]);
     };
 
-    if (state->unk780 == 0) {
+    if (state->previewWipeLeft == 0) {
         terminateCurrentTask();
     }
 }
@@ -550,178 +291,178 @@ void initBoardShopCharacterPreview(BoardShopCharacterPreviewState *arg0) {
     pRotationYX = &rotationYX;
 
     getCurrentAllocation();
-    transformMatrix = &arg0->unk3C;
+    transformMatrix = &arg0->mode.character.baseTransform;
     memcpy(transformMatrix, &identityMatrix, sizeof(Transform3D));
     memcpy(pRotationZ, transformMatrix, sizeof(Transform3D));
     memcpy(pRotationYX, pRotationZ, sizeof(Transform3D));
     createRotationMatrixYX(pRotationYX, 0x1000, 0x800);
     createZRotationMatrix(pRotationZ, 0x1F00);
     composeTransform3D(pRotationYX, pRotationZ, (Transform3D *)transformMatrix);
-    arg0->unk50 = 0x600000;
-    arg0->unk58 = 0xFFF80000;
+    arg0->mode.character.baseTransform.translation.x = 0x600000;
+    arg0->mode.character.baseTransform.translation.z = 0xFFF80000;
     paletteIndex = EepromSaveData->characterPaletteIds[0];
     memcpy(arg0, transformMatrix, sizeof(Transform3D));
-    arg0->unk20 = loadAssetByIndex_95728(0);
-    arg0->unk24 = loadAssetByIndex_95500(0);
-    arg0->unk28 = loadAssetByIndex_95590(0);
-    arg0->unk2C = loadAssetByIndex_95668(paletteIndex - 1);
+    arg0->render.character.characterAsset = loadAssetByIndex_95728(0);
+    arg0->render.character.modelAsset = loadAssetByIndex_95500(0);
+    arg0->render.character.animationAsset = loadAssetByIndex_95590(0);
+    arg0->render.character.paletteAsset = loadAssetByIndex_95668(paletteIndex - 1);
     setCleanupCallback(&freeBoardShopCharacterPreviewAssets);
     setCallback(&waitBoardShopCharacterPreview);
 }
 
 void waitBoardShopCharacterPreview(void) {
-    BoardShopScreenAllocation *allocation;
+    BoardShopState *allocation;
 
     allocation = getCurrentAllocation();
-    if (allocation->unk788[19] == 1) {
+    if (allocation->shopState == 1) {
         setCallbackWithContinue(animateBoardShopCharacterSlideIn);
     }
 }
 
 void animateBoardShopCharacterSlideIn(BoardShopCharacterPreviewState *arg0) {
-    BoardShopScreenAllocation *allocation;
+    BoardShopState *allocation;
 
     allocation = getCurrentAllocation();
 
-    arg0->unk50 += 0xFFF00000;
+    arg0->mode.character.baseTransform.translation.x += 0xFFF00000;
 
-    memcpy(arg0, &arg0->unk3C, sizeof(Transform3D));
+    memcpy(&arg0->render.character.transform, &arg0->mode.character.baseTransform, sizeof(Transform3D));
 
-    if (arg0->unk50 == 0) {
-        allocation->unk788[19] = 0xC;
+    if (arg0->mode.character.baseTransform.translation.x == 0) {
+        allocation->shopState = 0xC;
         setCallbackWithContinue(&updateBoardShopCharacterPreview);
     }
 
-    enqueueDisplayListObject(0, (DisplayListObject *)arg0);
+    enqueueDisplayListObject(0, &arg0->render.displayObject);
 }
 
 void updateBoardShopCharacterPreview(BoardShopCharacterPreviewState *arg0) {
-    BoardShopScreenAllocation *allocation;
+    BoardShopState *allocation;
     u8 state;
 
     allocation = getCurrentAllocation();
-    state = allocation->unk788[19];
+    state = allocation->shopState;
 
     if (state == 3 || state == 0x1A) {
         if (state == 3) {
-            arg0->unk24 = freeNodeMemory(arg0->unk24);
-            arg0->unk28 = freeNodeMemory(arg0->unk28);
-            arg0->unk2C = freeNodeMemory(arg0->unk2C);
+            arg0->render.character.modelAsset = freeNodeMemory(arg0->render.character.modelAsset);
+            arg0->render.character.animationAsset = freeNodeMemory(arg0->render.character.animationAsset);
+            arg0->render.character.paletteAsset = freeNodeMemory(arg0->render.character.paletteAsset);
             setCallback(&loadBoardShopCharacterAssets);
         } else {
             setCallback(&freeBoardShopPurchaseAssets);
-            enqueueDisplayListObject(0, (DisplayListObject *)arg0);
+            enqueueDisplayListObject(0, &arg0->render.displayObject);
         }
     } else if (state == 0x32) {
         setCallback(&animateBoardShopCharacterSlideOut);
-        enqueueDisplayListObject(0, (DisplayListObject *)arg0);
+        enqueueDisplayListObject(0, &arg0->render.displayObject);
     } else {
-        enqueueDisplayListObject(0, (DisplayListObject *)arg0);
+        enqueueDisplayListObject(0, &arg0->render.displayObject);
     }
 }
 
 void loadBoardShopCharacterAssets(BoardShopCharacterPreviewState *arg0) {
     u8 paletteIndex;
     u8 temp_v1;
-    BoardShopScreenAllocation *allocation;
+    BoardShopState *allocation;
 
     allocation = getCurrentAllocation();
 
-    if (allocation->unk79C == 0) {
-        arg0->unk50 = 0xFFA00000;
+    if (allocation->scrollDirection == 0) {
+        arg0->mode.character.baseTransform.translation.x = 0xFFA00000;
     } else {
-        arg0->unk50 = 0x600000;
+        arg0->mode.character.baseTransform.translation.x = 0x600000;
     }
 
-    paletteIndex = EepromSaveData->characterPaletteIds[allocation->unk79E];
+    paletteIndex = EepromSaveData->characterPaletteIds[allocation->newTransitionIndex];
 
-    memcpy(arg0, &arg0->unk3C, sizeof(Transform3D));
+    memcpy(&arg0->render.character.transform, &arg0->mode.character.baseTransform, sizeof(Transform3D));
 
-    arg0->unk20 = loadAssetByIndex_95728(allocation->unk79E);
-    arg0->unk24 = loadAssetByIndex_95500(allocation->unk79E);
-    arg0->unk28 = loadAssetByIndex_95590(allocation->unk79E);
-    arg0->unk2C = loadAssetByIndex_95668(paletteIndex - 1);
+    arg0->render.character.characterAsset = loadAssetByIndex_95728(allocation->newTransitionIndex);
+    arg0->render.character.modelAsset = loadAssetByIndex_95500(allocation->newTransitionIndex);
+    arg0->render.character.animationAsset = loadAssetByIndex_95590(allocation->newTransitionIndex);
+    arg0->render.character.paletteAsset = loadAssetByIndex_95668(paletteIndex - 1);
 
     setCallback(&animateBoardShopCharacterSwitch);
 }
 
 void animateBoardShopCharacterSwitch(BoardShopCharacterPreviewState *arg0) {
-    BoardShopScreenAllocation *allocation;
+    BoardShopState *allocation;
     s32 slideSpeed;
 
-    allocation = (BoardShopScreenAllocation *)getCurrentAllocation();
+    allocation = getCurrentAllocation();
 
-    if (allocation->unk79C == 1) {
+    if (allocation->scrollDirection == 1) {
         slideSpeed = 0xFFF00000;
     } else {
         slideSpeed = 0x100000;
     }
 
-    arg0->unk50 += slideSpeed;
+    arg0->mode.character.baseTransform.translation.x += slideSpeed;
 
-    memcpy(arg0, &arg0->unk3C, sizeof(Transform3D));
+    memcpy(&arg0->render.character.transform, &arg0->mode.character.baseTransform, sizeof(Transform3D));
 
-    if (arg0->unk50 == 0) {
-        allocation->unk79D--;
+    if (arg0->mode.character.baseTransform.translation.x == 0) {
+        allocation->transitionDirection--;
         setCallback(&updateBoardShopCharacterPreview);
     }
 
-    enqueueDisplayListObject(0, (DisplayListObject *)arg0);
+    enqueueDisplayListObject(0, &arg0->render.displayObject);
 }
 
-void freeBoardShopPurchaseAssets(func_800319C8_325C8_arg *arg0) {
-    arg0->unk24 = freeNodeMemory(arg0->unk24);
-    arg0->unk28 = freeNodeMemory(arg0->unk28);
-    arg0->unk2C = freeNodeMemory(arg0->unk2C);
+void freeBoardShopPurchaseAssets(BoardShopCharacterPreviewState *arg0) {
+    arg0->render.character.modelAsset = freeNodeMemory(arg0->render.character.modelAsset);
+    arg0->render.character.animationAsset = freeNodeMemory(arg0->render.character.animationAsset);
+    arg0->render.character.paletteAsset = freeNodeMemory(arg0->render.character.paletteAsset);
     setCallback(&loadBoardShopPurchaseAssets);
 }
 
 void loadBoardShopPurchaseAssets(BoardShopCharacterPreviewState *arg0) {
-    BoardShopScreenAllocation *allocation;
+    BoardShopState *allocation;
     s16 assetIndex;
     int new_var;
     u8 characterIndex;
 
     allocation = getCurrentAllocation();
-    new_var = allocation->unk784[allocation->unk788[17]];
-    assetIndex = allocation->unk7A1;
-    characterIndex = allocation->unk7A2;
+    new_var = allocation->boardDisplayIndices[allocation->selectedSlot];
+    assetIndex = allocation->selectedCategoryIndex;
+    characterIndex = allocation->selectedBoard.index;
     assetIndex = (characterIndex + (assetIndex * 3)) & 0xFF;
-    characterIndex = allocation->unk788[new_var];
+    characterIndex = allocation->boardIndexMap[new_var];
 
-    memcpy(arg0, &arg0->unk3C, sizeof(Transform3D));
+    memcpy(&arg0->render.character.transform, &arg0->mode.character.baseTransform, sizeof(Transform3D));
 
-    arg0->unk20 = loadAssetByIndex_95728(assetIndex);
-    arg0->unk24 = loadAssetByIndex_95500(assetIndex);
-    arg0->unk28 = loadAssetByIndex_95590(assetIndex);
-    arg0->unk2C = loadAssetByIndex_95668(characterIndex);
+    arg0->render.character.characterAsset = loadAssetByIndex_95728(assetIndex);
+    arg0->render.character.modelAsset = loadAssetByIndex_95500(assetIndex);
+    arg0->render.character.animationAsset = loadAssetByIndex_95590(assetIndex);
+    arg0->render.character.paletteAsset = loadAssetByIndex_95668(characterIndex);
 
     setCallback(&updateBoardShopCharacterPreview);
 }
 
 void animateBoardShopCharacterSlideOut(BoardShopCharacterPreviewState *arg0) {
-    BoardShopSelectionAllocation *allocation;
+    BoardShopState *allocation;
 
     allocation = getCurrentAllocation();
-    arg0->unk50 += 0x100000;
-    memcpy(arg0, &arg0->unk3C, sizeof(Transform3D));
+    arg0->mode.character.baseTransform.translation.x += 0x100000;
+    memcpy(&arg0->render.character.transform, &arg0->mode.character.baseTransform, sizeof(Transform3D));
 
-    if (arg0->unk50 == 0x600000) {
-        allocation->unk79A = 1;
+    if (arg0->mode.character.baseTransform.translation.x == 0x600000) {
+        allocation->exitMode = 1;
         terminateCurrentTask();
     } else {
-        enqueueDisplayListObject(0, (DisplayListObject *)arg0);
+        enqueueDisplayListObject(0, &arg0->render.displayObject);
     }
 }
 
 void freeBoardShopCharacterPreviewAssets(BoardShopCharacterPreviewState *arg0) {
-    arg0->unk24 = freeNodeMemory(arg0->unk24);
-    arg0->unk28 = freeNodeMemory(arg0->unk28);
-    arg0->unk2C = freeNodeMemory(arg0->unk2C);
+    arg0->render.character.modelAsset = freeNodeMemory(arg0->render.character.modelAsset);
+    arg0->render.character.animationAsset = freeNodeMemory(arg0->render.character.animationAsset);
+    arg0->render.character.paletteAsset = freeNodeMemory(arg0->render.character.paletteAsset);
 }
 
 void initBoardShopCharacterTransition(BoardShopCharacterPreviewState *arg0) {
-    BoardShopScreenAllocation *state;
+    BoardShopState *state;
     Transform3D rotationYX;
     Transform3D rotationZ;
     u8 characterIndex;
@@ -731,36 +472,36 @@ void initBoardShopCharacterTransition(BoardShopCharacterPreviewState *arg0) {
 
     state = getCurrentAllocation();
 
-    memcpy(&arg0->unk3C, &identityMatrix, sizeof(Transform3D));
+    memcpy(&arg0->mode.character.baseTransform, &identityMatrix, sizeof(Transform3D));
 
     pRotationZ = &rotationZ;
-    memcpy(pRotationZ, &arg0->unk3C, sizeof(Transform3D));
+    memcpy(pRotationZ, &arg0->mode.character.baseTransform, sizeof(Transform3D));
 
     pRotationYX = &rotationYX;
     memcpy(pRotationYX, pRotationZ, sizeof(Transform3D));
 
     createRotationMatrixYX(pRotationYX, 0x1000, 0x800);
     createZRotationMatrix(pRotationZ, 0x1F00);
-    composeTransform3D(pRotationYX, pRotationZ, (Transform3D *)&arg0->unk3C);
+    composeTransform3D(pRotationYX, pRotationZ, &arg0->mode.character.baseTransform);
 
-    arg0->unk58 = 0xFFF80000;
-    memcpy(arg0, &arg0->unk3C, 0x20U);
+    arg0->mode.character.baseTransform.translation.z = 0xFFF80000;
+    memcpy(&arg0->render.character.transform, &arg0->mode.character.baseTransform, 0x20U);
 
-    characterIndex = state->unk79F;
+    characterIndex = state->oldTransitionIndex;
     paletteIndex = EepromSaveData->characterPaletteIds[characterIndex];
 
-    arg0->unk20 = loadAssetByIndex_95728(characterIndex);
-    arg0->unk24 = loadAssetByIndex_95500(characterIndex);
-    arg0->unk28 = loadAssetByIndex_95590(characterIndex);
-    arg0->unk2C = loadAssetByIndex_95668(paletteIndex - 1);
+    arg0->render.character.characterAsset = loadAssetByIndex_95728(characterIndex);
+    arg0->render.character.modelAsset = loadAssetByIndex_95500(characterIndex);
+    arg0->render.character.animationAsset = loadAssetByIndex_95590(characterIndex);
+    arg0->render.character.paletteAsset = loadAssetByIndex_95668(paletteIndex - 1);
 
     setCleanupCallback(&freeBoardShopCharacterTransitionAssets);
     setCallbackWithContinue(&animateBoardShopCharacterTransition);
 }
 
-void animateBoardShopCharacterTransition(func_80031944_32544_arg *arg0) {
+void animateBoardShopCharacterTransition(BoardShopCharacterPreviewState *arg0) {
     s32 pad[8];
-    GameState *state;
+    BoardShopState *state;
     s32 slideSpeed;
     s32 targetPosition;
     s32 newPosition;
@@ -770,26 +511,26 @@ void animateBoardShopCharacterTransition(func_80031944_32544_arg *arg0) {
     slideSpeed = 0x100000;
     targetPosition = 0x600000;
 
-    if (state->unk79C == 1) {
+    if (state->scrollDirection == 1) {
         slideSpeed = 0xFFF00000;
         targetPosition = 0xFFA00000;
     }
 
-    newPosition = arg0->unk50 + slideSpeed;
-    arg0->unk50 = newPosition;
-    memcpy(&arg0->unk0, &arg0->unk3C, sizeof(Transform3D));
+    newPosition = arg0->mode.character.baseTransform.translation.x + slideSpeed;
+    arg0->mode.character.baseTransform.translation.x = newPosition;
+    memcpy(&arg0->render.character.transform, &arg0->mode.character.baseTransform, sizeof(Transform3D));
 
-    enqueueDisplayListObject(0, &arg0->unk0);
+    enqueueDisplayListObject(0, &arg0->render.displayObject);
 
-    if (arg0->unk50 == targetPosition) {
+    if (arg0->mode.character.baseTransform.translation.x == targetPosition) {
         terminateCurrentTask();
     }
 }
 
-void freeBoardShopCharacterTransitionAssets(func_800319C8_325C8_arg *arg0) {
-    arg0->unk24 = freeNodeMemory(arg0->unk24);
-    arg0->unk28 = freeNodeMemory(arg0->unk28);
-    arg0->unk2C = freeNodeMemory(arg0->unk2C);
+void freeBoardShopCharacterTransitionAssets(BoardShopCharacterPreviewState *arg0) {
+    arg0->render.character.modelAsset = freeNodeMemory(arg0->render.character.modelAsset);
+    arg0->render.character.animationAsset = freeNodeMemory(arg0->render.character.animationAsset);
+    arg0->render.character.paletteAsset = freeNodeMemory(arg0->render.character.paletteAsset);
 }
 
 void initBoardShopShopkeeper(BoardShopShopkeeperState *arg0) {
@@ -811,36 +552,27 @@ void initBoardShopShopkeeper(BoardShopShopkeeperState *arg0) {
     setCallback(&waitBoardShopShopkeeper);
 }
 
-void waitBoardShopShopkeeper(BoardShopShopkeeperWaitState *arg0) {
-    GameState *state;
+void waitBoardShopShopkeeper(BoardShopShopkeeperState *arg0) {
+    BoardShopState *state;
 
-    state = (GameState *)getCurrentAllocation();
+    state = getCurrentAllocation();
     applyTransformToModel(arg0->model, &arg0->transform);
     setItemDisplayEnabled(arg0->model, 1);
-    setModelAnimation(arg0->model, arg0->animFrameUnion.animationFrame);
+    setModelAnimation(arg0->model, arg0->animationFrame);
     updateModelGeometry(arg0->model);
-    if (state->unk79B != 0) {
+    if (state->shopState != 0) {
         setCallback(&updateBoardShopShopkeeper);
     }
 }
 
-typedef struct {
-    u8 padding[0x1D8];
-    void *audioPlayer2;
-    u8 padding2[0x5A2];
-    u16 shopkeeperAnimIndex;
-    u8 padding3[0x23];
-    u8 forceShopkeeperAnimUpdate;
-} BoardShopUpdateAllocation;
-
 void updateBoardShopShopkeeper(BoardShopShopkeeperState *arg0) {
-    BoardShopUpdateAllocation *allocation;
+    BoardShopState *allocation;
     s32 result;
     s32 animState;
     u16 frame;
     volatile u8 pad[8];
 
-    allocation = (BoardShopUpdateAllocation *)getCurrentAllocation();
+    allocation = getCurrentAllocation();
     animState = arg0->animationState;
 
     if (animState != 2) {
@@ -874,7 +606,7 @@ void updateBoardShopShopkeeper(BoardShopShopkeeperState *arg0) {
         }
     }
 
-    enableViewportDisplayList(&allocation->audioPlayer2);
+    enableViewportDisplayList(&allocation->secondaryViewport);
     updateModelGeometry(arg0->model);
 }
 
@@ -882,47 +614,26 @@ void cleanupBoardShopShopkeeper(BoardShopShopkeeperState *arg0) {
     destroySceneModel(arg0->model);
 }
 
-void loadBoardShopBackground(BoardShopBackgroundState *state) {
+void loadBoardShopBackground(TileMapRenderTaskState *state) {
     state->asset = loadCompressedData(&previewBackgroundAsset_ROM_START, &previewBackgroundAsset_ROM_END, 0x14410);
     setCleanupCallback(&cleanupBoardShopBackground);
     setCallback(&initBoardShopBackgroundRenderState);
 }
 
-void initBoardShopBackgroundRenderState(BoardShopBackgroundState *state) {
+void initBoardShopBackgroundRenderState(TileMapRenderTaskState *state) {
     initScrollingTileMapState(&state->renderState, state->asset);
     setCallback(&enqueueBoardShopBackgroundRender);
 }
 
-void enqueueBoardShopBackgroundRender(BoardShopBackgroundState *state) {
+void enqueueBoardShopBackgroundRender(TileMapRenderTaskState *state) {
     pushViewportCallbackBySlot(9, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderTiledTextureMap, &state->renderState);
 }
 
-void cleanupBoardShopBackground(BoardShopBackgroundState *state) {
+void cleanupBoardShopBackground(TileMapRenderTaskState *state) {
     state->asset = freeNodeMemory(state->asset);
 }
 
-typedef struct {
-    void *unk0;
-    void *asset;
-} BoardShopComparisonIconsCleanupArg;
-
-void cleanupBoardShopComparisonIcons(BoardShopComparisonIconsCleanupArg *arg0);
-
-typedef struct {
-    s16 x;
-    s16 y;
-    void *asset;
-    s16 spriteIndex;
-    s16 alpha;
-    s8 unkC;
-    s8 unkD;
-    s16 unkE;
-} BoardShopComparisonIconState;
-
-typedef struct {
-    BoardShopComparisonIconState icons[2];
-    u8 animationCounter;
-} BoardShopComparisonIconsState;
+void cleanupBoardShopComparisonIcons(TextRenderArg *arg0);
 
 void updateBoardShopComparisonIcons(BoardShopComparisonIconsState *arg0);
 
@@ -934,13 +645,13 @@ void initBoardShopComparisonIcons(BoardShopComparisonIconsState *arg0) {
     setCleanupCallback(&cleanupBoardShopComparisonIcons);
 
     for (i = 0; i < 2; i++) {
-        arg0->icons[i].x = i * 0x50 + -0x30;
-        arg0->icons[i].y = -0x18;
-        arg0->icons[i].spriteIndex = i;
-        arg0->icons[i].asset = spriteAsset;
-        arg0->icons[i].alpha = 0xFF;
-        arg0->icons[i].unkD = 0;
-        arg0->icons[i].unkC = 0;
+        arg0->comparisonIcons[i].x = i * 0x50 + -0x30;
+        arg0->comparisonIcons[i].y = -0x18;
+        arg0->comparisonIcons[i].frameIndex = i;
+        arg0->comparisonIcons[i].spriteData = spriteAsset;
+        arg0->comparisonIcons[i].color.paletteAndAlphaSigned = 0xFF;
+        arg0->comparisonIcons[i].overridePaletteCount = 0;
+        arg0->comparisonIcons[i].tileMode = 0;
     }
 
     arg0->animationCounter = 0;
@@ -948,8 +659,8 @@ void initBoardShopComparisonIcons(BoardShopComparisonIconsState *arg0) {
 }
 
 void updateBoardShopComparisonIcons(BoardShopComparisonIconsState *arg0) {
-    BoardShopSelectionAllocation *allocation;
-    BoardShopComparisonIconState *icon;
+    BoardShopState *allocation;
+    TextRenderArg *icon;
     u8 state;
     s16 s4;
     s16 s3;
@@ -959,25 +670,25 @@ void updateBoardShopComparisonIcons(BoardShopComparisonIconsState *arg0) {
     if (allocation->shopState < 15) {
         s4 = 0xFF;
         s3 = 8;
-        icon = arg0->icons;
+        icon = arg0->comparisonIcons;
 
     loop:
         state = allocation->shopState;
         if ((state == 2) | (state == 5)) {
             if (arg0->animationCounter < 16) {
-                icon->alpha = icon->alpha - 8;
+                icon->color.paletteAndAlphaSigned = icon->color.paletteAndAlphaSigned - 8;
             } else {
-                icon->alpha = icon->alpha + 8;
+                icon->color.paletteAndAlphaSigned = icon->color.paletteAndAlphaSigned + 8;
             }
         } else {
             arg0->animationCounter = 0;
-            icon->alpha = s4;
+            icon->color.paletteAndAlphaSigned = s4;
             state = allocation->shopState;
             if ((state == 4) & (state == 7)) {
-                if (allocation->frameCounter & 1) {
-                    icon->unkD = s4;
+                if (allocation->delayTimer & 1) {
+                    icon->overridePaletteCount = s4;
                 } else {
-                    icon->unkD = 0;
+                    icon->overridePaletteCount = 0;
                 }
             }
         }
@@ -990,14 +701,14 @@ void updateBoardShopComparisonIcons(BoardShopComparisonIconsState *arg0) {
         }
 
         if (allocation->shopState == 3) {
-            if (allocation->unk79D < 0) {
+            if (allocation->transitionDirection < 0) {
                 icon->y = s3;
             }
         }
 
         pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderTextSprite, icon);
         icon++;
-        if ((s32)icon < (s32)(arg0->icons + 2)) {
+        if ((s32)icon < (s32)(arg0->comparisonIcons + 2)) {
             goto loop;
         }
 
@@ -1010,40 +721,14 @@ void updateBoardShopComparisonIcons(BoardShopComparisonIconsState *arg0) {
     }
 }
 
-void cleanupBoardShopComparisonIcons(BoardShopComparisonIconsCleanupArg *arg0) {
-    arg0->asset = freeNodeMemory(arg0->asset);
+void cleanupBoardShopComparisonIcons(TextRenderArg *arg0) {
+    arg0->spriteData = freeNodeMemory(arg0->spriteData);
 }
 
-typedef struct {
-    void *unk0;
-    void *asset;
-} BoardShopRowSelectorArrowCleanupArg;
+void cleanupBoardShopRowSelectorArrow(TextRenderArg *arg0);
+void updateBoardShopRowSelectorArrow(TextRenderArg *arg0);
 
-void cleanupBoardShopRowSelectorArrow(BoardShopRowSelectorArrowCleanupArg *arg0);
-
-typedef struct {
-    s16 x;
-    s16 y;
-    void *asset;
-    s16 spriteIndex;
-    s16 alpha;
-    s8 unkC;
-    s8 unkD;
-} BoardShopRowSelectorArrowState;
-
-typedef struct {
-    u8 _pad[0x77C];
-    u16 unk77C;
-    u8 _pad2[0x1D];
-    u8 unk79B;
-    u8 _pad3[0x5];
-    s8 unk7A1;
-    s8 unk7A2;
-} BoardShopRowSelectorArrowAllocation;
-
-void updateBoardShopRowSelectorArrow(BoardShopRowSelectorArrowState *arg0);
-
-void initBoardShopRowSelectorArrow(BoardShopRowSelectorArrowState *arg0) {
+void initBoardShopRowSelectorArrow(TextRenderArg *arg0) {
     void *asset;
 
     getCurrentAllocation();
@@ -1051,30 +736,30 @@ void initBoardShopRowSelectorArrow(BoardShopRowSelectorArrowState *arg0) {
     setCleanupCallback(&cleanupBoardShopRowSelectorArrow);
     arg0->x = -0x1C;
     arg0->y = -0x18;
-    arg0->spriteIndex = 0x1D;
-    arg0->alpha = 0xFF;
-    arg0->unkC = 0;
-    arg0->unkD = 0;
-    arg0->asset = asset;
+    arg0->frameIndex = 0x1D;
+    arg0->color.paletteAndAlphaSigned = 0xFF;
+    arg0->tileMode = 0;
+    arg0->overridePaletteCount = 0;
+    arg0->spriteData = asset;
     setCallback(&updateBoardShopRowSelectorArrow);
 }
 
-void updateBoardShopRowSelectorArrow(BoardShopRowSelectorArrowState *arg0) {
-    BoardShopRowSelectorArrowAllocation *allocation;
+void updateBoardShopRowSelectorArrow(TextRenderArg *arg0) {
+    BoardShopState *allocation;
     u8 temp;
 
     allocation = getCurrentAllocation();
 
-    if (allocation->unk79B < 0xF) {
-        if (allocation->unk79B != 3) {
-            arg0->spriteIndex = allocation->unk7A1 + 0x1D;
+    if (allocation->shopState < 0xF) {
+        if (allocation->shopState != 3) {
+            arg0->frameIndex = allocation->selectedCategoryIndex + 0x1D;
 
-            if (allocation->unk79B == 4) {
-                if (allocation->unk77C & 1) {
+            if (allocation->shopState == 4) {
+                if (allocation->delayTimer & 1) {
                     temp = 0xFF;
-                    arg0->unkD = temp;
+                    arg0->overridePaletteCount = temp;
                 } else {
-                    arg0->unkD = 0;
+                    arg0->overridePaletteCount = 0;
                 }
             }
 
@@ -1083,23 +768,13 @@ void updateBoardShopRowSelectorArrow(BoardShopRowSelectorArrowState *arg0) {
     }
 }
 
-void cleanupBoardShopRowSelectorArrow(BoardShopRowSelectorArrowCleanupArg *arg0) {
-    arg0->asset = freeNodeMemory(arg0->asset);
+void cleanupBoardShopRowSelectorArrow(TextRenderArg *arg0) {
+    arg0->spriteData = freeNodeMemory(arg0->spriteData);
 }
 
-typedef struct {
-    s16 x;
-    s16 y;
-    void *asset;
-    s16 spriteIndex;
-    s16 alpha;
-    s8 unkC;
-    s8 unkD;
-} BoardShopColumnSelectorArrowState;
+void updateBoardShopColumnSelectorArrow(TextRenderArg *arg0);
 
-void updateBoardShopColumnSelectorArrow(BoardShopColumnSelectorArrowState *arg0);
-
-void initBoardShopColumnSelectorArrow(BoardShopColumnSelectorArrowState *arg0) {
+void initBoardShopColumnSelectorArrow(TextRenderArg *arg0) {
     void *asset;
 
     getCurrentAllocation();
@@ -1107,32 +782,32 @@ void initBoardShopColumnSelectorArrow(BoardShopColumnSelectorArrowState *arg0) {
     setCleanupCallback(&cleanupBoardShopColumnSelectorArrow);
     arg0->x = -8;
     arg0->y = 8;
-    arg0->spriteIndex = 0x24;
-    arg0->alpha = 0xFF;
-    arg0->unkC = 0;
-    arg0->unkD = 0;
-    arg0->asset = asset;
+    arg0->frameIndex = 0x24;
+    arg0->color.paletteAndAlphaSigned = 0xFF;
+    arg0->tileMode = 0;
+    arg0->overridePaletteCount = 0;
+    arg0->spriteData = asset;
     setCallback(&updateBoardShopColumnSelectorArrow);
 }
 
-void updateBoardShopColumnSelectorArrow(BoardShopColumnSelectorArrowState *arg0) {
-    BoardShopRowSelectorArrowAllocation *allocation;
+void updateBoardShopColumnSelectorArrow(TextRenderArg *arg0) {
+    BoardShopState *allocation;
     u8 state;
     u8 temp;
 
     allocation = getCurrentAllocation();
-    state = allocation->unk79B;
+    state = allocation->shopState;
 
     if (state < 0xF) {
         if ((state >= 5) && (state != 6)) {
-            arg0->spriteIndex = allocation->unk7A2 + 0x24;
+            arg0->frameIndex = allocation->selectedBoard.signedIndex + 0x24;
 
-            if (allocation->unk79B == 7) {
-                if (allocation->unk77C & 1) {
+            if (allocation->shopState == 7) {
+                if (allocation->delayTimer & 1) {
                     temp = 0xFF;
-                    arg0->unkD = temp;
+                    arg0->overridePaletteCount = temp;
                 } else {
-                    arg0->unkD = 0;
+                    arg0->overridePaletteCount = 0;
                 }
             }
 
@@ -1141,14 +816,8 @@ void updateBoardShopColumnSelectorArrow(BoardShopColumnSelectorArrowState *arg0)
     }
 }
 
-typedef struct {
-    void *unk0;
-    void *asset;
-} BoardShopColumnSelectorArrowCleanupArg;
-
-void cleanupBoardShopColumnSelectorArrow(void *arg0) {
-    BoardShopColumnSelectorArrowCleanupArg *temp = arg0;
-    temp->asset = freeNodeMemory(temp->asset);
+void cleanupBoardShopColumnSelectorArrow(TextRenderArg *arg0) {
+    arg0->spriteData = freeNodeMemory(arg0->spriteData);
 }
 
 void initBoardShopExitOverlay(SpriteRenderArg *arg0) {
@@ -1162,10 +831,10 @@ void initBoardShopExitOverlay(SpriteRenderArg *arg0) {
 }
 
 void updateBoardShopExitOverlay(void *arg0) {
-    BoardShopScreenAllocation *allocation;
+    BoardShopState *allocation;
 
     allocation = getCurrentAllocation();
-    if (allocation->unk788[0x13] == 0x19) {
+    if (allocation->shopState == 0x19) {
         pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_FINAL, &renderSpriteFrame, arg0);
     }
 }
@@ -1184,20 +853,20 @@ void initBoardShopGoldDisplay(BoardShopGoldDisplayState *arg0) {
     for (i = 0; i < 7; i++) {
         arg0->digits[i].x = 0x48 + (i * 8);
         arg0->digits[i].y = 0x58;
-        arg0->digits[i].asset = digitAsset;
+        arg0->digits[i].spriteData = digitAsset;
     }
 
-    arg0->iconX = 0x38;
-    arg0->iconY = 0x58;
-    arg0->unk5C = 0;
-    arg0->unk5E = 0;
-    arg0->iconAsset = iconAsset;
+    arg0->icon.x = 0x38;
+    arg0->icon.y = 0x58;
+    arg0->icon.frameIndex = 0;
+    arg0->icon.paletteIndex = 0;
+    arg0->icon.spriteData = iconAsset;
 
     setCallback(&updateBoardShopGoldDisplay);
 }
 
 void updateBoardShopGoldDisplay(BoardShopGoldDisplayState *arg0) {
-    BoardShopGoldDigitState *digit;
+    SpriteRenderArg *digit;
     s32 space;
     s32 i;
     s32 colorStyle;
@@ -1206,13 +875,13 @@ void updateBoardShopGoldDisplay(BoardShopGoldDisplayState *arg0) {
         colorStyle = 1;
         i = 6;
         do {
-            arg0->digits[i].colorStyle = colorStyle;
+            arg0->digits[i].paletteIndex = colorStyle;
         } while (--i >= 0);
     } else {
         colorStyle = 2;
         i = 6;
         do {
-            arg0->digits[i].colorStyle = colorStyle;
+            arg0->digits[i].paletteIndex = colorStyle;
         } while (--i >= 0);
     }
 
@@ -1224,22 +893,22 @@ void updateBoardShopGoldDisplay(BoardShopGoldDisplayState *arg0) {
 
     for (; i < 7; i++) {
         if (arg0->goldString[i] != space) {
-            digit->digitValue = arg0->goldString[i] - 0x30;
+            digit->frameIndex = arg0->goldString[i] - 0x30;
             pushViewportCallbackBySlot(9, VIEWPORT_CALLBACK_LAYER_FINAL, renderSpriteFrameWithPalette, digit);
         }
         digit++;
     }
 
-    pushViewportCallbackBySlot(9, VIEWPORT_CALLBACK_LAYER_FINAL, renderSpriteFrameWithPalette, &arg0->iconX);
+    pushViewportCallbackBySlot(9, VIEWPORT_CALLBACK_LAYER_FINAL, renderSpriteFrameWithPalette, &arg0->icon);
 }
 
-void cleanupBoardShopGoldDisplay(BoardShopGoldDisplayCleanupArg *arg0) {
-    arg0->unk4 = freeNodeMemory(arg0->unk4);
-    arg0->unk58 = freeNodeMemory(arg0->unk58);
+void cleanupBoardShopGoldDisplay(BoardShopGoldDisplayState *arg0) {
+    arg0->digits[0].spriteData = freeNodeMemory(arg0->digits[0].spriteData);
+    arg0->icon.spriteData = freeNodeMemory(arg0->icon.spriteData);
 }
 
 void initBoardShopBoardIcons(BoardShopBoardIconsState *arg0) {
-    BoardShopScreenAllocation *state;
+    BoardShopState *state;
     void *spriteAsset;
     s32 i;
     u8 boardIndex;
@@ -1248,35 +917,35 @@ void initBoardShopBoardIcons(BoardShopBoardIconsState *arg0) {
     spriteAsset = loadCompressedData(&snowflakeSprite_ROM_START, &snowflakeSprite_ROM_END, 0x9488);
 
     for (i = 0; i < 4; i++) {
-        arg0->icons[i].x = 0x60;
-        arg0->icons[i].y = -0x91;
+        arg0->sprites[i].x = 0x60;
+        arg0->sprites[i].y = -0x91;
 
-        boardIndex = state->unk784[i];
-        boardIndex = state->unk788[boardIndex];
+        boardIndex = state->boardDisplayIndices[i];
+        boardIndex = state->boardIndexMap[boardIndex];
 
-        arg0->icons[i].spriteIndex = boardIndex;
-        arg0->icons[i].scaleX = 0x400;
-        arg0->icons[i].scaleY = 0x400;
-        arg0->icons[i].rotation = 0;
-        arg0->icons[i].alpha = 0xFF;
-        arg0->icons[i].unk13 = 0;
-        arg0->icons[i].unk12 = 0;
-        arg0->icons[i].flipX = 0;
-        arg0->icons[i].asset = spriteAsset;
-        arg0->animationCounters[i] = 0;
+        arg0->sprites[i].frameIndex = boardIndex;
+        arg0->sprites[i].scaleX = 0x400;
+        arg0->sprites[i].scaleY = 0x400;
+        arg0->sprites[i].rotation = 0;
+        arg0->sprites[i].alpha.value = 0xFF;
+        arg0->sprites[i].overridePaletteCount = 0;
+        arg0->sprites[i].tileMode = 0;
+        arg0->sprites[i].flipX = 0;
+        arg0->sprites[i].spriteData = spriteAsset;
+        arg0->animation.animationCounters[i] = 0;
     }
 
     arg0->priceTextX = 0x58;
     arg0->priceTextY = -0x2A;
     arg0->priceTextStyle = 0;
-    arg0->priceTextPtr = &arg0->priceTextBuffer;
+    arg0->priceTextPtr = arg0->priceTextBuffer;
 
     setCleanupCallback(&cleanupBoardShopBoardIcons);
     setCallback(&animateBoardShopBoardIconsSlideIn);
 }
 
 void animateBoardShopBoardIconsSlideIn(BoardShopBoardIconsState *arg0) {
-    func_80032628_alloc *allocation;
+    BoardShopState *allocation;
     s32 animatingCount;
     s32 i;
     s16 currentY;
@@ -1287,84 +956,94 @@ void animateBoardShopBoardIconsSlideIn(BoardShopBoardIconsState *arg0) {
     animatingCount = 0;
 
     for (i = 0; i < 4; i++) {
-        currentY = arg0->icons[i].y;
+        currentY = arg0->sprites[i].y;
         if (currentY < boardIconTargetYPositions[i]) {
             delta = boardIconTargetYPositions[i] - currentY;
             absDelta = ABS(delta);
             if (absDelta >= 20) {
-                arg0->icons[i].y = currentY + 20;
+                arg0->sprites[i].y = currentY + 20;
             } else {
-                arg0->icons[i].y = currentY + absDelta;
+                arg0->sprites[i].y = currentY + absDelta;
             }
             animatingCount++;
         }
-        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderFlippedScaledSpriteFrame, &arg0->icons[i]);
+        pushViewportCallbackBySlot(
+            8,
+            VIEWPORT_CALLBACK_LAYER_INITIAL,
+            renderFlippedScaledSpriteFrame,
+            &arg0->sprites[i]
+        );
     }
 
     if ((animatingCount & 0xFF) == 0) {
-        allocation->unk77C = 1;
+        allocation->delayTimer = 1;
         setCallback(updateBoardShopBoardIconSelection);
     }
 }
 
-void updateBoardShopBoardIconSelection(BoardShopIconSelectionState *arg0) {
-    BoardShopSelectionAllocation *state;
+void updateBoardShopBoardIconSelection(BoardShopBoardIconsState *arg0) {
+    BoardShopState *state;
     s32 i;
     int new_var;
     u8 temp;
     s16 adjustment;
     state = getCurrentAllocation();
     for (i = 0; i < 4; i++) {
-        if (state->selectedIconIndex == i) {
-            arg0->icons[i].alpha = 0xFF;
-            if (state->frameCounter >= 5) {
-                temp = arg0->animationCounters[i];
+        if (state->selectedSlot == i) {
+            arg0->sprites[i].alpha.value = 0xFF;
+            if (state->delayTimer >= 5) {
+                temp = arg0->animation.animationCounters[i];
                 if (temp < 30) {
                     adjustment = D_8008F184_8FD84[temp / 10];
-                    arg0->icons[i].scaleX = arg0->icons[i].scaleX + adjustment;
+                    arg0->sprites[i].scaleY = arg0->sprites[i].scaleY + adjustment;
                 } else {
                     adjustment = D_8008F184_8FD84[2 - ((temp - 30) / 10)];
-                    arg0->icons[i].scaleX = arg0->icons[i].scaleX - adjustment;
+                    arg0->sprites[i].scaleY = arg0->sprites[i].scaleY - adjustment;
                 }
-                arg0->animationCounters[i]++;
-                temp = arg0->animationCounters[i];
+                arg0->animation.animationCounters[i]++;
+                temp = arg0->animation.animationCounters[i];
                 if (temp == 60) {
-                    arg0->animationCounters[i] = 0;
-                    arg0->icons[i].scaleX = 0x400;
+                    arg0->animation.animationCounters[i] = 0;
+                    arg0->sprites[i].scaleY = 0x400;
                 } else if (temp == 30) {
-                    arg0->icons[i].flipX = (arg0->icons[i].flipX + 1) & 1;
+                    arg0->sprites[i].flipX = (arg0->sprites[i].flipX + 1) & 1;
                 }
             }
         } else {
-            arg0->icons[i].alpha = 0x80;
-            arg0->animationCounters[i] = 0;
-            arg0->icons[i].flipX = 0;
-            arg0->icons[i].scaleX = 0x400;
+            arg0->sprites[i].alpha.value = 0x80;
+            arg0->animation.animationCounters[i] = 0;
+            arg0->sprites[i].flipX = 0;
+            arg0->sprites[i].scaleY = 0x400;
         }
-        pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderFlippedScaledSpriteFrame, &arg0->icons[i]);
+        pushViewportCallbackBySlot(
+            8,
+            VIEWPORT_CALLBACK_LAYER_INITIAL,
+            renderFlippedScaledSpriteFrame,
+            &arg0->sprites[i]
+        );
     }
 
     if (state->shopState == 0x11) {
         for (i = 0; i < 4; i++) {
-            arg0->icons[i].alpha = 0x80;
-            arg0->icons[i].scaleX = 0x400;
-            arg0->icons[i].flipX = 0;
-            arg0->icons[i].spriteIndex = state->unk788[state->unk784[i]];
+            arg0->sprites[i].alpha.value = 0x80;
+            arg0->sprites[i].scaleY = 0x400;
+            arg0->sprites[i].flipX = 0;
+            arg0->sprites[i].frameIndex = state->boardIndexMap[state->boardDisplayIndices[i]];
         }
 
-        arg0->animationCounters[0] = 1;
+        arg0->animation.animationCounters[0] = 1;
         setCallback(animateBoardShopBoardIconsSlideOut);
     } else if (state->shopState == 0x13) {
         new_var = 0x400;
         for (i = 3; i >= 0; i--) {
-            arg0->icons[i].scaleX = new_var;
+            arg0->sprites[i].scaleY = new_var;
         }
 
         setCallback(initBoardShopCharacterPortraitsSlideIn);
     } else {
-        temp = state->unk788[state->unk784[state->selectedIconIndex]];
-        sprintf(&arg0->priceTextBuffer, &D_8009E480_9F080, D_8008F150_8FD50[temp]);
-        arg0->priceTextY = (state->selectedIconIndex * 0x28) - 0x2A;
+        temp = state->boardIndexMap[state->boardDisplayIndices[state->selectedSlot]];
+        sprintf(arg0->priceTextBuffer, &D_8009E480_9F080, D_8008F150_8FD50[temp]);
+        arg0->priceTextY = (state->selectedSlot * 0x28) - 0x2A;
         pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_FINAL, renderTextPalette, &arg0->priceTextX);
         if (state->shopState == 0x14) {
             setCallback(blinkBoardShopBoardIconConfirmation);
@@ -1372,8 +1051,8 @@ void updateBoardShopBoardIconSelection(BoardShopIconSelectionState *arg0) {
     }
 }
 
-void blinkBoardShopBoardIconConfirmation(BoardShopIconSelectionState *arg0) {
-    BoardShopSelectionAllocation *state;
+void blinkBoardShopBoardIconConfirmation(BoardShopBoardIconsState *arg0) {
+    BoardShopState *state;
     s32 i;
     u8 temp;
     s16 temp2;
@@ -1381,51 +1060,51 @@ void blinkBoardShopBoardIconConfirmation(BoardShopIconSelectionState *arg0) {
     state = getCurrentAllocation();
 
     for (i = 0; i < 4; i++) {
-        arg0->icons[i].scaleX = 0x400;
-        arg0->animationCounters[i] = 0;
+        arg0->sprites[i].scaleY = 0x400;
+        arg0->animation.animationCounters[i] = 0;
         temp2 = 0xFF;
 
-        if (state->selectedIconIndex == i) {
-            arg0->icons[i].alpha = 0xFF;
-            arg0->icons[i].unk13 = 0;
+        if (state->selectedSlot == i) {
+            arg0->sprites[i].alpha.value = 0xFF;
+            arg0->sprites[i].overridePaletteCount = 0;
             if (state->shopState == 0x14) {
-                if ((state->frameCounter & 1) != 0) {
+                if ((state->delayTimer & 1) != 0) {
                     __asm__ volatile("" ::: "memory");
-                    arg0->icons[i].unk13 = temp2;
+                    arg0->sprites[i].overridePaletteCount = temp2;
                 }
             }
         } else {
-            arg0->icons[i].alpha = 0x80;
+            arg0->sprites[i].alpha.value = 0x80;
         }
 
         pushViewportCallbackBySlot(
             8,
             VIEWPORT_CALLBACK_LAYER_INITIAL,
             &renderFlippedScaledSpriteFrame,
-            &arg0->icons[i]
+            &arg0->sprites[i]
         );
     }
 
-    temp = state->unk784[state->selectedIconIndex];
-    temp = state->unk788[temp];
+    temp = state->boardDisplayIndices[state->selectedSlot];
+    temp = state->boardIndexMap[temp];
 
-    sprintf(&arg0->priceTextBuffer, &D_8009E480_9F080, D_8008F150_8FD50[temp]);
-    arg0->priceTextY = state->selectedIconIndex * 0x28 - 0x2A;
+    sprintf(arg0->priceTextBuffer, &D_8009E480_9F080, D_8008F150_8FD50[temp]);
+    arg0->priceTextY = state->selectedSlot * 0x28 - 0x2A;
     pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_FINAL, &renderTextPalette, &arg0->priceTextX);
     if (state->shopState < 0x14) {
         setCallback(&updateBoardShopBoardIconSelection);
     }
 }
 
-void initBoardShopCharacterPortraitsSlideIn(BoardShopCharacterPortraitState *arg0) {
-    BoardShopScreenAllocation *allocation;
+void initBoardShopCharacterPortraitsSlideIn(BoardShopBoardIconsState *arg0) {
+    BoardShopState *allocation;
     s32 i;
     s32 startX;
     s16 currentX;
 
     allocation = getCurrentAllocation();
 
-    if (allocation->unk79C == 1) {
+    if (allocation->scrollDirection == 1) {
         startX = -0x11;
     } else {
         startX = -0x61;
@@ -1435,14 +1114,14 @@ void initBoardShopCharacterPortraitsSlideIn(BoardShopCharacterPortraitState *arg
     currentX = startX;
 
     for (i = 0; i < 4; i++) {
-        arg0->portraits[i].x = currentX;
-        arg0->portraits[i].spriteIndex = allocation->unk788[allocation->unk784[i]];
-        arg0->animationFrameCounters[i] = 0;
+        arg0->sprites[i].y = currentX;
+        arg0->sprites[i].frameIndex = allocation->boardIndexMap[allocation->boardDisplayIndices[i]];
+        arg0->animation.portraitFrameCounters[i] = 0;
         pushViewportCallbackBySlot(
             8,
             VIEWPORT_CALLBACK_LAYER_INITIAL,
             &renderFlippedScaledSpriteFrame,
-            &arg0->portraits[i]
+            &arg0->sprites[i]
         );
         currentX += 0x28;
     }
@@ -1450,94 +1129,94 @@ void initBoardShopCharacterPortraitsSlideIn(BoardShopCharacterPortraitState *arg
     setCallback(&animateBoardShopCharacterPortraitsSlideIn);
 }
 
-void animateBoardShopCharacterPortraitsSlideIn(BoardShopCharacterPortraitState *arg0) {
-    BoardShopScreenAllocation *gameState;
+void animateBoardShopCharacterPortraitsSlideIn(BoardShopBoardIconsState *arg0) {
+    BoardShopState *gameState;
     s32 i;
 
     gameState = getCurrentAllocation();
 
     for (i = 0; i < 4; i++) {
-        arg0->animationFrameCounters[i]++;
+        arg0->animation.portraitFrameCounters[i]++;
 
-        if (gameState->unk79C == 1) {
-            arg0->portraits[i].x -= 10;
+        if (gameState->scrollDirection == 1) {
+            arg0->sprites[i].y -= 10;
         } else {
-            arg0->portraits[i].x += 10;
+            arg0->sprites[i].y += 10;
         }
 
         pushViewportCallbackBySlot(
             8,
             VIEWPORT_CALLBACK_LAYER_INITIAL,
             &renderFlippedScaledSpriteFrame,
-            &arg0->portraits[i]
+            &arg0->sprites[i]
         );
     }
 
-    if (arg0->animationFrameCounters[0] == 4) {
-        gameState->unk788[19] = 0x10;
+    if (arg0->animation.portraitFrameCounters[0] == 4) {
+        gameState->shopState = 0x10;
 
         for (i = 0; i < 4; i++) {
-            arg0->animationFrameCounters[i] = 0;
+            arg0->animation.portraitFrameCounters[i] = 0;
         }
 
         setCallback(&updateBoardShopBoardIconSelection);
     }
 }
 
-void animateBoardShopBoardIconsSlideOut(BoardShopBoardIconsSlideOutState *arg0) {
-    BoardShopSlideOutAllocation *allocation;
-    BoardShopSlideOutIconState *icons;
+void animateBoardShopBoardIconsSlideOut(BoardShopBoardIconsState *arg0) {
+    BoardShopState *allocation;
+    FlippedScaledSpriteArg *icons;
     u8 slideCount;
     s32 i;
 
-    allocation = (BoardShopSlideOutAllocation *)getCurrentAllocation();
+    allocation = getCurrentAllocation();
 
-    icons = &arg0->icons[0];
+    icons = arg0->sprites;
     for (i = 0; i < 4; i++) {
-        if (i >= (4 - arg0->slidingIconCount)) {
+        if (i >= (4 - arg0->animation.slideOut.slidingIconCount)) {
             icons[i].y -= 0x14;
             if (i != 0) {
-                slideCount = arg0->slidingIconCount & 0xFF;
-                if (arg0->icons[4 - slideCount].y == arg0->icons[3 - slideCount].y) {
-                    arg0->slidingIconCount++;
+                slideCount = arg0->animation.slideOut.slidingIconCount & 0xFF;
+                if (arg0->sprites[4 - slideCount].y == arg0->sprites[3 - slideCount].y) {
+                    arg0->animation.slideOut.slidingIconCount++;
                 }
             }
         }
         pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderFlippedScaledSpriteFrame, &icons[i]);
     }
 
-    if (arg0->icons[0].y < (-0x88)) {
-        allocation->animationComplete = 1;
+    if (arg0->sprites[0].y < (-0x88)) {
+        allocation->delayTimer = 1;
         terminateCurrentTask();
     }
 }
 
 void cleanupBoardShopBoardIcons(BoardShopBoardIconsState *arg0) {
-    arg0->icons[0].asset = freeNodeMemory(arg0->icons[0].asset);
+    arg0->sprites[0].spriteData = freeNodeMemory(arg0->sprites[0].spriteData);
 }
 
 void initBoardShopSnowflakeSlideIn(BoardShopSnowflakeSpriteState *arg0) {
     void *snowflakeAsset;
-    BoardShopScreenAllocation *allocation = getCurrentAllocation();
+    BoardShopState *allocation = getCurrentAllocation();
 
     snowflakeAsset = loadCompressedData(&snowflakeSprite_ROM_START, &snowflakeSprite_ROM_END, 0x9488);
 
-    arg0->x = 0x60;
-    arg0->spriteIndex = allocation->unk788[allocation->scrollOutBoardIndex];
-    arg0->scaleX = 0x400;
-    arg0->scaleY = 0x400;
-    arg0->rotation = 0;
-    arg0->alpha = 0x80;
-    arg0->unk13 = 0;
-    arg0->unk12 = 0;
-    arg0->flipX = 0;
-    arg0->asset = snowflakeAsset;
-    arg0->frameCounter = 0;
+    arg0->sprite.x = 0x60;
+    arg0->sprite.frameIndex = allocation->boardIndexMap[allocation->scrollOutBoardIndex];
+    arg0->sprite.scaleX = 0x400;
+    arg0->sprite.scaleY = 0x400;
+    arg0->sprite.rotation = 0;
+    arg0->sprite.alpha.value = 0x80;
+    arg0->sprite.overridePaletteCount = 0;
+    arg0->sprite.tileMode = 0;
+    arg0->sprite.flipX = 0;
+    arg0->sprite.spriteData = snowflakeAsset;
+    arg0->task.frameCounter = 0;
 
-    if (allocation->unk79C != 1) {
-        arg0->y = 0x3F;
+    if (allocation->scrollDirection != 1) {
+        arg0->sprite.y = 0x3F;
     } else {
-        arg0->y = -0x39;
+        arg0->sprite.y = -0x39;
     }
 
     setCleanupCallback(&cleanupBoardShopSnowflakeSprite);
@@ -1549,19 +1228,19 @@ void queueBoardShopSnowflakeRender(void *arg0) {
     setCallback(&animateBoardShopSnowflakeSlideIn);
 }
 
-void animateBoardShopSnowflakeSlideIn(BoardShopSnowflakeAnimState *arg0) {
-    BoardShopSnowflakeAnimAllocation *allocation = (BoardShopSnowflakeAnimAllocation *)getCurrentAllocation();
+void animateBoardShopSnowflakeSlideIn(BoardShopSnowflakeSpriteState *arg0) {
+    BoardShopState *allocation = getCurrentAllocation();
 
-    arg0->frameCounter++;
-    if (allocation->unk79C == 1) {
-        arg0->y = arg0->y - 0x14;
+    arg0->task.frameCounter++;
+    if (allocation->scrollDirection == 1) {
+        arg0->sprite.y = arg0->sprite.y - 0x14;
     } else {
-        arg0->y = arg0->y + 0x14;
+        arg0->sprite.y = arg0->sprite.y + 0x14;
     }
 
-    pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderFlippedScaledSpriteFrame, arg0);
+    pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderFlippedScaledSpriteFrame, &arg0->sprite);
 
-    if (arg0->frameCounter == 4) {
+    if (arg0->task.frameCounter == 4) {
         terminateCurrentTask();
     }
 }
@@ -1583,31 +1262,31 @@ void initBoardShopTitleText(BoardShopTitleTextState *arg0) {
     setCallback(&updateBoardShopTitleText);
 }
 
-void updateBoardShopTitleText(BoardShopTitleTextUpdateArg *arg0) {
-    BoardShopTitleCornersAllocation *allocation = (BoardShopTitleCornersAllocation *)getCurrentAllocation();
+void updateBoardShopTitleText(BoardShopTitleTextState *arg0) {
+    BoardShopState *allocation = getCurrentAllocation();
     u16 *new_var;
 
-    if (allocation->titleCornersVisible != 0) {
+    if (allocation->viewMode != 0) {
         new_var = D_8008F200_8FE00.unkA;
-        arg0->textWidth = new_var[allocation->titleCornersVisible];
+        arg0->textWidth = new_var[allocation->viewMode];
         // this makes no sense but it matches
         new_var = (void *)&renderTextLayout;
-        arg0->textData = D_8008F200_8FE00.unk0[allocation->titleCornersVisible];
+        arg0->textData = (void *)D_8008F200_8FE00.unk0[allocation->viewMode];
         pushViewportCallbackBySlot(9, VIEWPORT_CALLBACK_LAYER_FINAL, new_var, arg0);
     }
 }
 
-void cleanupBoardShopTitleText(BoardShopTitleTextCleanupArg *arg0) {
+void cleanupBoardShopTitleText(BoardShopTitleTextState *arg0) {
     arg0->textAsset = freeNodeMemory(arg0->textAsset);
 }
 
-void initBoardShopTitleCorners(BoardShopTitleCornerState *arg0) {
+void initBoardShopTitleCorners(TextRenderArg *arg0) {
     s32 i;
     void *cornerAsset = loadCompressedData(&uiCornerSprites_ROM_START, &uiCornerSprites_ROM_END, 0x1548);
     setCleanupCallback(&cleanupBoardShopTitleCorners);
 
     for (i = 0; i < 4; i++) {
-        BoardShopTitleCornerState *corner = &arg0[i];
+        TextRenderArg *corner = &arg0[i];
 
         if (i % 2 != 0) {
             corner->x = -0x80;
@@ -1616,26 +1295,26 @@ void initBoardShopTitleCorners(BoardShopTitleCornerState *arg0) {
         }
 
         corner->y = (s16)(((i / 2) * 0x10) - 0x66);
-        corner->asset = cornerAsset;
-        corner->spriteIndex = i;
-        corner->alpha = 0xFF;
-        corner->unkD = 0;
-        corner->visible = 1;
+        corner->spriteData = cornerAsset;
+        corner->frameIndex = i;
+        corner->color.paletteAndAlphaSigned = 0xFF;
+        corner->overridePaletteCount = 0;
+        corner->tileMode = 1;
     }
 
     setCallback(&updateBoardShopTitleCorners);
 }
 
-void updateBoardShopTitleCorners(BoardShopTitleCornerState *arg0) {
+void updateBoardShopTitleCorners(TextRenderArg *arg0) {
     s32 i;
 
-    if (((BoardShopTitleCornersAllocation *)getCurrentAllocation())->titleCornersVisible != NULL) {
+    if (((BoardShopState *)getCurrentAllocation())->viewMode != 0) {
         for (i = 0; i < 4; i++) {
             pushViewportCallbackBySlot(9, VIEWPORT_CALLBACK_LAYER_OPAQUE, &renderTextSprite, &arg0[i]);
         }
     }
 }
 
-void cleanupBoardShopTitleCorners(BoardShopTitleCornerState *arg0) {
-    arg0->asset = freeNodeMemory(arg0->asset);
+void cleanupBoardShopTitleCorners(TextRenderArg *arg0) {
+    arg0->spriteData = freeNodeMemory(arg0->spriteData);
 }
