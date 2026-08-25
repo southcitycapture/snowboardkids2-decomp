@@ -27,7 +27,7 @@ typedef struct {
     /* 0x1E8 */ SpriteSheetData *racdymFootprintSpriteAsset;
     /* 0x1EC */ TileMapScrollRenderState atlusLogoRenderState;
     /* 0x218 */ TileMapScrollRenderState racdymLogoRenderState;
-    /* 0x244 */ FrameSpriteEntry footprintSprites[6];
+    /* 0x244 */ TransformedSpriteArg footprintSprites[6];
     /* 0x2D4 */ s32 footprintAlphaAccumulators[6];
     /* 0x2EC */ u8 padding2EC[4];
 } LogoSplashState;

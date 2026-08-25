@@ -252,7 +252,7 @@ void updateSaveSlotStatSprites(SaveSlotStatSpritesState *arg0) {
         if (arg0->slotIndex == three) {
             arg0->entries[i].overridePaletteCount = allocation->selectedSaveSlot + 1;
         }
-        arg0->entries[i].color.paletteAndAlpha = alpha;
+        arg0->entries[i].paletteEffect.value = alpha;
         if (i >= 7) {
             arg0->entries[i].tileMode = 1;
         } else {
@@ -290,7 +290,7 @@ void initSaveSlotNameEntryGrid(SaveSlotGridState *state) {
 
     for (i = 0; i < 0x37; i++) {
         state->entries[i].spriteData = spriteSheet;
-        state->entries[i].color.paletteAndAlpha = 0xFF;
+        state->entries[i].paletteEffect.value = 0xFF;
         state->entries[i].overridePaletteCount = 0;
     }
 
@@ -376,7 +376,7 @@ void initSaveSlotItemIcons(SaveSlotItemIconsState *arg0) {
     s16 yPos;
 
     allocation = getCurrentAllocation();
-    arg0->icons = (TextRenderArg *)allocateNodeMemory(0xF0);
+    arg0->icons = (PaletteSpriteArg *)allocateNodeMemory(0xF0);
     arg0->spriteSheet = loadCompressedData(&uiFontSpriteSheet_ROM_START, &uiFontSpriteSheet_ROM_END, 0x2278);
     arg0->slotHasData = allocation->slotStatus.displaySlotActive[arg0->slotIndex];
     setCleanupCallback(cleanupSaveSlotItemIcons);
@@ -387,7 +387,7 @@ void initSaveSlotItemIcons(SaveSlotItemIconsState *arg0) {
         arg0->icons[i].y = yPos;
         arg0->icons[i].spriteData = arg0->spriteSheet;
         arg0->icons[i].frameIndex = 5;
-        arg0->icons[i].color.paletteAndAlpha = 0xFF;
+        arg0->icons[i].paletteEffect.value = 0xFF;
         arg0->icons[i].overridePaletteCount = 0;
         arg0->icons[i].tileMode = 0;
     }
@@ -437,33 +437,33 @@ void updateSaveSlotItemIcons(SaveSlotItemIconsState *arg0) {
                 if (allocation->slotData[slotIndex].levelUnlockStatus[i] == 1) {
                     animFrame = arg0->animFrame;
                     if (animFrame < 0x10) {
-                        arg0->icons[i].color.paletteAndAlpha = alphaCheck - ((animFrame + 1) * 8);
+                        arg0->icons[i].paletteEffect.value = alphaCheck - ((animFrame + 1) * 8);
                     } else if (animFrame != 0x1F) {
-                        arg0->icons[i].color.paletteAndAlpha = (animFrame * 8) | 6;
+                        arg0->icons[i].paletteEffect.value = (animFrame * 8) | 6;
                     } else {
-                        arg0->icons[i].color.paletteAndAlpha = alphaCheck;
+                        arg0->icons[i].paletteEffect.value = alphaCheck;
                     }
                 } else {
-                    arg0->icons[i].color.paletteAndAlpha = 0x60;
+                    arg0->icons[i].paletteEffect.value = 0x60;
                 }
             } else {
                 if (allocation->slotData[3].levelUnlockStatus[i] == 1) {
-                    arg0->icons[i].color.paletteAndAlpha = alphaCheck;
+                    arg0->icons[i].paletteEffect.value = alphaCheck;
                 } else {
-                    arg0->icons[i].color.paletteAndAlpha = 0x60;
+                    arg0->icons[i].paletteEffect.value = 0x60;
                 }
             }
         } else {
-            arg0->icons[i].color.paletteAndAlpha = alpha;
+            arg0->icons[i].paletteEffect.value = alpha;
             if (alphaCheck == 0xFF && allocation->saveSlotMenuState != 2) {
                 if (allocation->slotData[arg0->slotIndex].levelUnlockStatus[i] == 1) {
-                    arg0->icons[i].color.paletteAndAlpha = 0xFE;
+                    arg0->icons[i].paletteEffect.value = 0xFE;
                 } else {
-                    arg0->icons[i].color.paletteAndAlpha = 0x60;
+                    arg0->icons[i].paletteEffect.value = 0x60;
                 }
             } else if (alphaCheck == 0x60) {
                 if (allocation->slotData[arg0->slotIndex].levelUnlockStatus[i] != 1) {
-                    arg0->icons[i].color.paletteAndAlpha = 0x30;
+                    arg0->icons[i].paletteEffect.value = 0x30;
                 }
             }
         }
@@ -585,7 +585,7 @@ void initSaveSlotItemLabels(SaveSlotNumberLabelsState *arg0) {
             arg0->sprites[i - 9].y = itemY;
             arg0->sprites[i - 9].spriteData = spriteSheet;
             arg0->sprites[i - 9].frameIndex = i + 4;
-            arg0->sprites[i - 9].color.paletteAndAlpha = 0xFF;
+            arg0->sprites[i - 9].paletteEffect.value = 0xFF;
             arg0->sprites[i - 9].overridePaletteCount = 0;
             arg0->sprites[i - 9].tileMode = 0;
         }
@@ -624,7 +624,7 @@ void updateSaveSlotNumberLabels(SaveSlotNumberLabelsState *arg0) {
         if (i < 9) {
             arg0->texts[i].shade.value = alpha;
         } else {
-            arg0->sprites[i - 9].color.paletteAndAlpha = alpha;
+            arg0->sprites[i - 9].paletteEffect.value = alpha;
         }
 
         if ((alphaCheck == 0xFF) && (allocation->saveSlotMenuState != 2)) {
@@ -632,19 +632,19 @@ void updateSaveSlotNumberLabels(SaveSlotNumberLabelsState *arg0) {
                 if (i < 9) {
                     arg0->texts[i].shade.value = 0xFE;
                 } else {
-                    arg0->sprites[i - 9].color.paletteAndAlpha = 0xFE;
+                    arg0->sprites[i - 9].paletteEffect.value = 0xFE;
                 }
             } else if (i < 9) {
                 arg0->texts[i].shade.value = 0x60;
             } else {
-                arg0->sprites[i - 9].color.paletteAndAlpha = 0x60;
+                arg0->sprites[i - 9].paletteEffect.value = 0x60;
             }
         } else if (alphaCheck == 0x60) {
             if (allocation->slotData[arg0->slotIndex].levelUnlockStatus[i] != 1) {
                 if (i < 9) {
                     arg0->texts[i].shade.value = 0x30;
                 } else {
-                    arg0->sprites[i - 9].color.paletteAndAlpha = 0x30;
+                    arg0->sprites[i - 9].paletteEffect.value = 0x30;
                 }
             }
         }
@@ -818,10 +818,10 @@ void initSaveSlotGoldDisplay(SaveSlotGoldDisplayState *arg0) {
         arg0->icons[i].y = 0x10;
         arg0->icons[i].spriteData = goldIconAsset;
         arg0->icons[i].frameIndex = 0;
-        arg0->icons[i].renderWidth = 0x555;
-        arg0->icons[i].renderHeight = 0x555;
-        arg0->icons[i].padding0E = 0;
-        arg0->icons[i].shade.shadeWithPadding = 0xFF;
+        arg0->icons[i].scaleX = 0x555;
+        arg0->icons[i].scaleY = 0x555;
+        arg0->icons[i].mode.shaded.rotation = 0;
+        arg0->icons[i].mode.shaded.shade.value = 0xFF;
         arg0->icons[i].overridePaletteCount = 0;
         arg0->icons[i].tileMode = 0;
 
@@ -846,11 +846,11 @@ void updateSaveSlotGoldDisplay(SaveSlotGoldDisplayState *state) {
             state->text[i].x = 0x1D;
             state->text[i].shade.value = 0x60;
             state->icons[i].frameIndex = 0;
-            state->icons[i].shade.shadeWithPadding = 0x60;
+            state->icons[i].mode.shaded.shade.value = 0x60;
         } else if (i == allocation->selectedSaveSlot) {
             state->text[i].x = 0x18;
             state->text[i].shade.value = 0xFF;
-            state->icons[i].shade.shadeWithPadding = 0xFF;
+            state->icons[i].mode.shaded.shade.value = 0xFF;
 
             if (allocation->saveSlotMenuState < 2) {
                 state->animFrames[i]++;
@@ -875,12 +875,12 @@ void updateSaveSlotGoldDisplay(SaveSlotGoldDisplayState *state) {
                 state->text[i].x = 0x1D;
                 state->text[i].shade.value = 0x60;
                 state->icons[i].frameIndex = 0;
-                state->icons[i].shade.shadeWithPadding = 0x60;
+                state->icons[i].mode.shaded.shade.value = 0x60;
             } else {
                 state->text[i].x = 0x17;
                 state->text[i].shade.value = 0xFF;
                 state->icons[i].frameIndex = 0;
-                state->icons[i].shade.shadeWithPadding = 0xFF;
+                state->icons[i].mode.shaded.shade.value = 0xFF;
             }
             state->animFrames[i] = 0;
         }

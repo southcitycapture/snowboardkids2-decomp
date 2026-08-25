@@ -823,7 +823,7 @@ void initCharacterSelectDisplay(CharacterSelectDisplayState *state) {
         state->textEntries[i].y = row * 0x2C - 0x58;
         state->textEntries[i].spriteData = portraitAsset;
         state->textEntries[i].frameIndex = row + 0xA;
-        state->textEntries[i].color.paletteAndAlpha = 0xFF;
+        state->textEntries[i].paletteEffect.value = 0xFF;
         state->textEntries[i].tileMode = 0;
         state->textEntries[i].overridePaletteCount = 0;
     }
@@ -890,7 +890,7 @@ void renderCharacterSelectDisplay(CharacterSelectDisplayState *state) {
                 state->textAlpha = 0xFF;
             }
             for (i = 0; i < 4; i++) {
-                state->textEntries[i].color.paletteAndAlpha = state->textAlpha;
+                state->textEntries[i].paletteEffect.value = state->textAlpha;
                 pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_FINAL, renderTextSprite, &state->textEntries[i]);
             }
         }
@@ -1177,7 +1177,7 @@ void initPrizeDisplay(PrizeDisplayState *arg0) {
     s16 titleWidth;
     s32 i;
     s32 xPos;
-    TextRenderArg *entry;
+    PaletteSpriteArg *entry;
     s32 yPos;
     s32 alpha;
     u8 prizeCountValue;
@@ -1209,7 +1209,7 @@ L1:
     entry->y = yPos;
     entry->spriteData = spriteAsset;
     entry->frameIndex = i;
-    entry->color.paletteAndAlpha = alpha;
+    entry->paletteEffect.value = alpha;
     entry->overridePaletteCount = 0;
     entry->tileMode = 0;
     entry++;
@@ -1236,29 +1236,29 @@ L1:
 void updatePrizeDisplay(PrizeDisplayState *state) {
     LevelSelectState *levelSelect;
     s32 i;
-    TextRenderArg *spriteEntry;
+    PaletteSpriteArg *spriteEntry;
 
     levelSelect = getCurrentAllocation();
 
     if (levelSelect->menuState == 3) {
         state->animationTimer++;
         if (state->animationTimer < 0x11) {
-            state->spriteEntries[0].color.paletteAndAlpha -= 8;
-            state->spriteEntries[1].color.paletteAndAlpha -= 8;
+            state->spriteEntries[0].paletteEffect.value -= 8;
+            state->spriteEntries[1].paletteEffect.value -= 8;
         } else {
-            state->spriteEntries[0].color.paletteAndAlpha += 8;
-            state->spriteEntries[1].color.paletteAndAlpha += 8;
+            state->spriteEntries[0].paletteEffect.value += 8;
+            state->spriteEntries[1].paletteEffect.value += 8;
         }
 
         if (state->animationTimer == 0x20) {
             state->animationTimer = 0;
-            state->spriteEntries[0].color.paletteAndAlpha = 0xFF;
-            state->spriteEntries[1].color.paletteAndAlpha = 0xFF;
+            state->spriteEntries[0].paletteEffect.value = 0xFF;
+            state->spriteEntries[1].paletteEffect.value = 0xFF;
         }
     } else {
         state->animationTimer = 0;
-        state->spriteEntries[0].color.paletteAndAlpha = 0xFF;
-        state->spriteEntries[1].color.paletteAndAlpha = 0xFF;
+        state->spriteEntries[0].paletteEffect.value = 0xFF;
+        state->spriteEntries[1].paletteEffect.value = 0xFF;
     }
 
     if ((u32)(levelSelect->menuState - 2) < 2) {

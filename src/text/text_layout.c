@@ -5,18 +5,7 @@
 #include "graphics/sprite_rdp.h"
 #include "gs2dex.h"
 
-typedef struct {
-    s16 x;
-    s16 y;
-    /* 0x04 */ void *spriteData;
-    /* 0x08 */ s16 frameIndex;
-    /* 0x0A */ s16 alpha;
-    /* 0x0C */ u8 tileMode;
-    /* 0x0D */ u8 paletteIndex;
-    /* 0x0E */ u8 transparency;
-} TextElementState;
-
-void initHudElementState(TextElementState *arg0);
+void initHudElementState(PaletteSpriteArg *arg0);
 void renderShadedTextSprite(s32, s32, u16, u16, u16, u16, SpriteSheetData *);
 
 extern SpriteFrameEntry *gCachedPaletteAddr;
@@ -40,7 +29,7 @@ void enqueueTextLayout(
     s16 x = startX;
     s16 y = startY;
     u16 palette = paletteIndex;
-    TextElementState *elem;
+    PaletteSpriteArg *elem;
     u16 *ptr = (u16 *)textData;
 
     while ((*ptr) != 0xFFFF) {
@@ -67,13 +56,13 @@ void enqueueTextLayout(
                 width = 12;
             }
 
-            elem = advanceLinearAlloc(sizeof(TextElementState));
+            elem = advanceLinearAlloc(sizeof(PaletteSpriteArg));
             if (elem != NULL) {
                 initHudElementState(elem);
-                elem->transparency = transparency;
-                elem->alpha = alpha;
+                elem->primitiveAlpha = transparency;
+                elem->paletteEffect.value = alpha;
                 elem->spriteData = fontAsset;
-                elem->paletteIndex = palette + 1;
+                elem->overridePaletteCount = palette + 1;
                 elem->x = x;
                 elem->y = y;
                 elem->frameIndex = cmd & 0xFFF;
@@ -216,7 +205,7 @@ void enqueueTextLayoutCapped(
     s16 x = startX;
     s16 y = startY;
     u16 palette = paletteIndex;
-    TextElementState *elem;
+    PaletteSpriteArg *elem;
     u16 *ptr = textData;
     u16 cmd;
     s32 iterationCount;
@@ -252,13 +241,13 @@ void enqueueTextLayoutCapped(
             if (width == 0) {
                 width = 0xC;
             }
-            elem = advanceLinearAlloc(sizeof(TextElementState));
+            elem = advanceLinearAlloc(sizeof(PaletteSpriteArg));
             if (elem != NULL) {
                 initHudElementState(elem);
-                elem->transparency = transparency;
-                elem->alpha = alpha;
+                elem->primitiveAlpha = transparency;
+                elem->paletteEffect.value = alpha;
                 elem->spriteData = fontAsset;
-                elem->paletteIndex = palette + 1;
+                elem->overridePaletteCount = palette + 1;
                 elem->x = x;
                 elem->y = y;
                 elem->frameIndex = cmd & 0xFFF;
@@ -475,7 +464,7 @@ void enqueueTextLayoutAlphaBlended(
     s16 x = startX;
     s16 y = startY;
     u16 palette = paletteIndex & 0xFF;
-    TextElementState *elem;
+    PaletteSpriteArg *elem;
     u16 *ptr = (u16 *)textData;
 
     while ((*ptr) != 0xFFFF) {
@@ -502,12 +491,12 @@ void enqueueTextLayoutAlphaBlended(
                 width = 12;
             }
 
-            elem = advanceLinearAlloc(sizeof(TextElementState));
+            elem = advanceLinearAlloc(sizeof(PaletteSpriteArg));
             if (elem != NULL) {
                 initHudElementState(elem);
-                elem->alpha = alpha;
+                elem->paletteEffect.value = alpha;
                 elem->spriteData = fontAsset;
-                elem->paletteIndex = palette + 1;
+                elem->overridePaletteCount = palette + 1;
                 elem->x = x;
                 elem->y = y;
                 elem->frameIndex = cmd & 0xFFF;

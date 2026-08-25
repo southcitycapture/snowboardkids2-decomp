@@ -55,10 +55,10 @@ void initPlayerSelectSprites(PlayerSelectState *state) {
         slotIndex = state->playerCountOptionIndex;
         baseFrame = i + 8;
         i++;
-        sprite->renderWidth = scale;
-        sprite->renderHeight = scale;
-        sprite->shade.shadeWithPadding = alpha;
-        sprite->padding0E = 0;
+        sprite->scaleX = scale;
+        sprite->scaleY = scale;
+        sprite->mode.shaded.shade.value = alpha;
+        sprite->mode.shaded.rotation = 0;
         sprite->overridePaletteCount = 0;
         sprite->tileMode = 0;
         sprite->spriteData = spriteData;
@@ -132,10 +132,10 @@ void updatePlayerSelectAnim(PlayerSelectState *state) {
                     s16 frame;
                     s32 yPos;
 
-                    portrait->renderHeight = scaleConst;
-                    scale = divConst / (s32)(u16)portrait->renderHeight;
-                    portrait->renderWidth = scaleConst;
-                    portrait->shade.shadeWithPadding = alphaConst;
+                    portrait->scaleY = scaleConst;
+                    scale = divConst / (s32)(u16)portrait->scaleY;
+                    portrait->scaleX = scaleConst;
+                    portrait->mode.shaded.shade.value = alphaConst;
                     yPos = i * scale;
                     yPos -= PLAYER_SELECT_PORTRAIT_Y_OFFSET;
                     portrait->y = yPos - scale / 2;
@@ -158,10 +158,10 @@ void updatePlayerSelectAnim(PlayerSelectState *state) {
                     s32 frame;
                     s32 yPos;
 
-                    portrait->renderHeight = scaleConst;
-                    scale = divConst / (s32)(u16)portrait->renderHeight;
-                    portrait->renderWidth = scaleConst;
-                    portrait->shade.shadeWithPadding = alphaConst;
+                    portrait->scaleY = scaleConst;
+                    scale = divConst / (s32)(u16)portrait->scaleY;
+                    portrait->scaleX = scaleConst;
+                    portrait->mode.shaded.shade.value = alphaConst;
                     yPos = i * scale;
                     yPos -= PLAYER_SELECT_PORTRAIT_Y_OFFSET;
                     portrait->y = yPos - scale / 2;
@@ -230,7 +230,7 @@ void cleanupPlayerSelectTask(PlayerSelectState *state) {
     state->portraits[0].spriteData = freeNodeMemory(state->portraits[0].spriteData);
 }
 
-void initPlayerCountSelectSprites(TextRenderArg *sprites) {
+void initPlayerCountSelectSprites(PaletteSpriteArg *sprites) {
     void *spriteData;
     s32 i;
     s16 x, y;
@@ -246,7 +246,7 @@ void initPlayerCountSelectSprites(TextRenderArg *sprites) {
         sprites[i].frameIndex = i / 2;
         sprites[i].overridePaletteCount = 0;
         sprites[i].tileMode = i & 1;
-        sprites[i].color.paletteAndAlpha = 0xFF;
+        sprites[i].paletteEffect.value = 0xFF;
         sprites[i].spriteData = spriteData;
         sprites[i].y = y;
     }
@@ -254,7 +254,7 @@ void initPlayerCountSelectSprites(TextRenderArg *sprites) {
     setCallback(enqueuePlayerSelectSpritesRender);
 }
 
-void enqueuePlayerSelectSpritesRender(TextRenderArg *sprites) {
+void enqueuePlayerSelectSpritesRender(PaletteSpriteArg *sprites) {
     s32 i;
 
     for (i = 0; i < 4; i++) {
@@ -262,7 +262,7 @@ void enqueuePlayerSelectSpritesRender(TextRenderArg *sprites) {
     }
 }
 
-void cleanupPlayerCountSelectSprites(TextRenderArg *sprites) {
+void cleanupPlayerCountSelectSprites(PaletteSpriteArg *sprites) {
     sprites[0].spriteData = freeNodeMemory(sprites[0].spriteData);
 }
 

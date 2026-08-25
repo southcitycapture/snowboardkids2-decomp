@@ -15,8 +15,8 @@ typedef struct {
 
 void initPlayerSelectSprites(PlayerSelectState *state);
 void cleanupPlayerSelectTask(PlayerSelectState *state);
-void enqueuePlayerSelectSpritesRender(TextRenderArg *sprites);
-void cleanupPlayerCountSelectSprites(TextRenderArg *sprites);
+void enqueuePlayerSelectSpritesRender(PaletteSpriteArg *sprites);
+void cleanupPlayerCountSelectSprites(PaletteSpriteArg *sprites);
 void initPlayerCountHeaderSprite(SpriteRenderArg *sprite);
 void updatePlayerCountHeaderSprite(SpriteRenderArg *sprite);
 void initPlayerIndicatorSprite(SpriteRenderArg *sprite);
@@ -26,5 +26,5 @@ void cleanupPlayerIndicatorSprite(SpriteRenderArg *sprite);
 void initCharacterReadyIndicator(SpriteRenderArg *sprite);
 void updateCharacterReadyIndicator(SpriteRenderArg *sprite);
 void cleanupCharacterReadyIndicator(SpriteRenderArg *sprite);
-void initPlayerCountSelectSprites(TextRenderArg *sprites);
+void initPlayerCountSelectSprites(PaletteSpriteArg *sprites);
 void updatePlayerSelectAnim(PlayerSelectState *);

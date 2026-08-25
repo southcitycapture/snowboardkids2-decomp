@@ -385,45 +385,45 @@ menu_body: {
             if (((s8)arg0->menuOptionAnimFrames[i]) >= gDefaultMenuOptionCount) {
                 arg0->menuOptionAnimFrames[i] = 0;
             }
-            arg0->menuOptionSprites[i].frameIndex =
+            arg0->menuOptionSprites[i].base.frameIndex =
                 (s16)((s8)gNavigationCycleIndices[(s8)arg0->menuOptionAnimFrames[i]]);
         } else {
             arg0->menuOptionAnimTimers[i] = arg0->menuOptionAnimTimers[i] - 1;
         }
         if (i == arg0->selectedOption) {
-            arg0->menuOptionSprites[i].scaleY = 0x370;
-            arg0->menuOptionSprites[i].scaleX = 0x370;
+            arg0->menuOptionSprites[i].base.scaleY = 0x370;
+            arg0->menuOptionSprites[i].base.scaleX = 0x370;
             arg0->menuOptionAlpha[i] += 0xF0000;
             if (arg0->menuOptionAlpha[i] > 0xFF0000) {
                 arg0->menuOptionAlpha[i] = 0xFF0000;
             }
         } else {
-            arg0->menuOptionSprites[i].scaleY = 0x400;
-            arg0->menuOptionSprites[i].scaleX = 0x400;
+            arg0->menuOptionSprites[i].base.scaleY = 0x400;
+            arg0->menuOptionSprites[i].base.scaleX = 0x400;
             arg0->menuOptionAlpha[i] += (s32)0xFFF10000;
             if (arg0->menuOptionAlpha[i] <= ((s32)0x95FFFF)) {
                 arg0->menuOptionAlpha[i] = 0x960000;
             }
         }
-        arg0->menuOptionSprites[i].x = entry->x;
-        arg0->menuOptionSprites[i].y = entry->y;
-        arg0->menuOptionSprites[i].overridePaletteCount = entry->overridePaletteCount;
+        arg0->menuOptionSprites[i].base.x = entry->x;
+        arg0->menuOptionSprites[i].base.y = entry->y;
+        arg0->menuOptionSprites[i].base.overridePaletteCount = entry->overridePaletteCount;
         alpha = (s16)(arg0->menuOptionAlpha[i] >> 16);
-        arg0->menuOptionSprites[i].alpha = (s8)alpha;
-        arg0->menuOptionSprites[i].shade.shadeWithPadding = alpha & 0xFF;
+        arg0->menuOptionSprites[i].effect.alpha = (s8)alpha;
+        arg0->menuOptionSprites[i].base.mode.shaded.shade.value = alpha & 0xFF;
         pushViewportCallbackBySlot(
             2,
             VIEWPORT_CALLBACK_LAYER_SPRITES,
             renderScaledAlphaSpriteFrame,
             &arg0->menuOptionSprites[i]
         );
-        arg0->menuOptionLabels[i].x = entry->x;
-        arg0->menuOptionLabels[i].y = entry->y;
-        arg0->menuOptionLabels[i].overridePaletteCount = 0;
+        arg0->menuOptionLabels[i].base.x = entry->x;
+        arg0->menuOptionLabels[i].base.y = entry->y;
+        arg0->menuOptionLabels[i].base.overridePaletteCount = 0;
         alpha = (s16)(arg0->menuOptionAlpha[i] >> 16);
-        arg0->menuOptionLabels[i].alpha = (s8)alpha;
-        arg0->menuOptionLabels[i].shade.shadeWithPadding = alpha & 0xFF;
-        arg0->menuOptionLabels[i].frameIndex = (s16)((s8)entry->labelIndex);
+        arg0->menuOptionLabels[i].effect.alpha = (s8)alpha;
+        arg0->menuOptionLabels[i].base.mode.shaded.shade.value = alpha & 0xFF;
+        arg0->menuOptionLabels[i].base.frameIndex = (s16)((s8)entry->labelIndex);
         pushViewportCallbackBySlot(
             2,
             VIEWPORT_CALLBACK_LAYER_OVERLAY,
@@ -683,28 +683,28 @@ void setupGalleryMenuState(void) {
     alloc->overlayTileMapAsset =
         loadCompressedData(&galleryOverlayTexture_ROM_START, &MUSIC_BANK_UNUSED_01_ROM_START, 0xD00);
     for (i = 0; i < 6; i++) {
-        alloc->menuOptionSprites[i].x = 0;
-        alloc->menuOptionSprites[i].y = 0;
-        alloc->menuOptionSprites[i].spriteData = alloc->spriteAsset;
-        alloc->menuOptionSprites[i].frameIndex = 0;
-        alloc->menuOptionSprites[i].scaleX = 0x400;
-        alloc->menuOptionSprites[i].scaleY = 0x400;
-        alloc->menuOptionSprites[i].rotation = 0;
-        alloc->menuOptionSprites[i].shade.shadeWithPadding = 0xFF;
-        alloc->menuOptionSprites[i].tileMode = 0;
-        alloc->menuOptionSprites[i].overridePaletteCount = 0;
-        alloc->menuOptionSprites[i].alpha = 0x96;
-        alloc->menuOptionLabels[i].x = 0;
-        alloc->menuOptionLabels[i].y = 0;
-        alloc->menuOptionLabels[i].spriteData = alloc->spriteAsset;
-        alloc->menuOptionLabels[i].frameIndex = 0;
-        alloc->menuOptionLabels[i].scaleX = 0x400;
-        alloc->menuOptionLabels[i].scaleY = 0x400;
-        alloc->menuOptionLabels[i].rotation = 0;
-        alloc->menuOptionLabels[i].shade.shadeWithPadding = 0xFF;
-        alloc->menuOptionLabels[i].tileMode = 0;
-        alloc->menuOptionLabels[i].overridePaletteCount = 0;
-        alloc->menuOptionLabels[i].alpha = 0x96;
+        alloc->menuOptionSprites[i].base.x = 0;
+        alloc->menuOptionSprites[i].base.y = 0;
+        alloc->menuOptionSprites[i].base.spriteData = alloc->spriteAsset;
+        alloc->menuOptionSprites[i].base.frameIndex = 0;
+        alloc->menuOptionSprites[i].base.scaleX = 0x400;
+        alloc->menuOptionSprites[i].base.scaleY = 0x400;
+        alloc->menuOptionSprites[i].base.mode.shaded.rotation = 0;
+        alloc->menuOptionSprites[i].base.mode.shaded.shade.value = 0xFF;
+        alloc->menuOptionSprites[i].base.tileMode = 0;
+        alloc->menuOptionSprites[i].base.overridePaletteCount = 0;
+        alloc->menuOptionSprites[i].effect.alpha = 0x96;
+        alloc->menuOptionLabels[i].base.x = 0;
+        alloc->menuOptionLabels[i].base.y = 0;
+        alloc->menuOptionLabels[i].base.spriteData = alloc->spriteAsset;
+        alloc->menuOptionLabels[i].base.frameIndex = 0;
+        alloc->menuOptionLabels[i].base.scaleX = 0x400;
+        alloc->menuOptionLabels[i].base.scaleY = 0x400;
+        alloc->menuOptionLabels[i].base.mode.shaded.rotation = 0;
+        alloc->menuOptionLabels[i].base.mode.shaded.shade.value = 0xFF;
+        alloc->menuOptionLabels[i].base.tileMode = 0;
+        alloc->menuOptionLabels[i].base.overridePaletteCount = 0;
+        alloc->menuOptionLabels[i].effect.alpha = 0x96;
         alloc->menuOptionAlpha[i] = 0x960000;
         alloc->menuOptionAnimFrames[i] = 0;
         alloc->menuOptionAnimTimers[i] = 4;
@@ -720,14 +720,14 @@ void setupGalleryMenuState(void) {
         alloc->itemSprites[i].y = 0;
         alloc->itemSprites[i].spriteData = alloc->spriteAsset;
         alloc->itemSprites[i].frameIndex = 0;
-        alloc->itemSprites[i].color.paletteAndAlpha = 0xFF;
+        alloc->itemSprites[i].paletteEffect.value = 0xFF;
         alloc->itemSprites[i].tileMode = 0;
         alloc->itemSprites[i].overridePaletteCount = 0;
         alloc->boardOverlaySprites[i].x = 0;
         alloc->boardOverlaySprites[i].y = 0;
         alloc->boardOverlaySprites[i].spriteData = alloc->spriteAsset;
         alloc->boardOverlaySprites[i].frameIndex = 0x1A;
-        alloc->boardOverlaySprites[i].color.paletteAndAlpha = 0xFF;
+        alloc->boardOverlaySprites[i].paletteEffect.value = 0xFF;
         alloc->boardOverlaySprites[i].tileMode = 0;
         alloc->boardOverlaySprites[i].overridePaletteCount = 0;
     }
@@ -737,7 +737,7 @@ void setupGalleryMenuState(void) {
         alloc->extraItemSprites[i].y = 0x2C;
         alloc->extraItemSprites[i].spriteData = alloc->spriteAsset;
         alloc->extraItemSprites[i].frameIndex = 0x2F;
-        alloc->extraItemSprites[i].color.paletteAndAlpha = 0xFF;
+        alloc->extraItemSprites[i].paletteEffect.value = 0xFF;
         alloc->extraItemSprites[i].tileMode = 0;
         alloc->extraItemSprites[i].overridePaletteCount = 0;
     }
@@ -753,11 +753,11 @@ void setupGalleryMenuState(void) {
     alloc->prizeIcon.spriteData = alloc->spriteAsset;
     alloc->flashingPrizeIcon.spriteData = alloc->spriteAsset;
     alloc->selectionCursor.frameIndex = 0x0A;
-    alloc->selectionCursor.color.paletteAndAlpha = 0xFF;
+    alloc->selectionCursor.paletteEffect.value = 0xFF;
     alloc->pageIndicator.x = -0x24;
     alloc->pageIndicator.y = -0x10;
     alloc->pageIndicator.frameIndex = 9;
-    alloc->pageIndicator.color.paletteAndAlpha = 0xFF;
+    alloc->pageIndicator.paletteEffect.value = 0xFF;
     alloc->prizeIcon.x = 0x18;
     alloc->prizeIcon.y = 0x28;
     alloc->prizeIcon.frameIndex = 0x25;
@@ -1002,7 +1002,7 @@ void renderGalleryViewerContent(GalleryViewerState *arg0) {
             }
 
             item = &category->items[arg0->cursorIndex];
-            alloc->selectionCursor.color.paletteAndAlpha = arg0->cursorAlpha >> 16;
+            alloc->selectionCursor.paletteEffect.value = arg0->cursorAlpha >> 16;
             alloc->selectionCursor.x = (s8)item->x;
             alloc->selectionCursor.y = (s8)item->y;
             if (alloc->selectedOption == 3) {
@@ -1031,14 +1031,14 @@ void renderGalleryViewerContent(GalleryViewerState *arg0) {
                 alloc->itemSprites[i].y = ((s8)item->y) + sp3C;
                 alloc->itemSprites[i].frameIndex = (s8)item->spriteFrame;
                 if (isGalleryItemUnlocked(i & 0xFF) & 0xFF) {
-                    alloc->itemSprites[i].color.paletteAndAlpha = 0xFF;
+                    alloc->itemSprites[i].paletteEffect.value = 0xFF;
                     alloc->itemSprites[i].overridePaletteCount = 0;
                 } else if (alloc->selectedOption == 2) {
                     alloc->itemSprites[i].overridePaletteCount = 0x14;
-                    alloc->itemSprites[i].color.paletteAndAlpha = 0x96;
+                    alloc->itemSprites[i].paletteEffect.value = 0x96;
                 } else {
                     alloc->itemSprites[i].overridePaletteCount = 0;
-                    alloc->itemSprites[i].color.paletteAndAlpha = 0x64;
+                    alloc->itemSprites[i].paletteEffect.value = 0x64;
                 }
                 pushViewportCallbackBySlot(
                     2,
@@ -1050,9 +1050,9 @@ void renderGalleryViewerContent(GalleryViewerState *arg0) {
                     alloc->boardOverlaySprites[i].x = (s8)item->x;
                     alloc->boardOverlaySprites[i].y = (s8)item->y;
                     if (isGalleryItemUnlocked(i & 0xFF) & 0xFF) {
-                        alloc->boardOverlaySprites[i].color.paletteAndAlpha = 0xFF;
+                        alloc->boardOverlaySprites[i].paletteEffect.value = 0xFF;
                     } else {
-                        alloc->boardOverlaySprites[i].color.paletteAndAlpha = 0x96;
+                        alloc->boardOverlaySprites[i].paletteEffect.value = 0x96;
                     }
                     pushViewportCallbackBySlot(
                         2,
@@ -1063,7 +1063,7 @@ void renderGalleryViewerContent(GalleryViewerState *arg0) {
                 }
             }
 
-            alloc->pageIndicator.color.paletteAndAlpha = (s16)(arg0->pageIndicatorAlpha >> 16);
+            alloc->pageIndicator.paletteEffect.value = (s16)(arg0->pageIndicatorAlpha >> 16);
             pushViewportCallbackBySlot(2, VIEWPORT_CALLBACK_LAYER_SPRITES, renderTextSprite, &alloc->pageIndicator);
             item = &category->items[arg0->cursorIndex];
             if (arg0->navigationState == 0) {

@@ -49,17 +49,17 @@ void initLogoSplashRenderState(LogoSplashState *arg0) {
     arg0->racdymLogoRenderState.clipY = 0;
 
     for (i = 0; i < 6; i++) {
-        arg0->footprintSprites[i].x = racdymFootprintPlacements[i].x;
-        arg0->footprintSprites[i].y = racdymFootprintPlacements[i].y;
-        arg0->footprintSprites[i].spriteData = arg0->racdymFootprintSpriteAsset;
-        arg0->footprintSprites[i].frameIndex = racdymFootprintPlacements[i].frameIndex;
-        arg0->footprintSprites[i].scaleX = 0x400;
-        arg0->footprintSprites[i].scaleY = 0x400;
-        arg0->footprintSprites[i].rotation = 0;
-        arg0->footprintSprites[i].shade.shadeWithPadding = 0xFF;
-        arg0->footprintSprites[i].tileMode = 0;
-        arg0->footprintSprites[i].overridePaletteCount = 0;
-        arg0->footprintSprites[i].alpha = 0;
+        arg0->footprintSprites[i].base.x = racdymFootprintPlacements[i].x;
+        arg0->footprintSprites[i].base.y = racdymFootprintPlacements[i].y;
+        arg0->footprintSprites[i].base.spriteData = arg0->racdymFootprintSpriteAsset;
+        arg0->footprintSprites[i].base.frameIndex = racdymFootprintPlacements[i].frameIndex;
+        arg0->footprintSprites[i].base.scaleX = 0x400;
+        arg0->footprintSprites[i].base.scaleY = 0x400;
+        arg0->footprintSprites[i].base.mode.shaded.rotation = 0;
+        arg0->footprintSprites[i].base.mode.shaded.shade.value = 0xFF;
+        arg0->footprintSprites[i].base.tileMode = 0;
+        arg0->footprintSprites[i].base.overridePaletteCount = 0;
+        arg0->footprintSprites[i].effect.alpha = 0;
         arg0->footprintAlphaAccumulators[i] = 0;
     }
 
@@ -219,7 +219,8 @@ void updateLogoSplash(void) {
                     if (logoScreen->footprintAlphaAccumulators[i] > 0xFFFFFF) {
                         logoScreen->footprintAlphaAccumulators[i] = 0xFF0000;
                     }
-                    logoScreen->footprintSprites[i].alpha = (s8)(logoScreen->footprintAlphaAccumulators[i] >> 16);
+                    logoScreen->footprintSprites[i].effect.alpha =
+                        (s8)(logoScreen->footprintAlphaAccumulators[i] >> 16);
                     pushViewportCallbackBySlot(
                         0,
                         VIEWPORT_CALLBACK_LAYER_TRANSLUCENT,

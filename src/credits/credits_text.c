@@ -71,28 +71,28 @@ void initCreditsScrollingTextEffects(CreditsState *s) {
     s->paletteChangePending = 0;
 
     for (i = 0; i < 0x12; i++) {
-        s->paletteSprites[i].x = 0;
-        s->paletteSprites[i].y = -0x60 + i * 8;
-        s->paletteSprites[i].spriteData = (SpriteSheetData *)s->paletteDataTables[s->currentPaletteIndex];
-        s->paletteSprites[i].frameIndex = i;
-        s->paletteSprites[i].scaleY = 0x400;
-        s->paletteSprites[i].scaleX = 0x400;
-        s->paletteSprites[i].rotation = 0;
-        s->paletteSprites[i].shade.shadeWithPadding = 0xFF;
-        s->paletteSprites[i].tileMode = 0;
-        s->paletteSprites[i].overridePaletteCount = 0;
-        s->paletteSprites[i].alpha = 0;
-        s->paletteOverlaySprites[i].x = 0;
-        s->paletteOverlaySprites[i].y = -0x60 + i * 8;
-        s->paletteOverlaySprites[i].spriteData = (SpriteSheetData *)s->paletteDataTables[s->currentPaletteIndex];
-        s->paletteOverlaySprites[i].frameIndex = i;
-        s->paletteOverlaySprites[i].scaleY = 0x400;
-        s->paletteOverlaySprites[i].scaleX = 0x400;
-        s->paletteOverlaySprites[i].rotation = 0;
-        s->paletteOverlaySprites[i].shade.shadeWithPadding = 0x64;
-        s->paletteOverlaySprites[i].tileMode = 0;
-        s->paletteOverlaySprites[i].overridePaletteCount = 0x11;
-        s->paletteOverlaySprites[i].alpha = 0;
+        s->paletteSprites[i].base.x = 0;
+        s->paletteSprites[i].base.y = -0x60 + i * 8;
+        s->paletteSprites[i].base.spriteData = (SpriteSheetData *)s->paletteDataTables[s->currentPaletteIndex];
+        s->paletteSprites[i].base.frameIndex = i;
+        s->paletteSprites[i].base.scaleY = 0x400;
+        s->paletteSprites[i].base.scaleX = 0x400;
+        s->paletteSprites[i].base.mode.shaded.rotation = 0;
+        s->paletteSprites[i].base.mode.shaded.shade.value = 0xFF;
+        s->paletteSprites[i].base.tileMode = 0;
+        s->paletteSprites[i].base.overridePaletteCount = 0;
+        s->paletteSprites[i].effect.alpha = 0;
+        s->paletteOverlaySprites[i].base.x = 0;
+        s->paletteOverlaySprites[i].base.y = -0x60 + i * 8;
+        s->paletteOverlaySprites[i].base.spriteData = (SpriteSheetData *)s->paletteDataTables[s->currentPaletteIndex];
+        s->paletteOverlaySprites[i].base.frameIndex = i;
+        s->paletteOverlaySprites[i].base.scaleY = 0x400;
+        s->paletteOverlaySprites[i].base.scaleX = 0x400;
+        s->paletteOverlaySprites[i].base.mode.shaded.rotation = 0;
+        s->paletteOverlaySprites[i].base.mode.shaded.shade.value = 0x64;
+        s->paletteOverlaySprites[i].base.tileMode = 0;
+        s->paletteOverlaySprites[i].base.overridePaletteCount = 0x11;
+        s->paletteOverlaySprites[i].effect.alpha = 0;
     }
 
     for (i = 0; i < 6; i++) {
@@ -173,8 +173,9 @@ void updateCreditsScrollingTextEffects(CreditsState *s) {
             s->currentPaletteAlpha = 0;
             if (s->paletteChangePending != 0) {
                 for (i = 0; i < 0x12; i++) {
-                    s->paletteSprites[i].spriteData = (SpriteSheetData *)s->paletteDataTables[s->currentPaletteIndex];
-                    s->paletteOverlaySprites[i].spriteData =
+                    s->paletteSprites[i].base.spriteData =
+                        (SpriteSheetData *)s->paletteDataTables[s->currentPaletteIndex];
+                    s->paletteOverlaySprites[i].base.spriteData =
                         (SpriteSheetData *)s->paletteDataTables[s->currentPaletteIndex];
                 }
                 s->paletteFadeSpeed = paletteFadeSpeeds[1];
@@ -204,7 +205,7 @@ void updateCreditsScrollingTextEffects(CreditsState *s) {
 
         for (i = 0; i < 0x12; i++) {
             if (scaledAlpha != 0) {
-                s->paletteOverlaySprites[i].alpha = scaledAlpha >> 16;
+                s->paletteOverlaySprites[i].effect.alpha = scaledAlpha >> 16;
                 pushViewportCallbackBySlot(
                     0,
                     VIEWPORT_CALLBACK_LAYER_POST_OPAQUE,
@@ -218,7 +219,7 @@ void updateCreditsScrollingTextEffects(CreditsState *s) {
                 }
             }
             if (showPalette != 0) {
-                s->paletteSprites[i].alpha = s->currentPaletteAlpha >> 16;
+                s->paletteSprites[i].effect.alpha = s->currentPaletteAlpha >> 16;
                 pushViewportCallbackBySlot(
                     0,
                     VIEWPORT_CALLBACK_LAYER_POST_OPAQUE,

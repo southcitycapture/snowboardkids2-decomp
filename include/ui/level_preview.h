@@ -146,7 +146,7 @@ typedef struct {
 } MinigameDescTextState;
 
 typedef struct {
-    /* 0x00 */ TextRenderArg spriteEntries[2];
+    /* 0x00 */ PaletteSpriteArg spriteEntries[2];
     /* 0x20 */ u8 _pad20[0xC];
     /* 0x2C */ s16 titleX;
     /* 0x2E */ s16 titleY;
@@ -182,7 +182,7 @@ typedef struct {
     SpriteRenderArg sprite84;
     SpriteRenderArg sprite90;
     SpriteRenderArg sprite9C;
-    TextRenderArg textEntries[4];
+    PaletteSpriteArg textEntries[4];
     TextData textPaletteData;
     char numBuffer[2];
     u16 textAlpha;

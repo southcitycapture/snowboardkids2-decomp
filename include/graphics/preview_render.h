@@ -60,7 +60,7 @@ typedef struct {
 } BoardShopTitleTextState;
 
 typedef union {
-    FlippedScaledSpriteArg sprite;
+    TransformedSpriteArg sprite;
     struct {
         u8 packedSpriteFields[0x15];
         u8 taskData[0x6F];
@@ -69,7 +69,7 @@ typedef union {
 } BoardShopSnowflakeSpriteState;
 
 typedef struct {
-    FlippedScaledSpriteArg sprites[4];
+    TransformedSpriteArg sprites[4];
     u8 taskData60[0x18];
     s16 priceTextX;
     s16 priceTextY;
@@ -86,7 +86,7 @@ typedef struct {
 } BoardShopBoardIconsState;
 
 typedef struct {
-    TextRenderArg comparisonIcons[2];
+    PaletteSpriteArg comparisonIcons[2];
     u8 animationCounter;
 } BoardShopComparisonIconsState;
 
@@ -142,14 +142,14 @@ typedef struct {
 void initBoardShopBoardIcons(BoardShopBoardIconsState *state);
 void initBoardShopCharacterPreview(BoardShopCharacterPreviewState *state);
 void initBoardShopCharacterTransition(BoardShopCharacterPreviewState *state);
-void initBoardShopColumnSelectorArrow(TextRenderArg *state);
+void initBoardShopColumnSelectorArrow(PaletteSpriteArg *state);
 void initBoardShopComparisonIcons(BoardShopComparisonIconsState *state);
 void initBoardShopExitOverlay(SpriteRenderArg *state);
 void initBoardShopPreviewWipe(BoardShopCharacterPreviewState *state);
-void initBoardShopRowSelectorArrow(TextRenderArg *state);
+void initBoardShopRowSelectorArrow(PaletteSpriteArg *state);
 void initBoardShopShopkeeper(BoardShopShopkeeperState *state);
 void initBoardShopSnowParticles(SnowParticleState *state);
 void initBoardShopSnowflakeSlideIn(BoardShopSnowflakeSpriteState *state);
-void initBoardShopTitleCorners(TextRenderArg *state);
+void initBoardShopTitleCorners(PaletteSpriteArg *state);
 void initBoardShopTitleText(BoardShopTitleTextState *state);
 void loadBoardShopBackground(TileMapRenderTaskState *state);

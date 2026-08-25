@@ -20,7 +20,7 @@ typedef struct {
 } UnlockScreenItemIconsState;
 
 typedef struct {
-    TextRenderArg arrows[2];
+    PaletteSpriteArg arrows[2];
     s8 animationCounter;
 } UnlockScreenScrollArrowsState;
 

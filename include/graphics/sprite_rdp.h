@@ -9,7 +9,6 @@ typedef struct {
     /* 0x08 */ u16 height;
     /* 0x0A */ u16 paletteTableIndex;
     /* 0x0C */ u16 formatIndex;
-    /* 0x0E */ u16 pad0E;
 } SpriteFrameEntry;
 
 typedef struct {
@@ -17,6 +16,26 @@ typedef struct {
     /* 0x04 */ s32 numFrames;
     /* 0x08 */ SpriteFrameEntry frames[1];
 } SpriteSheetData;
+
+typedef union {
+    u16 value;
+    s16 signedValue;
+    struct {
+        u8 paletteIndex;
+        union {
+            u8 intensity;
+            u8 alpha;
+        } effect;
+    } components;
+} SpritePaletteEffect;
+
+typedef union {
+    u16 value;
+    struct {
+        u8 padding;
+        u8 intensity;
+    } components;
+} SpriteShade;
 
 typedef struct {
     /* 0x00 */ s16 x;
@@ -31,116 +50,66 @@ typedef struct {
     /* 0x02 */ s16 y;
     /* 0x04 */ SpriteSheetData *spriteData;
     /* 0x08 */ u16 frameIndex;
-    /* 0x0A */ union {
-        struct {
-            u8 paletteIndex;
-            u8 alpha;
-        } components;
-        u16 paletteAndAlpha;
-        s16 paletteAndAlphaSigned;
-    } color;
+    /* 0x0A */ SpritePaletteEffect paletteEffect;
     /* 0x0C */ u8 tileMode;
     /* 0x0D */ u8 overridePaletteCount;
-    /* 0x0E */ u8 transparency;
-} TextRenderArg;
+    /* 0x0E */ u8 primitiveAlpha;
+} PaletteSpriteArg;
 
 typedef struct {
     /* 0x00 */ s16 x;
     /* 0x02 */ s16 y;
     /* 0x04 */ SpriteSheetData *spriteData;
     /* 0x08 */ u16 frameIndex;
-    /* 0x0A */ u8 r;
-    /* 0x0B */ u8 g;
-    /* 0x0C */ u8 b;
-    /* 0x0D */ u8 a;
+    /* 0x0A */ u8 envR;
+    /* 0x0B */ u8 envG;
+    /* 0x0C */ u8 envB;
+    /* 0x0D */ u8 envA;
     /* 0x0E */ u8 tileMode;
-    /* 0x0F */ u8 paletteOverrideCount;
-    /* 0x10 */ u8 primColor;
+    /* 0x0F */ u8 overridePaletteCount;
+    /* 0x10 */ u8 primitiveAlpha;
 } TintedSpriteArg;
 
-void renderSpriteFrame(SpriteRenderArg *arg0);
-void renderSpriteFrameWithPalette(SpriteRenderArg *arg0);
-void renderHalfSizeSpriteFrame(SpriteRenderArg *arg0);
-void renderHalfSizeSpriteWithCustomPalette(SpriteRenderArg *arg0);
 typedef struct {
     /* 0x00 */ s16 x;
     /* 0x02 */ s16 y;
     /* 0x04 */ SpriteSheetData *spriteData;
     /* 0x08 */ u16 frameIndex;
-    /* 0x0A */ u16 renderWidth;
-    /* 0x0C */ u16 renderHeight;
-    /* 0x0E */ u16 padding0E;
-    /* 0x10 */ union {
-        u16 shadeWithPadding;
+    /* 0x0A */ u16 scaleX;
+    /* 0x0C */ u16 scaleY;
+    /* 0x0E */ union {
         struct {
-            u8 padding;
-            u8 intensity;
-        } bytes;
-    } shade;
+            s16 rotation;
+            SpriteShade shade;
+        } shaded;
+        struct {
+            s16 renderWidth;
+            s16 renderHeight;
+        } cropped;
+    } mode;
     /* 0x12 */ u8 tileMode;
     /* 0x13 */ u8 overridePaletteCount;
 } ScaledSpriteArg;
 
 typedef struct {
-    /* 0x00 */ s16 x;
-    /* 0x02 */ s16 y;
-    /* 0x04 */ SpriteSheetData *spriteData;
-    /* 0x08 */ u16 frameIndex;
-    /* 0x0A */ u16 scaleX;
-    /* 0x0C */ u16 scaleY;
-    /* 0x0E */ s16 rotation;
-    /* 0x10 */ union {
-        u16 value;
-        struct {
-            u8 padding;
-            u8 intensity;
-        } components;
-    } alpha;
-    /* 0x12 */ u8 tileMode;
-    /* 0x13 */ u8 overridePaletteCount;
-    /* 0x14 */ u8 flipX;
-} FlippedScaledSpriteArg;
+    /* 0x00 */ ScaledSpriteArg base;
+    /* 0x14 */ union {
+        u8 alpha;
+        u8 flipX;
+    } effect;
+} TransformedSpriteArg;
 
-typedef struct {
-    /* 0x00 */ s16 baseY;
-    /* 0x02 */ s16 x;
-    /* 0x04 */ SpriteSheetData *spriteAsset;
-    /* 0x08 */ u16 spriteIndex;
-    /* 0x0A */ u16 scaleX;
-    /* 0x0C */ u16 scaleY;
-    /* 0x0E */ s16 currentY;
-    /* 0x10 */ s16 textureHeight;
-    /* 0x12 */ u8 tileMode;
-    /* 0x13 */ u8 overridePaletteCount;
-} CharSelectIconEntry;
-
-void renderCharSelectIconSprite(CharSelectIconEntry *sprite);
+void renderSpriteFrame(SpriteRenderArg *arg0);
+void renderSpriteFrameWithPalette(SpriteRenderArg *arg0);
+void renderHalfSizeSpriteFrame(SpriteRenderArg *arg0);
+void renderHalfSizeSpriteWithCustomPalette(SpriteRenderArg *arg0);
+void renderCharSelectIconSprite(ScaledSpriteArg *sprite);
 void renderScaledShadedSpriteFrame(ScaledSpriteArg *arg0);
-void renderAlphaBlendedTextSprite(TextRenderArg *arg0);
+void renderScaledAlphaSpriteFrame(TransformedSpriteArg *sprite);
+void renderAlphaBlendedTextSprite(PaletteSpriteArg *arg0);
 void initDefaultFontPalette(void);
 void loadSpriteTexture(s32 textureAddr, u16 width, u16 height, u16 format, s32 paletteMode);
 void renderTintedSprite(TintedSpriteArg *arg0);
-void renderTextSpriteWithTransparency(TextRenderArg *arg0);
-void renderFlippedScaledSpriteFrame(FlippedScaledSpriteArg *sprite);
-void renderTextSprite(TextRenderArg *arg0);
-typedef struct {
-    /* 0x00 */ s16 x;
-    /* 0x02 */ s16 y;
-    /* 0x04 */ SpriteSheetData *spriteData;
-    /* 0x08 */ u16 frameIndex;
-    /* 0x0A */ u16 scaleX;
-    /* 0x0C */ u16 scaleY;
-    /* 0x0E */ s16 rotation;
-    /* 0x10 */ union {
-        u16 shadeWithPadding;
-        struct {
-            u8 padding;
-            u8 intensity;
-        } bytes;
-    } shade;
-    /* 0x12 */ u8 tileMode;
-    /* 0x13 */ u8 overridePaletteCount;
-    /* 0x14 */ u8 alpha;
-} FrameSpriteEntry;
-
-void renderScaledAlphaSpriteFrame(FrameSpriteEntry *sprite);
+void renderTextSpriteWithTransparency(PaletteSpriteArg *arg0);
+void renderFlippedScaledSpriteFrame(TransformedSpriteArg *sprite);
+void renderTextSprite(PaletteSpriteArg *arg0);

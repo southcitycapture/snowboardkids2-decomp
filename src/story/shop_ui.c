@@ -123,10 +123,10 @@ void enqueueStoryMapShopBackgroundRender(StoryMapShopBackgroundState *state);
 void cleanupStoryMapShopBackground(StoryMapShopBackgroundState *);
 void updateUnlockScreenScrollArrows(UnlockScreenScrollArrowsState *);
 void cleanupUnlockScreenScrollArrows(UnlockScreenScrollArrowsState *state);
-void updateStoryMapShopItemIcon(TextRenderArg *);
-void cleanupStoryMapShopItemIcon(TextRenderArg *);
-void updateStoryMapShopItemStatLabel(TextRenderArg *);
-void cleanupStoryMapShopItemStatLabel(TextRenderArg *);
+void updateStoryMapShopItemIcon(PaletteSpriteArg *);
+void cleanupStoryMapShopItemIcon(PaletteSpriteArg *);
+void updateStoryMapShopItemStatLabel(PaletteSpriteArg *);
+void cleanupStoryMapShopItemStatLabel(PaletteSpriteArg *);
 void updateStoryMapShopExitOverlay(void *arg0);
 void cleanupStoryMapShopExitOverlay(SpriteRenderArg *arg0);
 void updateStoryMapShopItemStatsDisplay(UnlockScreenItemStatsDisplay *arg0);
@@ -550,7 +550,7 @@ void initUnlockScreenScrollArrows(UnlockScreenScrollArrowsState *state) {
         state->arrows[i].y = -0x18;
         state->arrows[i].frameIndex = i;
         state->arrows[i].spriteData = asset;
-        state->arrows[i].color.paletteAndAlpha = 0xFF;
+        state->arrows[i].paletteEffect.value = 0xFF;
         state->arrows[i].overridePaletteCount = 0;
         state->arrows[i].tileMode = 0;
     }
@@ -569,39 +569,39 @@ void updateUnlockScreenScrollArrows(UnlockScreenScrollArrowsState *arrowState) {
             arrowState->animationCounter++;
             if (state->modeData.unlockScreen.unlockedItemCount >= 3) {
                 if ((u8)(arrowState->animationCounter) < 0x11) {
-                    arrowState->arrows[0].color.paletteAndAlpha -= 8;
-                    arrowState->arrows[1].color.paletteAndAlpha -= 8;
+                    arrowState->arrows[0].paletteEffect.value -= 8;
+                    arrowState->arrows[1].paletteEffect.value -= 8;
                 } else {
-                    arrowState->arrows[0].color.paletteAndAlpha += 8;
-                    arrowState->arrows[1].color.paletteAndAlpha += 8;
+                    arrowState->arrows[0].paletteEffect.value += 8;
+                    arrowState->arrows[1].paletteEffect.value += 8;
                 }
             } else if (state->modeData.unlockScreen.unlockedItemCount == 2) {
                 if ((u8)(arrowState->animationCounter) < 0x11) {
                     if (state->modeData.unlockScreen.selectedItemIndex == 1) {
-                        arrowState->arrows[1].color.paletteAndAlpha = 0xFF;
-                        arrowState->arrows[0].color.paletteAndAlpha -= 8;
+                        arrowState->arrows[1].paletteEffect.value = 0xFF;
+                        arrowState->arrows[0].paletteEffect.value -= 8;
                     } else {
-                        arrowState->arrows[0].color.paletteAndAlpha = 0xFF;
-                        arrowState->arrows[1].color.paletteAndAlpha -= 8;
+                        arrowState->arrows[0].paletteEffect.value = 0xFF;
+                        arrowState->arrows[1].paletteEffect.value -= 8;
                     }
                 } else {
                     if (state->modeData.unlockScreen.selectedItemIndex == 1) {
-                        arrowState->arrows[1].color.paletteAndAlpha = 0xFF;
-                        arrowState->arrows[0].color.paletteAndAlpha += 8;
+                        arrowState->arrows[1].paletteEffect.value = 0xFF;
+                        arrowState->arrows[0].paletteEffect.value += 8;
                     } else {
-                        arrowState->arrows[0].color.paletteAndAlpha = 0xFF;
-                        arrowState->arrows[1].color.paletteAndAlpha += 8;
+                        arrowState->arrows[0].paletteEffect.value = 0xFF;
+                        arrowState->arrows[1].paletteEffect.value += 8;
                     }
                 }
             } else {
                 arrowState->animationCounter = 0;
-                arrowState->arrows[0].color.paletteAndAlpha = 0xFF;
-                arrowState->arrows[1].color.paletteAndAlpha = 0xFF;
+                arrowState->arrows[0].paletteEffect.value = 0xFF;
+                arrowState->arrows[1].paletteEffect.value = 0xFF;
             }
         } else {
             arrowState->animationCounter = 0;
-            arrowState->arrows[0].color.paletteAndAlpha = 0xFF;
-            arrowState->arrows[1].color.paletteAndAlpha = 0xFF;
+            arrowState->arrows[0].paletteEffect.value = 0xFF;
+            arrowState->arrows[1].paletteEffect.value = 0xFF;
         }
 
         arrowState->animationCounter &= 0x1F;
@@ -616,7 +616,7 @@ void cleanupUnlockScreenScrollArrows(UnlockScreenScrollArrowsState *state) {
     state->arrows[0].spriteData = freeNodeMemory(state->arrows[0].spriteData);
 }
 
-void initStoryMapShopItemIcon(TextRenderArg *iconState) {
+void initStoryMapShopItemIcon(PaletteSpriteArg *iconState) {
     void *dmaResult;
     GameState *state;
     u8 itemValue;
@@ -642,7 +642,7 @@ void initStoryMapShopItemIcon(TextRenderArg *iconState) {
         iconState->x = ((0x120 - tableVal) / 2) - tableVal2 - 0x96;
     }
 
-    iconState->color.paletteAndAlpha = 0xFF;
+    iconState->paletteEffect.value = 0xFF;
     iconState->tileMode = 0;
     iconState->overridePaletteCount = 0;
     iconState->spriteData = dmaResult;
@@ -650,7 +650,7 @@ void initStoryMapShopItemIcon(TextRenderArg *iconState) {
     setCallback(updateStoryMapShopItemIcon);
 }
 
-void updateStoryMapShopItemIcon(TextRenderArg *iconState) {
+void updateStoryMapShopItemIcon(PaletteSpriteArg *iconState) {
     GameState *state;
     s32 pad;
     u8 itemValue;
@@ -682,11 +682,11 @@ void updateStoryMapShopItemIcon(TextRenderArg *iconState) {
     }
 }
 
-void cleanupStoryMapShopItemIcon(TextRenderArg *iconState) {
+void cleanupStoryMapShopItemIcon(PaletteSpriteArg *iconState) {
     iconState->spriteData = freeNodeMemory(iconState->spriteData);
 }
 
-void initStoryMapShopItemStatLabel(TextRenderArg *arg0) {
+void initStoryMapShopItemStatLabel(PaletteSpriteArg *arg0) {
     GameState *state;
     void *dmaResult;
     u8 itemValue;
@@ -708,7 +708,7 @@ void initStoryMapShopItemStatLabel(TextRenderArg *arg0) {
         arg0->x = tableVal + ((0x120 - (s16)(tableVal + 0x18)) / 2) - 0x96;
     }
 
-    arg0->color.paletteAndAlpha = 0xFF;
+    arg0->paletteEffect.value = 0xFF;
     arg0->tileMode = 0;
     arg0->overridePaletteCount = 0;
     arg0->spriteData = dmaResult;
@@ -716,7 +716,7 @@ void initStoryMapShopItemStatLabel(TextRenderArg *arg0) {
     setCallback(updateStoryMapShopItemStatLabel);
 }
 
-void updateStoryMapShopItemStatLabel(TextRenderArg *arg0) {
+void updateStoryMapShopItemStatLabel(PaletteSpriteArg *arg0) {
     GameState *state = (GameState *)getCurrentAllocation();
     u8 itemValue;
 
@@ -748,7 +748,7 @@ void updateStoryMapShopItemStatLabel(TextRenderArg *arg0) {
     }
 }
 
-void cleanupStoryMapShopItemStatLabel(TextRenderArg *arg0) {
+void cleanupStoryMapShopItemStatLabel(PaletteSpriteArg *arg0) {
     arg0->spriteData = freeNodeMemory(arg0->spriteData);
 }
 

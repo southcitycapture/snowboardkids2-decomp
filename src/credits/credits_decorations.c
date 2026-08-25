@@ -30,17 +30,17 @@ void initCreditsCornerDecorationSprites(CreditsState *arg0) {
         state->leftTopCornerSprite.x = spriteX;
         state->leftTopCornerSprite.y = topSpriteY;
         state->leftTopCornerSprite.frameIndex = 0;
-        state->leftTopCornerSprite.color.paletteAndAlpha = alpha;
+        state->leftTopCornerSprite.paletteEffect.value = alpha;
         state->leftTopCornerSprite.tileMode = 0;
         state->leftTopCornerSprite.overridePaletteCount = 0;
         state->leftBottomCornerSprite.x = spriteX;
         state->leftBottomCornerSprite.y = 0;
-        state->leftBottomCornerSprite.color.paletteAndAlpha = alpha;
+        state->leftBottomCornerSprite.paletteEffect.value = alpha;
         state->leftBottomCornerSprite.tileMode = 0;
         state->leftBottomCornerSprite.overridePaletteCount = 0;
         state->rightTopCornerSprite.x = spriteX;
         state->rightTopCornerSprite.y = topSpriteY;
-        state->rightTopCornerSprite.color.paletteAndAlpha = alpha;
+        state->rightTopCornerSprite.paletteEffect.value = alpha;
         state->rightTopCornerSprite.tileMode = 0;
         state->rightTopCornerSprite.overridePaletteCount = 0;
         state->rightBottomCornerSprite.x = spriteX;
@@ -52,7 +52,7 @@ void initCreditsCornerDecorationSprites(CreditsState *arg0) {
     } while (0);
 
     state->rightBottomCornerSprite.spriteData = asset3;
-    state->rightBottomCornerSprite.color.paletteAndAlpha = alpha;
+    state->rightBottomCornerSprite.paletteEffect.value = alpha;
     state->rightBottomCornerSprite.tileMode = 0;
     state->rightBottomCornerSprite.overridePaletteCount = 0;
 }
@@ -104,8 +104,8 @@ void updateCreditsCornerDecorationSprites(CreditsState *state) {
     if (temp_v0 != 0) {
         s16 shortVal = temp_v0 >> 16;
         void *callback = renderTextSprite;
-        state->leftBottomCornerSprite.color.paletteAndAlpha = shortVal;
-        state->leftTopCornerSprite.color.paletteAndAlpha = shortVal;
+        state->leftBottomCornerSprite.paletteEffect.value = shortVal;
+        state->leftTopCornerSprite.paletteEffect.value = shortVal;
         pushViewportCallbackBySlot(1, VIEWPORT_CALLBACK_LAYER_SPRITES, callback, &state->leftTopCornerSprite);
         pushViewportCallbackBySlot(1, VIEWPORT_CALLBACK_LAYER_SPRITES, callback, &state->leftBottomCornerSprite);
     }
@@ -114,8 +114,8 @@ void updateCreditsCornerDecorationSprites(CreditsState *state) {
     if (temp_v0 != 0) {
         s16 shortVal = temp_v0 >> 16;
         void *callback = renderTextSprite;
-        state->rightBottomCornerSprite.color.paletteAndAlpha = shortVal;
-        state->rightTopCornerSprite.color.paletteAndAlpha = shortVal;
+        state->rightBottomCornerSprite.paletteEffect.value = shortVal;
+        state->rightTopCornerSprite.paletteEffect.value = shortVal;
         pushViewportCallbackBySlot(1, VIEWPORT_CALLBACK_LAYER_SPRITES, callback, &state->rightTopCornerSprite);
         pushViewportCallbackBySlot(1, VIEWPORT_CALLBACK_LAYER_SPRITES, callback, &state->rightBottomCornerSprite);
     }

@@ -697,7 +697,7 @@ SceneModel *cleanupSceneModelHolder(SceneModel **arg0) {
 void initCharSelectIcons(CharSelectIconsState *state) {
     OutputStruct_19E80 tableEntry;
     u8 *tablePtr;
-    volatile CharSelectIconEntry *iconEntry;
+    volatile ScaledSpriteArg *iconEntry;
     DataTable_19E80 *spriteAsset;
     s16 scaleX;
     s16 scaleY;
@@ -741,21 +741,21 @@ void initCharSelectIcons(CharSelectIconsState *state) {
     // Initialize 3 icon entries for the character's items
     do {
         u8 tableVal;
-        iconEntry->baseY = yPos;
-        iconEntry->x = xPos;
-        iconEntry->spriteIndex = iconTableIndex;
+        iconEntry->x = yPos;
+        iconEntry->y = xPos;
+        iconEntry->frameIndex = iconTableIndex;
         // Read maxItems from byte table (every 2nd byte)
         tableVal = tablePtr[1];
         tablePtr += 2;
         iconEntry->tileMode = 0;
         iconEntry->scaleX = scaleX;
         iconEntry->scaleY = scaleY;
-        iconEntry->spriteAsset = (SpriteSheetData *)spriteAsset;
-        iconEntry->currentY = 0;
+        iconEntry->spriteData = (SpriteSheetData *)spriteAsset;
+        iconEntry->mode.cropped.renderWidth = 0;
         iconEntry->overridePaletteCount = (s8)(tableVal + 1);
         xPos += xIncrement;
         i++;
-        iconEntry->textureHeight = tableEntry.height;
+        iconEntry->mode.cropped.renderHeight = tableEntry.height;
         iconEntry++;
     } while (i < 3);
 
@@ -778,7 +778,7 @@ void animateCharSelectIconReveal(CharSelectIconsState *arg0) {
     CharacterSelectState *state;
     s32 i;
     s32 iconsStillAnimating;
-    CharSelectIconEntry *entry;
+    ScaledSpriteArg *entry;
     u8 charIndex;
     u8 paletteIndex;
     u8 itemIconIndex;
@@ -798,7 +798,7 @@ void animateCharSelectIconReveal(CharSelectIconsState *arg0) {
         targetY = *(s16 *)(charSelectStatsPositions + itemIconIndex * 2 + 22);
 
         entry = &arg0->entries[i];
-        currentY = entry->currentY;
+        currentY = entry->mode.cropped.renderWidth;
 
         if ((currentY & 0xFFFF) < targetY) {
             if (currentY < 0x10) {
@@ -806,7 +806,7 @@ void animateCharSelectIconReveal(CharSelectIconsState *arg0) {
             } else {
                 newY = currentY + 0xC;
             }
-            entry->currentY = newY;
+            entry->mode.cropped.renderWidth = newY;
             iconsStillAnimating++;
         }
     }
@@ -842,7 +842,7 @@ void animateCharSelectIconReveal(CharSelectIconsState *arg0) {
 void updateCharSelectIconTargets(CharSelectIconTargetState *arg0) {
     CharacterSelectState *state;
     s32 i;
-    CharSelectIconEntry *entry;
+    ScaledSpriteArg *entry;
     u8 tableIndex;
     u8 charIndex;
     u8 paletteIndex;
@@ -855,7 +855,7 @@ void updateCharSelectIconTargets(CharSelectIconTargetState *arg0) {
         paletteIndex = state->characterVariants[arg0->playerIndex];
         tableIndex = charSelectItemData[((u8)(paletteIndex + charIndex * 3)) * 3 + i];
         entry = &arg0->entries[i];
-        entry->currentY = *(s16 *)(charSelectStatsPositions + tableIndex * 2 + 22);
+        entry->mode.cropped.renderWidth = *(s16 *)(charSelectStatsPositions + tableIndex * 2 + 22);
         pushViewportCallbackBySlot(
             arg0->playerIndex + 8,
             VIEWPORT_CALLBACK_LAYER_INITIAL,
@@ -1151,7 +1151,7 @@ void initCharSelectMenu(SelectionMenuState *arg0) {
             arg0->entries[i].frameIndex = spriteIndexBase + i;
             arg0->entries[i].overridePaletteCount = 0;
             arg0->entries[i].tileMode = 0;
-            arg0->entries[i].color.paletteAndAlpha = 0xFF;
+            arg0->entries[i].paletteEffect.value = 0xFF;
             arg0->entries[i].spriteData = dmaResult;
             arg0->blinkTimers[i] = 0;
             i++;
@@ -1163,12 +1163,12 @@ void initCharSelectMenu(SelectionMenuState *arg0) {
 }
 
 void updateCharSelectMenuConfirm(SelectionMenuState *);
-void updateBoardSelectCharNames(TextRenderArg *sprites);
+void updateBoardSelectCharNames(PaletteSpriteArg *sprites);
 
 void updateCharSelectMenu(SelectionMenuState *menu) {
     CharacterSelectState *state;
     s32 entryIndex;
-    TextRenderArg *entries;
+    PaletteSpriteArg *entries;
     u8 blinkCounter;
     u32 blinkPhase;
     s16 fullAlpha;
@@ -1190,17 +1190,17 @@ void updateCharSelectMenu(SelectionMenuState *menu) {
                     blinkPhase = blinkCounter & 0xFF;
                     menu->blinkTimers[entryIndex] = blinkCounter;
                     if (blinkPhase < 0x11) {
-                        entries[entryIndex].color.paletteAndAlpha = fullAlpha - (blinkPhase * 8);
+                        entries[entryIndex].paletteEffect.value = fullAlpha - (blinkPhase * 8);
                     } else {
-                        entries[entryIndex].color.paletteAndAlpha = (blinkPhase * 8) - 1;
+                        entries[entryIndex].paletteEffect.value = (blinkPhase * 8) - 1;
                     }
                     menu->blinkTimers[entryIndex] = menu->blinkTimers[entryIndex] & 0x1F;
                 } else {
                     menu->blinkTimers[entryIndex] = 0;
-                    entries[entryIndex].color.paletteAndAlpha = fullAlpha;
+                    entries[entryIndex].paletteEffect.value = fullAlpha;
                 }
             } else {
-                entries[entryIndex].color.paletteAndAlpha = 0x50;
+                entries[entryIndex].paletteEffect.value = 0x50;
                 menu->blinkTimers[entryIndex] = 0;
             }
             pushViewportCallbackBySlot(
@@ -1222,7 +1222,7 @@ void updateCharSelectMenuConfirm(SelectionMenuState *menu) {
     CharacterSelectState *state;
     s32 entryIndex;
     s32 selectedIndex;
-    TextRenderArg *entries;
+    PaletteSpriteArg *entries;
     s32 pad[2];
     s32 numEntries;
 
@@ -1236,7 +1236,7 @@ void updateCharSelectMenuConfirm(SelectionMenuState *menu) {
         do {
             menu->blinkTimers[entryIndex] = 0;
             if (state->cursorIndices[menu->playerIndex] == entryIndex) {
-                entries[entryIndex].color.paletteAndAlpha = 0xFF;
+                entries[entryIndex].paletteEffect.value = 0xFF;
                 selectedIndex = entryIndex;
                 if (state->frameCounters[menu->playerIndex] & 1) {
                     entries[entryIndex].overridePaletteCount = 0xFF;
@@ -1244,7 +1244,7 @@ void updateCharSelectMenuConfirm(SelectionMenuState *menu) {
                     entries[entryIndex].overridePaletteCount = 0;
                 }
             } else {
-                entries[entryIndex].color.paletteAndAlpha = 0x50;
+                entries[entryIndex].paletteEffect.value = 0x50;
             }
             pushViewportCallbackBySlot(
                 menu->playerIndex + 0xC,
@@ -1334,7 +1334,7 @@ void initCharSelectArrows(SelectionArrowsState *state) {
     u16 y;
     u16 xInc;
     s32 xIncrement;
-    TextRenderArg *arrow;
+    PaletteSpriteArg *arrow;
     u16 x;
     s32 playerEntryOffset;
     s32 pad[2];
@@ -1361,12 +1361,12 @@ void initCharSelectArrows(SelectionArrowsState *state) {
             do {
                 arrow = &state->entries[playerEntryOffset + arrowIdx];
                 // Volatile ensures these writes happen in order (required for correct sprite rendering)
-                ((volatile TextRenderArg *)arrow)->x = x;
-                ((volatile TextRenderArg *)arrow)->frameIndex = arrowIdx;
+                ((volatile PaletteSpriteArg *)arrow)->x = x;
+                ((volatile PaletteSpriteArg *)arrow)->frameIndex = arrowIdx;
                 arrowIdx++;
                 arrow->y = y;
                 arrow->spriteData = arrowAsset;
-                arrow->color.paletteAndAlpha = 0xFF;
+                arrow->paletteEffect.value = 0xFF;
                 arrow->overridePaletteCount = 0;
                 arrow->tileMode = 0;
                 x += xIncrement;
@@ -1419,18 +1419,18 @@ void updateCharSelectArrows(SelectionArrowsState *state) {
                 }
                 blinkTimer = state->blinkTimers[playerIdx];
                 if (blinkTimer < 0x11) {
-                    state->entries[entryStartIdx + arrowIdx].color.paletteAndAlpha -= 8;
+                    state->entries[entryStartIdx + arrowIdx].paletteEffect.value -= 8;
                 } else {
-                    state->entries[entryStartIdx + arrowIdx].color.paletteAndAlpha += 8;
+                    state->entries[entryStartIdx + arrowIdx].paletteEffect.value += 8;
                 }
                 blinkTimer = state->blinkTimers[playerIdx];
                 if (blinkTimer == 0x20) {
-                    state->entries[entryStartIdx + arrowIdx].color.paletteAndAlpha = 0xFF;
+                    state->entries[entryStartIdx + arrowIdx].paletteEffect.value = 0xFF;
                 }
                 goto enqueue;
             hide_arrow:
                 state->blinkTimers[playerIdx] = 0;
-                state->entries[entryStartIdx + arrowIdx].color.paletteAndAlpha = 0xFF;
+                state->entries[entryStartIdx + arrowIdx].paletteEffect.value = 0xFF;
             enqueue:
                 pushViewportCallbackBySlot(
                     playerIdx + 0xC,
@@ -1441,8 +1441,8 @@ void updateCharSelectArrows(SelectionArrowsState *state) {
             }
         } else {
             state->blinkTimers[playerIdx] = 0;
-            state->entries[playerIdx * 2].color.paletteAndAlpha = 0xFF;
-            state->entries[(playerIdx * blinkTimer) + 1].color.paletteAndAlpha = 0xFF;
+            state->entries[playerIdx * 2].paletteEffect.value = 0xFF;
+            state->entries[(playerIdx * blinkTimer) + 1].paletteEffect.value = 0xFF;
         }
         state->blinkTimers[playerIdx] &= 0x1F;
     }
@@ -1462,7 +1462,7 @@ void initBoardSelectArrows(SelectionArrowsState *state) {
     u16 y;
     u16 xSpacing;
     s32 xOffset;
-    TextRenderArg *arrow;
+    PaletteSpriteArg *arrow;
     u16 x;
     s32 entryOffset;
     s32 pad[2];
@@ -1489,12 +1489,12 @@ void initBoardSelectArrows(SelectionArrowsState *state) {
             x = xBase;
             do {
                 arrow = &state->entries[entryOffset + arrowIdx];
-                ((volatile TextRenderArg *)arrow)->x = x;
-                ((volatile TextRenderArg *)arrow)->frameIndex = arrowIdx;
+                ((volatile PaletteSpriteArg *)arrow)->x = x;
+                ((volatile PaletteSpriteArg *)arrow)->frameIndex = arrowIdx;
                 arrowIdx++;
                 arrow->y = y;
                 arrow->spriteData = arrowAsset;
-                arrow->color.paletteAndAlpha = 0xFF;
+                arrow->paletteEffect.value = 0xFF;
                 arrow->overridePaletteCount = 0;
                 arrow->tileMode = 0;
                 x += xOffset;
@@ -1536,22 +1536,22 @@ void updateBoardSelectArrows(SelectionArrowsState *state) {
 
                 if (timerValue < 0x11) {
                     // Fade in
-                    state->entries[entryStartIdx + arrowIdx].color.paletteAndAlpha -= 8;
+                    state->entries[entryStartIdx + arrowIdx].paletteEffect.value -= 8;
                 } else {
                     // Fade out
-                    state->entries[entryStartIdx + arrowIdx].color.paletteAndAlpha += 8;
+                    state->entries[entryStartIdx + arrowIdx].paletteEffect.value += 8;
                 }
 
                 timerValue = state->blinkTimers[playerIdx]; // Reload timer for second check
                 if (timerValue == 0x20) {
                     // Timer reached 0x20 - just set alpha
-                    state->entries[entryStartIdx + arrowIdx].color.paletteAndAlpha = 0xFF;
+                    state->entries[entryStartIdx + arrowIdx].paletteEffect.value = 0xFF;
                 }
                 goto enqueue;
 
             hide_arrow:
                 state->blinkTimers[playerIdx] = 0;
-                state->entries[entryStartIdx + arrowIdx].color.paletteAndAlpha = 0xFF;
+                state->entries[entryStartIdx + arrowIdx].paletteEffect.value = 0xFF;
 
             enqueue:
                 pushViewportCallbackBySlot(
@@ -1564,8 +1564,8 @@ void updateBoardSelectArrows(SelectionArrowsState *state) {
         } else {
             // Hide arrows
             state->blinkTimers[playerIdx] = 0;
-            state->entries[playerIdx * 2].color.paletteAndAlpha = 0xFF;
-            state->entries[playerIdx * 2 + 1].color.paletteAndAlpha = 0xFF;
+            state->entries[playerIdx * 2].paletteEffect.value = 0xFF;
+            state->entries[playerIdx * 2 + 1].paletteEffect.value = 0xFF;
         }
 
         state->blinkTimers[playerIdx] &= 0x1F;
@@ -1576,7 +1576,7 @@ void cleanupBoardSelectArrows(SpriteRenderArg *arg0) {
     arg0->spriteData = freeNodeMemory(arg0->spriteData);
 }
 
-void initBoardSelectCharNames(TextRenderArg *sprites) {
+void initBoardSelectCharNames(PaletteSpriteArg *sprites) {
     CharacterSelectState *gameState;
     void *spriteAsset;
     s32 i;
@@ -1620,14 +1620,14 @@ void initBoardSelectCharNames(TextRenderArg *sprites) {
         sprites[i].tileMode = 0;
         sprites[i].x = xPos;
         sprites[i].y = yPos;
-        sprites[i].color.paletteAndAlpha = 0xFF;
+        sprites[i].paletteEffect.value = 0xFF;
         sprites[i].spriteData = spriteAsset;
     }
 
     setCallback(updateBoardSelectCharNames);
 }
 
-void updateBoardSelectCharNames(TextRenderArg *sprites) {
+void updateBoardSelectCharNames(PaletteSpriteArg *sprites) {
     CharacterSelectState *gameState;
     s32 i;
     u16 selectionState;
@@ -1700,7 +1700,7 @@ void initCharSelectNameSprites(CharSelectNameSpritesState *state) {
     s32 spriteIndex;
     s32 const_1;
     s32 const_ff;
-    volatile TextRenderArg *entry;
+    volatile PaletteSpriteArg *entry;
     s32 pad[4];
 
     (void)pad;
@@ -1718,7 +1718,7 @@ void initCharSelectNameSprites(CharSelectNameSpritesState *state) {
     if (numPlayers != 0) {
         const_1 = 1;
         const_ff = 0xFF;
-        entry = (volatile TextRenderArg *)state;
+        entry = (volatile PaletteSpriteArg *)state;
         do {
             if (gameConfig->snowboardIds[i] >= 9) {
                 spriteIndex = 0x35;
@@ -1734,7 +1734,7 @@ void initCharSelectNameSprites(CharSelectNameSpritesState *state) {
             gameConfig = gGameSessionContext;
             entry->x = xPos;
             entry->y = yPos;
-            entry->color.paletteAndAlpha = const_ff;
+            entry->paletteEffect.value = const_ff;
             entry->frameIndex = spriteIndex;
             entry->spriteData = spriteAsset;
             i++;
@@ -2216,23 +2216,23 @@ void cleanupCharSelectBackgroundEffect(CharSelectTiledBackgroundState *state) {
     state->tileMapAsset = freeNodeMemory(state->tileMapAsset);
 }
 
-void initCharSelectScaledSprite(FrameSpriteEntry *arg0) {
+void initCharSelectScaledSprite(TransformedSpriteArg *arg0) {
     void *dmaResult;
 
     dmaResult = loadCompressedData(&menuUiSprites_ROM_START, &menuUiSprites_ROM_END, 0x8A08);
     setCleanupCallback(cleanupCharSelectScaledSprite);
 
-    arg0->frameIndex = 6;
-    arg0->scaleX = 0x300;
-    arg0->scaleY = 0x300;
-    arg0->shade.shadeWithPadding = 0xFF;
-    arg0->x = 0;
-    arg0->y = 0;
-    arg0->rotation = 0;
-    arg0->overridePaletteCount = 0;
-    arg0->tileMode = 0;
-    arg0->alpha = 0x80;
-    arg0->spriteData = dmaResult;
+    arg0->base.frameIndex = 6;
+    arg0->base.scaleX = 0x300;
+    arg0->base.scaleY = 0x300;
+    arg0->base.mode.shaded.shade.value = 0xFF;
+    arg0->base.x = 0;
+    arg0->base.y = 0;
+    arg0->base.mode.shaded.rotation = 0;
+    arg0->base.overridePaletteCount = 0;
+    arg0->base.tileMode = 0;
+    arg0->effect.alpha = 0x80;
+    arg0->base.spriteData = dmaResult;
 
     setCallback(renderCharSelectScaledSprite);
 }
@@ -2241,8 +2241,8 @@ void renderCharSelectScaledSprite(void *arg0) {
     pushViewportCallbackBySlot(0xC, VIEWPORT_CALLBACK_LAYER_FINAL, renderScaledAlphaSpriteFrame, arg0);
 }
 
-void cleanupCharSelectScaledSprite(FrameSpriteEntry *arg0) {
-    arg0->spriteData = freeNodeMemory(arg0->spriteData);
+void cleanupCharSelectScaledSprite(TransformedSpriteArg *arg0) {
+    arg0->base.spriteData = freeNodeMemory(arg0->base.spriteData);
 }
 
 void updateCharSelectPreviewLighting(CharSelectPreviewTaskState *arg0, u8 arg1) {

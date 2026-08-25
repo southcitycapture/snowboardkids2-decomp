@@ -7,18 +7,18 @@
 
 typedef struct {
     /* 0x00 */ TextLayoutArg titleText;
-    /* 0x14 */ TextRenderArg leftIcon;
-    /* 0x24 */ TextRenderArg rightIcon;
+    /* 0x14 */ PaletteSpriteArg leftIcon;
+    /* 0x24 */ PaletteSpriteArg rightIcon;
 } OptionsMenuTitleState;
 
 typedef struct {
-    /* 0x00 */ TextRenderArg optionIcons[4];
+    /* 0x00 */ PaletteSpriteArg optionIcons[4];
     /* 0x40 */ TextLayoutArg optionLabels[4];
     /* 0x90 */ void *textRenderAsset;
 } OptionsMenuLabelsState;
 
 typedef struct {
-    /* 0x00 */ TextRenderArg toggleIcons[6];
+    /* 0x00 */ PaletteSpriteArg toggleIcons[6];
     /* 0x60 */ TextLayoutArg toggleLabels[6];
     /* 0xD8 */ void *textRenderAsset;
 } OptionsMenuToggleState;
@@ -42,4 +42,4 @@ typedef struct {
 void initOptionsMenuTitle(OptionsMenuTitleState *arg0);
 void initOptionsMenuToggles(OptionsMenuToggleState *arg0);
 void initOptionsMenuLabels(OptionsMenuLabelsState *arg0);
-void initOptionsMenuCursors(TextRenderArg *arg0);
+void initOptionsMenuCursors(PaletteSpriteArg *arg0);

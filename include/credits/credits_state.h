@@ -55,8 +55,8 @@ typedef struct CreditsState {
     /* 0x9B4 */ s16 subtitleInitialDelay;
     /* 0x9B6 */ u8 pad9B6[2];
     /* 0x9B8 */ DataTable_19E80 *paletteDataTables[6];
-    /* 0x9D0 */ FrameSpriteEntry paletteSprites[18];
-    /* 0xB80 */ FrameSpriteEntry paletteOverlaySprites[18];
+    /* 0x9D0 */ TransformedSpriteArg paletteSprites[18];
+    /* 0xB80 */ TransformedSpriteArg paletteOverlaySprites[18];
     /* 0xD30 */ s32 currentPaletteAlpha;
     /* 0xD34 */ s32 paletteFadeSpeed;
     /* 0xD38 */ s16 nextCommandFrame;
@@ -80,10 +80,10 @@ typedef struct CreditsState {
     /* 0xDF4 */ s32 leftCornerFadeSpeed;
     /* 0xDF8 */ s32 rightCornerAlpha;
     /* 0xDFC */ s32 rightCornerFadeSpeed;
-    /* 0xE00 */ TextRenderArg leftTopCornerSprite;
-    /* 0xE10 */ TextRenderArg leftBottomCornerSprite;
-    /* 0xE20 */ TextRenderArg rightTopCornerSprite;
-    /* 0xE30 */ TextRenderArg rightBottomCornerSprite;
+    /* 0xE00 */ PaletteSpriteArg leftTopCornerSprite;
+    /* 0xE10 */ PaletteSpriteArg leftBottomCornerSprite;
+    /* 0xE20 */ PaletteSpriteArg rightTopCornerSprite;
+    /* 0xE30 */ PaletteSpriteArg rightBottomCornerSprite;
     /* 0xE40 */ s16 nextCharacterConfigIndex;
     /* 0xE42 */ s16 characterLaneIndex;
     /* 0xE44 */ DirectionalLightData sceneLights[3];

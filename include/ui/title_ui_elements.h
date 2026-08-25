@@ -14,7 +14,7 @@ typedef struct {
 } TitleLegalNoticeSprites;
 
 typedef struct {
-    TextRenderArg menuOptions[6];
+    PaletteSpriteArg menuOptions[6];
     TitleLegalNoticeSprites legalNotices;
 } TitleMenuOptionsState;
 

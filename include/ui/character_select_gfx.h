@@ -13,14 +13,14 @@ typedef struct {
 } CharSelectTiledBackgroundState;
 
 typedef struct {
-    TextRenderArg entries[3];
+    PaletteSpriteArg entries[3];
     u8 blinkTimers[3];
     u8 numEntries;
     u8 playerIndex;
 } SelectionMenuState;
 
 typedef struct {
-    CharSelectIconEntry entries[3];
+    ScaledSpriteArg entries[3];
     u8 padding[0x16];
     u8 playerIndex;
 } CharSelectIconTargetState;
@@ -38,7 +38,7 @@ typedef struct {
 typedef P2NameAnimationState CharSelectIconHideState;
 
 typedef struct {
-    CharSelectIconEntry entries[3];
+    ScaledSpriteArg entries[3];
     u8 padding[0x14];
     u8 numVisibleIcons;
     u8 revealCounter;
@@ -47,7 +47,7 @@ typedef struct {
 } CharSelectIconsState;
 
 typedef struct {
-    TextRenderArg entries[8];
+    PaletteSpriteArg entries[8];
     u8 blinkTimers[4];
 } SelectionArrowsState;
 
@@ -57,7 +57,7 @@ typedef struct {
 } P2NameHideState;
 
 typedef struct {
-    TextRenderArg entries[4];
+    PaletteSpriteArg entries[4];
     SpriteRenderArg singlePlayerSprite;
 } CharSelectNameSpritesState;
 
@@ -169,7 +169,7 @@ void cleanupCharSelectBackgroundEffect(CharSelectTiledBackgroundState *state);
 void setupCharSelectBackgroundEffect(CharSelectTiledBackgroundState *state);
 void updateCharSelectBackgroundEffect(CharSelectTiledBackgroundState *state);
 void renderCharSelectScaledSprite(void *);
-void cleanupCharSelectScaledSprite(FrameSpriteEntry *);
+void cleanupCharSelectScaledSprite(TransformedSpriteArg *);
 void updateCharSelectPostSlide(CharSelectPreviewTaskState *);
 void updateCharSelectSlide(CharSelectPreviewTaskState *);
 void hideCharSelectIcons(CharSelectIconHideState *);
@@ -183,7 +183,7 @@ void initCharSelectNameSprites(CharSelectNameSpritesState *state);
 void initCharSelectStats(CharSelectStatsState *arg0);
 void updateCharSelectStats(CharSelectStatsState *arg0);
 void cleanupCharSelectStats(SpriteRenderArg *arg0);
-void initCharSelectScaledSprite(FrameSpriteEntry *arg0);
+void initCharSelectScaledSprite(TransformedSpriteArg *arg0);
 
 void initBoardSelectArrows(SelectionArrowsState *state);
-void initBoardSelectCharNames(TextRenderArg *sprites);
+void initBoardSelectCharNames(PaletteSpriteArg *sprites);

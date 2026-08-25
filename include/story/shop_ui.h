@@ -36,6 +36,6 @@ void initStoryMapShopExitOverlay(SpriteRenderArg *state);
 void initStoryMapShopFairyModel(StoryMapShopFairyState *state);
 void initStoryMapShopGoldDisplay(StoryMapShopGoldDisplayState *state);
 void initStoryMapShopItemCard(StoryMapShopItemCardState *card);
-void initStoryMapShopItemIcon(TextRenderArg *state);
-void initStoryMapShopItemStatLabel(TextRenderArg *state);
+void initStoryMapShopItemIcon(PaletteSpriteArg *state);
+void initStoryMapShopItemStatLabel(PaletteSpriteArg *state);
 void loadStoryMapShopBackground(StoryMapShopBackgroundState *state);

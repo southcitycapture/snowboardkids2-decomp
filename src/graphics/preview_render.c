@@ -75,11 +75,11 @@ void waitBoardShopShopkeeper(BoardShopShopkeeperState *arg0);
 void updateBoardShopShopkeeper(BoardShopShopkeeperState *arg0);
 void initBoardShopBackgroundRenderState(TileMapRenderTaskState *arg0);
 void cleanupBoardShopBackground(TileMapRenderTaskState *arg0);
-void cleanupBoardShopColumnSelectorArrow(TextRenderArg *);
+void cleanupBoardShopColumnSelectorArrow(PaletteSpriteArg *);
 void updateBoardShopExitOverlay(void *arg0);
 void cleanupBoardShopExitOverlay(SpriteRenderArg *arg0);
-void updateBoardShopTitleCorners(TextRenderArg *arg0);
-void cleanupBoardShopTitleCorners(TextRenderArg *arg0);
+void updateBoardShopTitleCorners(PaletteSpriteArg *arg0);
+void cleanupBoardShopTitleCorners(PaletteSpriteArg *arg0);
 void updateBoardShopTitleText(BoardShopTitleTextState *arg0);
 void cleanupBoardShopTitleText(BoardShopTitleTextState *arg0);
 void animateBoardShopSnowflakeSlideIn(BoardShopSnowflakeSpriteState *arg0);
@@ -633,7 +633,7 @@ void cleanupBoardShopBackground(TileMapRenderTaskState *state) {
     state->asset = freeNodeMemory(state->asset);
 }
 
-void cleanupBoardShopComparisonIcons(TextRenderArg *arg0);
+void cleanupBoardShopComparisonIcons(PaletteSpriteArg *arg0);
 
 void updateBoardShopComparisonIcons(BoardShopComparisonIconsState *arg0);
 
@@ -649,7 +649,7 @@ void initBoardShopComparisonIcons(BoardShopComparisonIconsState *arg0) {
         arg0->comparisonIcons[i].y = -0x18;
         arg0->comparisonIcons[i].frameIndex = i;
         arg0->comparisonIcons[i].spriteData = spriteAsset;
-        arg0->comparisonIcons[i].color.paletteAndAlphaSigned = 0xFF;
+        arg0->comparisonIcons[i].paletteEffect.signedValue = 0xFF;
         arg0->comparisonIcons[i].overridePaletteCount = 0;
         arg0->comparisonIcons[i].tileMode = 0;
     }
@@ -660,7 +660,7 @@ void initBoardShopComparisonIcons(BoardShopComparisonIconsState *arg0) {
 
 void updateBoardShopComparisonIcons(BoardShopComparisonIconsState *arg0) {
     BoardShopState *allocation;
-    TextRenderArg *icon;
+    PaletteSpriteArg *icon;
     u8 state;
     s16 s4;
     s16 s3;
@@ -676,13 +676,13 @@ void updateBoardShopComparisonIcons(BoardShopComparisonIconsState *arg0) {
         state = allocation->shopState;
         if ((state == 2) | (state == 5)) {
             if (arg0->animationCounter < 16) {
-                icon->color.paletteAndAlphaSigned = icon->color.paletteAndAlphaSigned - 8;
+                icon->paletteEffect.signedValue = icon->paletteEffect.signedValue - 8;
             } else {
-                icon->color.paletteAndAlphaSigned = icon->color.paletteAndAlphaSigned + 8;
+                icon->paletteEffect.signedValue = icon->paletteEffect.signedValue + 8;
             }
         } else {
             arg0->animationCounter = 0;
-            icon->color.paletteAndAlphaSigned = s4;
+            icon->paletteEffect.signedValue = s4;
             state = allocation->shopState;
             if ((state == 4) & (state == 7)) {
                 if (allocation->delayTimer & 1) {
@@ -721,14 +721,14 @@ void updateBoardShopComparisonIcons(BoardShopComparisonIconsState *arg0) {
     }
 }
 
-void cleanupBoardShopComparisonIcons(TextRenderArg *arg0) {
+void cleanupBoardShopComparisonIcons(PaletteSpriteArg *arg0) {
     arg0->spriteData = freeNodeMemory(arg0->spriteData);
 }
 
-void cleanupBoardShopRowSelectorArrow(TextRenderArg *arg0);
-void updateBoardShopRowSelectorArrow(TextRenderArg *arg0);
+void cleanupBoardShopRowSelectorArrow(PaletteSpriteArg *arg0);
+void updateBoardShopRowSelectorArrow(PaletteSpriteArg *arg0);
 
-void initBoardShopRowSelectorArrow(TextRenderArg *arg0) {
+void initBoardShopRowSelectorArrow(PaletteSpriteArg *arg0) {
     void *asset;
 
     getCurrentAllocation();
@@ -737,14 +737,14 @@ void initBoardShopRowSelectorArrow(TextRenderArg *arg0) {
     arg0->x = -0x1C;
     arg0->y = -0x18;
     arg0->frameIndex = 0x1D;
-    arg0->color.paletteAndAlphaSigned = 0xFF;
+    arg0->paletteEffect.signedValue = 0xFF;
     arg0->tileMode = 0;
     arg0->overridePaletteCount = 0;
     arg0->spriteData = asset;
     setCallback(&updateBoardShopRowSelectorArrow);
 }
 
-void updateBoardShopRowSelectorArrow(TextRenderArg *arg0) {
+void updateBoardShopRowSelectorArrow(PaletteSpriteArg *arg0) {
     BoardShopState *allocation;
     u8 temp;
 
@@ -768,13 +768,13 @@ void updateBoardShopRowSelectorArrow(TextRenderArg *arg0) {
     }
 }
 
-void cleanupBoardShopRowSelectorArrow(TextRenderArg *arg0) {
+void cleanupBoardShopRowSelectorArrow(PaletteSpriteArg *arg0) {
     arg0->spriteData = freeNodeMemory(arg0->spriteData);
 }
 
-void updateBoardShopColumnSelectorArrow(TextRenderArg *arg0);
+void updateBoardShopColumnSelectorArrow(PaletteSpriteArg *arg0);
 
-void initBoardShopColumnSelectorArrow(TextRenderArg *arg0) {
+void initBoardShopColumnSelectorArrow(PaletteSpriteArg *arg0) {
     void *asset;
 
     getCurrentAllocation();
@@ -783,14 +783,14 @@ void initBoardShopColumnSelectorArrow(TextRenderArg *arg0) {
     arg0->x = -8;
     arg0->y = 8;
     arg0->frameIndex = 0x24;
-    arg0->color.paletteAndAlphaSigned = 0xFF;
+    arg0->paletteEffect.signedValue = 0xFF;
     arg0->tileMode = 0;
     arg0->overridePaletteCount = 0;
     arg0->spriteData = asset;
     setCallback(&updateBoardShopColumnSelectorArrow);
 }
 
-void updateBoardShopColumnSelectorArrow(TextRenderArg *arg0) {
+void updateBoardShopColumnSelectorArrow(PaletteSpriteArg *arg0) {
     BoardShopState *allocation;
     u8 state;
     u8 temp;
@@ -816,7 +816,7 @@ void updateBoardShopColumnSelectorArrow(TextRenderArg *arg0) {
     }
 }
 
-void cleanupBoardShopColumnSelectorArrow(TextRenderArg *arg0) {
+void cleanupBoardShopColumnSelectorArrow(PaletteSpriteArg *arg0) {
     arg0->spriteData = freeNodeMemory(arg0->spriteData);
 }
 
@@ -917,21 +917,21 @@ void initBoardShopBoardIcons(BoardShopBoardIconsState *arg0) {
     spriteAsset = loadCompressedData(&snowflakeSprite_ROM_START, &snowflakeSprite_ROM_END, 0x9488);
 
     for (i = 0; i < 4; i++) {
-        arg0->sprites[i].x = 0x60;
-        arg0->sprites[i].y = -0x91;
+        arg0->sprites[i].base.x = 0x60;
+        arg0->sprites[i].base.y = -0x91;
 
         boardIndex = state->boardDisplayIndices[i];
         boardIndex = state->boardIndexMap[boardIndex];
 
-        arg0->sprites[i].frameIndex = boardIndex;
-        arg0->sprites[i].scaleX = 0x400;
-        arg0->sprites[i].scaleY = 0x400;
-        arg0->sprites[i].rotation = 0;
-        arg0->sprites[i].alpha.value = 0xFF;
-        arg0->sprites[i].overridePaletteCount = 0;
-        arg0->sprites[i].tileMode = 0;
-        arg0->sprites[i].flipX = 0;
-        arg0->sprites[i].spriteData = spriteAsset;
+        arg0->sprites[i].base.frameIndex = boardIndex;
+        arg0->sprites[i].base.scaleX = 0x400;
+        arg0->sprites[i].base.scaleY = 0x400;
+        arg0->sprites[i].base.mode.shaded.rotation = 0;
+        arg0->sprites[i].base.mode.shaded.shade.value = 0xFF;
+        arg0->sprites[i].base.overridePaletteCount = 0;
+        arg0->sprites[i].base.tileMode = 0;
+        arg0->sprites[i].effect.flipX = 0;
+        arg0->sprites[i].base.spriteData = spriteAsset;
         arg0->animation.animationCounters[i] = 0;
     }
 
@@ -956,14 +956,14 @@ void animateBoardShopBoardIconsSlideIn(BoardShopBoardIconsState *arg0) {
     animatingCount = 0;
 
     for (i = 0; i < 4; i++) {
-        currentY = arg0->sprites[i].y;
+        currentY = arg0->sprites[i].base.y;
         if (currentY < boardIconTargetYPositions[i]) {
             delta = boardIconTargetYPositions[i] - currentY;
             absDelta = ABS(delta);
             if (absDelta >= 20) {
-                arg0->sprites[i].y = currentY + 20;
+                arg0->sprites[i].base.y = currentY + 20;
             } else {
-                arg0->sprites[i].y = currentY + absDelta;
+                arg0->sprites[i].base.y = currentY + absDelta;
             }
             animatingCount++;
         }
@@ -990,30 +990,30 @@ void updateBoardShopBoardIconSelection(BoardShopBoardIconsState *arg0) {
     state = getCurrentAllocation();
     for (i = 0; i < 4; i++) {
         if (state->selectedSlot == i) {
-            arg0->sprites[i].alpha.value = 0xFF;
+            arg0->sprites[i].base.mode.shaded.shade.value = 0xFF;
             if (state->delayTimer >= 5) {
                 temp = arg0->animation.animationCounters[i];
                 if (temp < 30) {
                     adjustment = D_8008F184_8FD84[temp / 10];
-                    arg0->sprites[i].scaleY = arg0->sprites[i].scaleY + adjustment;
+                    arg0->sprites[i].base.scaleY = arg0->sprites[i].base.scaleY + adjustment;
                 } else {
                     adjustment = D_8008F184_8FD84[2 - ((temp - 30) / 10)];
-                    arg0->sprites[i].scaleY = arg0->sprites[i].scaleY - adjustment;
+                    arg0->sprites[i].base.scaleY = arg0->sprites[i].base.scaleY - adjustment;
                 }
                 arg0->animation.animationCounters[i]++;
                 temp = arg0->animation.animationCounters[i];
                 if (temp == 60) {
                     arg0->animation.animationCounters[i] = 0;
-                    arg0->sprites[i].scaleY = 0x400;
+                    arg0->sprites[i].base.scaleY = 0x400;
                 } else if (temp == 30) {
-                    arg0->sprites[i].flipX = (arg0->sprites[i].flipX + 1) & 1;
+                    arg0->sprites[i].effect.flipX = (arg0->sprites[i].effect.flipX + 1) & 1;
                 }
             }
         } else {
-            arg0->sprites[i].alpha.value = 0x80;
+            arg0->sprites[i].base.mode.shaded.shade.value = 0x80;
             arg0->animation.animationCounters[i] = 0;
-            arg0->sprites[i].flipX = 0;
-            arg0->sprites[i].scaleY = 0x400;
+            arg0->sprites[i].effect.flipX = 0;
+            arg0->sprites[i].base.scaleY = 0x400;
         }
         pushViewportCallbackBySlot(
             8,
@@ -1025,10 +1025,10 @@ void updateBoardShopBoardIconSelection(BoardShopBoardIconsState *arg0) {
 
     if (state->shopState == 0x11) {
         for (i = 0; i < 4; i++) {
-            arg0->sprites[i].alpha.value = 0x80;
-            arg0->sprites[i].scaleY = 0x400;
-            arg0->sprites[i].flipX = 0;
-            arg0->sprites[i].frameIndex = state->boardIndexMap[state->boardDisplayIndices[i]];
+            arg0->sprites[i].base.mode.shaded.shade.value = 0x80;
+            arg0->sprites[i].base.scaleY = 0x400;
+            arg0->sprites[i].effect.flipX = 0;
+            arg0->sprites[i].base.frameIndex = state->boardIndexMap[state->boardDisplayIndices[i]];
         }
 
         arg0->animation.animationCounters[0] = 1;
@@ -1036,7 +1036,7 @@ void updateBoardShopBoardIconSelection(BoardShopBoardIconsState *arg0) {
     } else if (state->shopState == 0x13) {
         new_var = 0x400;
         for (i = 3; i >= 0; i--) {
-            arg0->sprites[i].scaleY = new_var;
+            arg0->sprites[i].base.scaleY = new_var;
         }
 
         setCallback(initBoardShopCharacterPortraitsSlideIn);
@@ -1060,21 +1060,21 @@ void blinkBoardShopBoardIconConfirmation(BoardShopBoardIconsState *arg0) {
     state = getCurrentAllocation();
 
     for (i = 0; i < 4; i++) {
-        arg0->sprites[i].scaleY = 0x400;
+        arg0->sprites[i].base.scaleY = 0x400;
         arg0->animation.animationCounters[i] = 0;
         temp2 = 0xFF;
 
         if (state->selectedSlot == i) {
-            arg0->sprites[i].alpha.value = 0xFF;
-            arg0->sprites[i].overridePaletteCount = 0;
+            arg0->sprites[i].base.mode.shaded.shade.value = 0xFF;
+            arg0->sprites[i].base.overridePaletteCount = 0;
             if (state->shopState == 0x14) {
                 if ((state->delayTimer & 1) != 0) {
                     __asm__ volatile("" ::: "memory");
-                    arg0->sprites[i].overridePaletteCount = temp2;
+                    arg0->sprites[i].base.overridePaletteCount = temp2;
                 }
             }
         } else {
-            arg0->sprites[i].alpha.value = 0x80;
+            arg0->sprites[i].base.mode.shaded.shade.value = 0x80;
         }
 
         pushViewportCallbackBySlot(
@@ -1114,8 +1114,8 @@ void initBoardShopCharacterPortraitsSlideIn(BoardShopBoardIconsState *arg0) {
     currentX = startX;
 
     for (i = 0; i < 4; i++) {
-        arg0->sprites[i].y = currentX;
-        arg0->sprites[i].frameIndex = allocation->boardIndexMap[allocation->boardDisplayIndices[i]];
+        arg0->sprites[i].base.y = currentX;
+        arg0->sprites[i].base.frameIndex = allocation->boardIndexMap[allocation->boardDisplayIndices[i]];
         arg0->animation.portraitFrameCounters[i] = 0;
         pushViewportCallbackBySlot(
             8,
@@ -1139,9 +1139,9 @@ void animateBoardShopCharacterPortraitsSlideIn(BoardShopBoardIconsState *arg0) {
         arg0->animation.portraitFrameCounters[i]++;
 
         if (gameState->scrollDirection == 1) {
-            arg0->sprites[i].y -= 10;
+            arg0->sprites[i].base.y -= 10;
         } else {
-            arg0->sprites[i].y += 10;
+            arg0->sprites[i].base.y += 10;
         }
 
         pushViewportCallbackBySlot(
@@ -1165,7 +1165,7 @@ void animateBoardShopCharacterPortraitsSlideIn(BoardShopBoardIconsState *arg0) {
 
 void animateBoardShopBoardIconsSlideOut(BoardShopBoardIconsState *arg0) {
     BoardShopState *allocation;
-    FlippedScaledSpriteArg *icons;
+    TransformedSpriteArg *icons;
     u8 slideCount;
     s32 i;
 
@@ -1174,10 +1174,10 @@ void animateBoardShopBoardIconsSlideOut(BoardShopBoardIconsState *arg0) {
     icons = arg0->sprites;
     for (i = 0; i < 4; i++) {
         if (i >= (4 - arg0->animation.slideOut.slidingIconCount)) {
-            icons[i].y -= 0x14;
+            icons[i].base.y -= 0x14;
             if (i != 0) {
                 slideCount = arg0->animation.slideOut.slidingIconCount & 0xFF;
-                if (arg0->sprites[4 - slideCount].y == arg0->sprites[3 - slideCount].y) {
+                if (arg0->sprites[4 - slideCount].base.y == arg0->sprites[3 - slideCount].base.y) {
                     arg0->animation.slideOut.slidingIconCount++;
                 }
             }
@@ -1185,14 +1185,14 @@ void animateBoardShopBoardIconsSlideOut(BoardShopBoardIconsState *arg0) {
         pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderFlippedScaledSpriteFrame, &icons[i]);
     }
 
-    if (arg0->sprites[0].y < (-0x88)) {
+    if (arg0->sprites[0].base.y < (-0x88)) {
         allocation->delayTimer = 1;
         terminateCurrentTask();
     }
 }
 
 void cleanupBoardShopBoardIcons(BoardShopBoardIconsState *arg0) {
-    arg0->sprites[0].spriteData = freeNodeMemory(arg0->sprites[0].spriteData);
+    arg0->sprites[0].base.spriteData = freeNodeMemory(arg0->sprites[0].base.spriteData);
 }
 
 void initBoardShopSnowflakeSlideIn(BoardShopSnowflakeSpriteState *arg0) {
@@ -1201,22 +1201,22 @@ void initBoardShopSnowflakeSlideIn(BoardShopSnowflakeSpriteState *arg0) {
 
     snowflakeAsset = loadCompressedData(&snowflakeSprite_ROM_START, &snowflakeSprite_ROM_END, 0x9488);
 
-    arg0->sprite.x = 0x60;
-    arg0->sprite.frameIndex = allocation->boardIndexMap[allocation->scrollOutBoardIndex];
-    arg0->sprite.scaleX = 0x400;
-    arg0->sprite.scaleY = 0x400;
-    arg0->sprite.rotation = 0;
-    arg0->sprite.alpha.value = 0x80;
-    arg0->sprite.overridePaletteCount = 0;
-    arg0->sprite.tileMode = 0;
-    arg0->sprite.flipX = 0;
-    arg0->sprite.spriteData = snowflakeAsset;
+    arg0->sprite.base.x = 0x60;
+    arg0->sprite.base.frameIndex = allocation->boardIndexMap[allocation->scrollOutBoardIndex];
+    arg0->sprite.base.scaleX = 0x400;
+    arg0->sprite.base.scaleY = 0x400;
+    arg0->sprite.base.mode.shaded.rotation = 0;
+    arg0->sprite.base.mode.shaded.shade.value = 0x80;
+    arg0->sprite.base.overridePaletteCount = 0;
+    arg0->sprite.base.tileMode = 0;
+    arg0->sprite.effect.flipX = 0;
+    arg0->sprite.base.spriteData = snowflakeAsset;
     arg0->task.frameCounter = 0;
 
     if (allocation->scrollDirection != 1) {
-        arg0->sprite.y = 0x3F;
+        arg0->sprite.base.y = 0x3F;
     } else {
-        arg0->sprite.y = -0x39;
+        arg0->sprite.base.y = -0x39;
     }
 
     setCleanupCallback(&cleanupBoardShopSnowflakeSprite);
@@ -1233,9 +1233,9 @@ void animateBoardShopSnowflakeSlideIn(BoardShopSnowflakeSpriteState *arg0) {
 
     arg0->task.frameCounter++;
     if (allocation->scrollDirection == 1) {
-        arg0->sprite.y = arg0->sprite.y - 0x14;
+        arg0->sprite.base.y = arg0->sprite.base.y - 0x14;
     } else {
-        arg0->sprite.y = arg0->sprite.y + 0x14;
+        arg0->sprite.base.y = arg0->sprite.base.y + 0x14;
     }
 
     pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, &renderFlippedScaledSpriteFrame, &arg0->sprite);
@@ -1280,13 +1280,13 @@ void cleanupBoardShopTitleText(BoardShopTitleTextState *arg0) {
     arg0->textAsset = freeNodeMemory(arg0->textAsset);
 }
 
-void initBoardShopTitleCorners(TextRenderArg *arg0) {
+void initBoardShopTitleCorners(PaletteSpriteArg *arg0) {
     s32 i;
     void *cornerAsset = loadCompressedData(&uiCornerSprites_ROM_START, &uiCornerSprites_ROM_END, 0x1548);
     setCleanupCallback(&cleanupBoardShopTitleCorners);
 
     for (i = 0; i < 4; i++) {
-        TextRenderArg *corner = &arg0[i];
+        PaletteSpriteArg *corner = &arg0[i];
 
         if (i % 2 != 0) {
             corner->x = -0x80;
@@ -1297,7 +1297,7 @@ void initBoardShopTitleCorners(TextRenderArg *arg0) {
         corner->y = (s16)(((i / 2) * 0x10) - 0x66);
         corner->spriteData = cornerAsset;
         corner->frameIndex = i;
-        corner->color.paletteAndAlphaSigned = 0xFF;
+        corner->paletteEffect.signedValue = 0xFF;
         corner->overridePaletteCount = 0;
         corner->tileMode = 1;
     }
@@ -1305,7 +1305,7 @@ void initBoardShopTitleCorners(TextRenderArg *arg0) {
     setCallback(&updateBoardShopTitleCorners);
 }
 
-void updateBoardShopTitleCorners(TextRenderArg *arg0) {
+void updateBoardShopTitleCorners(PaletteSpriteArg *arg0) {
     s32 i;
 
     if (((BoardShopState *)getCurrentAllocation())->viewMode != 0) {
@@ -1315,6 +1315,6 @@ void updateBoardShopTitleCorners(TextRenderArg *arg0) {
     }
 }
 
-void cleanupBoardShopTitleCorners(TextRenderArg *arg0) {
+void cleanupBoardShopTitleCorners(PaletteSpriteArg *arg0) {
     arg0->spriteData = freeNodeMemory(arg0->spriteData);
 }

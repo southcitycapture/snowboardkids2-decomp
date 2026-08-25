@@ -13,7 +13,7 @@ typedef struct {
 } CharacterSelectBackgroundState;
 
 typedef struct {
-    /* 0x00 */ TextRenderArg playerMarkers[4];
+    /* 0x00 */ PaletteSpriteArg playerMarkers[4];
     /* 0x40 */ u8 pulseTimers[8];
 } CharacterSelectSprites;
 

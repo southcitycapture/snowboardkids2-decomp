@@ -46,7 +46,7 @@ u8 D_800B11C2_1DB762_data[] = { 0x00, 0x56, 0x00, 0x46, 0x00, 0x00, 0x00, 0x00, 
 char gCoordDisplayFormatString[16] = "X=%d Y=%d  ";
 
 void sortPlayersByCharacterRank(void);
-void positionCharacterSelectSprite(TextRenderArg *, u8);
+void positionCharacterSelectSprite(PaletteSpriteArg *, u8);
 void enqueueCharacterSelectTextureRender(void *);
 void awaitCharacterPreviewReady(CharacterPreviewState *);
 void updateCharacterPreviewAnimation(CharacterPreviewState *);
@@ -108,7 +108,7 @@ void sortPlayersByCharacterRank(void) {
     }
 }
 
-void positionCharacterSelectSprite(TextRenderArg *arg0, u8 arg1) {
+void positionCharacterSelectSprite(PaletteSpriteArg *arg0, u8 arg1) {
     GameState *allocation;
     u8 playerState;
     u8 count;
@@ -377,7 +377,7 @@ void initCharacterSelectSprites(CharacterSelectSprites *arg0) {
 
     for (i = 0; i < gGameSessionContext->numPlayers; i++) {
         arg0->playerMarkers[i].spriteData = allocation;
-        arg0->playerMarkers[i].color.paletteAndAlpha = 0xFF;
+        arg0->playerMarkers[i].paletteEffect.value = 0xFF;
         arg0->playerMarkers[i].overridePaletteCount = 0;
         arg0->playerMarkers[i].tileMode = 0;
         arg0->pulseTimers[i] = 0;
@@ -401,7 +401,7 @@ void updateCharacterSelectSprites(CharacterSelectSprites *arg0) {
         state = allocation->modeData.storyMap.selectionState[i];
 
         if (state == 10) {
-            arg0->playerMarkers[i].color.paletteAndAlpha = 0xFF;
+            arg0->playerMarkers[i].paletteEffect.value = 0xFF;
             arg0->pulseTimers[i] = 0;
             if (allocation->modeData.characterSelect.playerBlinkTimers[i] & 1) {
                 arg0->playerMarkers[i].overridePaletteCount = 0xFF;
@@ -411,21 +411,21 @@ void updateCharacterSelectSprites(CharacterSelectSprites *arg0) {
         } else if (state == 0) {
             arg0->pulseTimers[i] = arg0->pulseTimers[i] % 30;
             if (arg0->pulseTimers[i] < 15) {
-                arg0->playerMarkers[i].color.paletteAndAlpha = arg0->playerMarkers[i].color.paletteAndAlpha - 8;
+                arg0->playerMarkers[i].paletteEffect.value = arg0->playerMarkers[i].paletteEffect.value - 8;
             } else {
-                arg0->playerMarkers[i].color.paletteAndAlpha = arg0->playerMarkers[i].color.paletteAndAlpha + 8;
+                arg0->playerMarkers[i].paletteEffect.value = arg0->playerMarkers[i].paletteEffect.value + 8;
             }
             arg0->pulseTimers[i] = arg0->pulseTimers[i] + 1;
         } else {
             arg0->pulseTimers[i] = 0;
-            arg0->playerMarkers[i].color.paletteAndAlpha = 0xFF;
+            arg0->playerMarkers[i].paletteEffect.value = 0xFF;
         }
 
         if (allocation->modeData.storyMap.selectionState[i] == 2) {
             allocation->modeData.characterSelect.playerBlinkTimers[i] = 0;
             arg0->playerMarkers[i].overridePaletteCount = 0;
             arg0->pulseTimers[i] = 0;
-            arg0->playerMarkers[i].color.paletteAndAlpha = 0xFF;
+            arg0->playerMarkers[i].paletteEffect.value = 0xFF;
         }
 
         pushViewportCallbackBySlot(8, VIEWPORT_CALLBACK_LAYER_INITIAL, renderTextSprite, &arg0->playerMarkers[i]);

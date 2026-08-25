@@ -63,8 +63,8 @@ void initControllerSlotDisplay(TitleMenuOptionsState *state) {
         state->menuOptions[i].overridePaletteCount = 0;
         state->menuOptions[i].spriteData = spriteAsset;
         state->menuOptions[i].frameIndex = i;
-        state->menuOptions[i].color.paletteAndAlpha = 0x80;
-        state->menuOptions[i].transparency = 0xF0;
+        state->menuOptions[i].paletteEffect.value = 0x80;
+        state->menuOptions[i].primitiveAlpha = 0xF0;
         state->menuOptions[i].tileMode = 0;
     }
 
@@ -75,8 +75,8 @@ void initControllerSlotDisplay(TitleMenuOptionsState *state) {
         state->menuOptions[i + 4].spriteData = spriteAsset;
         state->menuOptions[i + 4].frameIndex = 3;
         state->menuOptions[i + 4].frameIndex += i;
-        state->menuOptions[i + 4].color.paletteAndAlpha = 0x80;
-        state->menuOptions[i + 4].transparency = 0xF0;
+        state->menuOptions[i + 4].paletteEffect.value = 0x80;
+        state->menuOptions[i + 4].primitiveAlpha = 0xF0;
         state->menuOptions[i + 4].tileMode = 0;
     }
 
@@ -97,7 +97,7 @@ void updateControllerSlotHighlights(TitleMenuOptionsState *arg0) {
     s32 numOptions;
     s32 selectedOption;
     s32 unused[2];
-    TextRenderArg *option;
+    PaletteSpriteArg *option;
     s32 selectedAlpha;
     s32 unselectedAlpha;
 
@@ -118,10 +118,10 @@ void updateControllerSlotHighlights(TitleMenuOptionsState *arg0) {
                 selectedOption = state->menuSelection;
                 if (i == selectedOption) {
                     option = &arg0->menuOptions[i + (state->menuMode << 2)];
-                    option->color.paletteAndAlpha = selectedAlpha;
+                    option->paletteEffect.value = selectedAlpha;
                 } else {
                     option = &arg0->menuOptions[i + (state->menuMode << 2)];
-                    option->color.paletteAndAlpha = unselectedAlpha;
+                    option->paletteEffect.value = unselectedAlpha;
                 }
 
                 pushViewportCallbackBySlot(

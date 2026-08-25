@@ -376,7 +376,7 @@ void renderHalfSizeSpriteWithCustomPalette(SpriteRenderArg *sprite) {
     }
 }
 
-void renderCharSelectIconSprite(CharSelectIconEntry *sprite) {
+void renderCharSelectIconSprite(ScaledSpriteArg *sprite) {
     SpriteFrameEntry *paletteBase;
     u16 paletteMode;
     s32 right;
@@ -395,9 +395,9 @@ void renderCharSelectIconSprite(CharSelectIconEntry *sprite) {
     SpriteFrameEntry *frameEntry;
     SpriteFrameEntry *paletteAddr;
 
-    frameEntry = sprite->spriteAsset->frames;
-    paletteBase = &frameEntry[sprite->spriteAsset->numFrames];
-    frameEntry = &frameEntry[sprite->spriteIndex];
+    frameEntry = sprite->spriteData->frames;
+    paletteBase = &frameEntry[sprite->spriteData->numFrames];
+    frameEntry = &frameEntry[sprite->frameIndex];
     paletteMode = gSpritePaletteModes[frameEntry->paletteTableIndex];
     format = gSpriteTextureFormats[frameEntry->formatIndex];
     scaleS = gTileTextureFlipTable[sprite->tileMode * 2];
@@ -418,14 +418,14 @@ void renderCharSelectIconSprite(CharSelectIconEntry *sprite) {
 
     sprite->tileMode &= 3;
 
-    right = left + (s16)(((u16)sprite->currentY << 12) / sprite->scaleX);
-    bottom = top + (s16)(((u16)sprite->textureHeight << 12) / sprite->scaleY);
+    right = left + (s16)(((u16)sprite->mode.cropped.renderWidth << 12) / sprite->scaleX);
+    bottom = top + (s16)(((u16)sprite->mode.cropped.renderHeight << 12) / sprite->scaleY);
 
-    dsdx = ((u16)sprite->currentY << 12) / sprite->scaleX;
-    dtdy = ((u16)sprite->textureHeight << 12) / sprite->scaleY;
+    dsdx = ((u16)sprite->mode.cropped.renderWidth << 12) / sprite->scaleX;
+    dtdy = ((u16)sprite->mode.cropped.renderHeight << 12) / sprite->scaleY;
 
-    left = (gTextClipAndOffsetData.offsetX + sprite->baseY) * 4;
-    top = (gTextClipAndOffsetData.offsetY + sprite->x) * 4;
+    left = (gTextClipAndOffsetData.offsetX + sprite->x) * 4;
+    top = (gTextClipAndOffsetData.offsetY + sprite->y) * 4;
     right = left + dsdx;
     bottom = top + dtdy;
 
@@ -482,10 +482,10 @@ void renderCharSelectIconSprite(CharSelectIconEntry *sprite) {
             gDPSetRenderMode(gDisplayListAllocPtr++, G_RM_TEX_EDGE, G_RM_TEX_EDGE2);
         }
 
-        if ((s32)sprite->spriteAsset + frameEntry->textureOffset != gCachedTextureAddr) {
-            gCachedTextureAddr = (s32)sprite->spriteAsset + frameEntry->textureOffset;
+        if ((s32)sprite->spriteData + frameEntry->textureOffset != gCachedTextureAddr) {
+            gCachedTextureAddr = (s32)sprite->spriteData + frameEntry->textureOffset;
             loadSpriteTexture(
-                (s32)sprite->spriteAsset + frameEntry->textureOffset,
+                (s32)sprite->spriteData + frameEntry->textureOffset,
                 frameEntry->width,
                 frameEntry->height,
                 format,
@@ -572,10 +572,10 @@ void renderScaledShadedSpriteFrame(ScaledSpriteArg *sprite) {
         paletteIndex = sprite->overridePaletteCount - 1;
     }
 
-    if (sprite->renderWidth > 0x7FFF || sprite->renderWidth == 0) {
+    if (sprite->scaleX > 0x7FFF || sprite->scaleX == 0) {
         return;
     }
-    if (sprite->renderHeight > 0x7FFF || sprite->renderHeight == 0) {
+    if (sprite->scaleY > 0x7FFF || sprite->scaleY == 0) {
         return;
     }
 
@@ -584,8 +584,8 @@ void renderScaledShadedSpriteFrame(ScaledSpriteArg *sprite) {
     sprite->tileMode = sprite->tileMode & 3;
 
     widthTimes4 = frameEntry->width << 2;
-    scaleW = (frameEntry->width << 12) / sprite->renderWidth;
-    scaleH = (frameEntry->height << 12) / sprite->renderHeight;
+    scaleW = (frameEntry->width << 12) / sprite->scaleX;
+    scaleH = (frameEntry->height << 12) / sprite->scaleY;
 
     left = (sprite->x * 4) - ((u32)scaleW >> 1) + (gTextClipAndOffsetData.offsetX * 4);
     top = (sprite->y * 4) - ((u32)scaleH >> 1) + (gTextClipAndOffsetData.offsetY * 4);
@@ -647,11 +647,11 @@ void renderScaledShadedSpriteFrame(ScaledSpriteArg *sprite) {
             (gfx + 2)->words.w0 = 0xFA000000;
 
             {
-                u8 shade = sprite->shade.bytes.intensity;
+                u8 shade = sprite->mode.shaded.shade.components.intensity;
                 (gfx + 2)->words.w1 = (shade << 24) | (shade << 16) | (shade << 8) | 0xFF;
             }
 
-            if (sprite->renderWidth != 0x400 || sprite->renderHeight != sprite->renderWidth) {
+            if (sprite->scaleX != 0x400 || sprite->scaleY != sprite->scaleX) {
                 gDisplayListAllocPtr = (Gfx *)((s32)gfx + 0x20);
                 (gfx + 3)->words.w0 = 0xE200001C;
                 (gfx + 3)->words.w1 = 0x0F0A7008;
@@ -702,14 +702,14 @@ void renderScaledShadedSpriteFrame(ScaledSpriteArg *sprite) {
             G_TX_RENDERTILE,
             clipOffsetX << 3,
             clipOffsetY << 3,
-            (s16)scaleS * sprite->renderWidth,
-            (s16)scaleT * sprite->renderHeight
+            (s16)scaleS * sprite->scaleX,
+            (s16)scaleT * sprite->scaleY
         );
 
         gDPPipeSync(gDisplayListAllocPtr++);
         gDPSetCombineMode(gDisplayListAllocPtr++, G_CC_DECALRGBA, G_CC_DECALRGBA);
 
-        if (sprite->renderWidth != 0x400 || sprite->renderHeight != sprite->renderWidth) {
+        if (sprite->scaleX != 0x400 || sprite->scaleY != sprite->scaleX) {
             Gfx *_g2 = gDisplayListAllocPtr++;
             _g2->words.w0 = 0xE200001C;
             _g2->words.w1 = 0x503048;
@@ -717,7 +717,7 @@ void renderScaledShadedSpriteFrame(ScaledSpriteArg *sprite) {
     }
 }
 
-void renderScaledAlphaSpriteFrame(FrameSpriteEntry *sprite) {
+void renderScaledAlphaSpriteFrame(TransformedSpriteArg *sprite) {
     SpriteFrameEntry *paletteBase;
     u16 paletteMode;
     s32 tile;
@@ -736,35 +736,35 @@ void renderScaledAlphaSpriteFrame(FrameSpriteEntry *sprite) {
     s32 clipVal;
     SpriteFrameEntry *frameEntry;
 
-    frameEntry = sprite->spriteData->frames;
-    paletteBase = &frameEntry[sprite->spriteData->numFrames];
-    frameEntry = &frameEntry[sprite->frameIndex];
+    frameEntry = sprite->base.spriteData->frames;
+    paletteBase = &frameEntry[sprite->base.spriteData->numFrames];
+    frameEntry = &frameEntry[sprite->base.frameIndex];
 
     paletteMode = gSpritePaletteModes[frameEntry->paletteTableIndex];
     format = gSpriteTextureFormats[frameEntry->formatIndex];
-    scaleS = gTileTextureFlipTable[sprite->tileMode * 2];
-    scaleT = gTileTextureFlipTable[sprite->tileMode * 2 + 1];
+    scaleS = gTileTextureFlipTable[sprite->base.tileMode * 2];
+    scaleT = gTileTextureFlipTable[sprite->base.tileMode * 2 + 1];
 
-    if (sprite->overridePaletteCount == 0) {
+    if (sprite->base.overridePaletteCount == 0) {
         paletteIndex = frameEntry->paletteIndex;
     } else {
-        paletteIndex = sprite->overridePaletteCount - 1;
+        paletteIndex = sprite->base.overridePaletteCount - 1;
     }
 
-    if ((sprite->scaleX > 0x7FFF) || (sprite->scaleX == 0)) {
+    if ((sprite->base.scaleX > 0x7FFF) || (sprite->base.scaleX == 0)) {
         return;
     }
-    if ((sprite->scaleY > 0x7FFF) || (sprite->scaleY == 0)) {
+    if ((sprite->base.scaleY > 0x7FFF) || (sprite->base.scaleY == 0)) {
         return;
     }
 
-    sprite->tileMode &= 3;
+    sprite->base.tileMode &= 3;
 
-    dsdx = (frameEntry->width << 12) / sprite->scaleX;
-    dtdy = (frameEntry->height << 12) / sprite->scaleY;
+    dsdx = (frameEntry->width << 12) / sprite->base.scaleX;
+    dtdy = (frameEntry->height << 12) / sprite->base.scaleY;
 
-    left = (sprite->x * 4 - dsdx / 2) + gTextClipAndOffsetData.offsetX * 4;
-    top = (sprite->y * 4 - dtdy / 2) + gTextClipAndOffsetData.offsetY * 4;
+    left = (sprite->base.x * 4 - dsdx / 2) + gTextClipAndOffsetData.offsetX * 4;
+    top = (sprite->base.y * 4 - dtdy / 2) + gTextClipAndOffsetData.offsetY * 4;
     bottom = top + dtdy;
     right = left + dsdx;
 
@@ -818,9 +818,9 @@ void renderScaledAlphaSpriteFrame(FrameSpriteEntry *sprite) {
 
         gDPPipeSync(gDisplayListAllocPtr++);
 
-        if (sprite->alpha != 0xFF) {
+        if (sprite->effect.alpha != 0xFF) {
             gDPSetRenderMode(gDisplayListAllocPtr++, G_RM_AA_XLU_SURF, G_RM_AA_XLU_SURF2);
-        } else if (sprite->scaleX != 0x400 || sprite->scaleY != sprite->scaleX) {
+        } else if (sprite->base.scaleX != 0x400 || sprite->base.scaleY != sprite->base.scaleX) {
             gDPSetRenderMode(gDisplayListAllocPtr++, G_RM_TEX_EDGE, G_RM_TEX_EDGE2);
         }
 
@@ -830,16 +830,16 @@ void renderScaledAlphaSpriteFrame(FrameSpriteEntry *sprite) {
             gDisplayListAllocPtr++,
             0,
             0,
-            sprite->shade.bytes.intensity,
-            sprite->shade.bytes.intensity,
-            sprite->shade.bytes.intensity,
-            sprite->alpha
+            sprite->base.mode.shaded.shade.components.intensity,
+            sprite->base.mode.shaded.shade.components.intensity,
+            sprite->base.mode.shaded.shade.components.intensity,
+            sprite->effect.alpha
         );
 
-        if ((s32)sprite->spriteData + frameEntry->textureOffset != gCachedTextureAddr) {
-            gCachedTextureAddr = (s32)sprite->spriteData + frameEntry->textureOffset;
+        if ((s32)sprite->base.spriteData + frameEntry->textureOffset != gCachedTextureAddr) {
+            gCachedTextureAddr = (s32)sprite->base.spriteData + frameEntry->textureOffset;
             loadSpriteTexture(
-                (s32)sprite->spriteData + frameEntry->textureOffset,
+                (s32)sprite->base.spriteData + frameEntry->textureOffset,
                 frameEntry->width,
                 frameEntry->height,
                 format,
@@ -878,8 +878,8 @@ void renderScaledAlphaSpriteFrame(FrameSpriteEntry *sprite) {
             tile,
             clipOffsetX << 3,
             clipOffsetY << 3,
-            scaleS * sprite->scaleX,
-            scaleT * sprite->scaleY
+            scaleS * sprite->base.scaleX,
+            scaleT * sprite->base.scaleY
         );
 
         gDPPipeSync(gDisplayListAllocPtr++);
@@ -889,7 +889,7 @@ void renderScaledAlphaSpriteFrame(FrameSpriteEntry *sprite) {
     }
 }
 
-void renderTextSprite(TextRenderArg *sprite) {
+void renderTextSprite(PaletteSpriteArg *sprite) {
     s32 left;
     s32 top;
     s32 right;
@@ -974,8 +974,8 @@ void renderTextSprite(TextRenderArg *sprite) {
         (gfx + 2)->words.w0 = 0xFA000000;
 
         {
-            u8 alpha = sprite->color.components.alpha;
-            u32 color = (alpha << 24) | (alpha << 16) | (alpha << 8) | 0xFF;
+            u8 intensity = sprite->paletteEffect.components.effect.intensity;
+            u32 color = (intensity << 24) | (intensity << 16) | (intensity << 8) | 0xFF;
             (gfx + 2)->words.w1 = color;
         }
 
@@ -1034,7 +1034,7 @@ void renderTextSprite(TextRenderArg *sprite) {
     }
 }
 
-void renderTextSpriteWithTransparency(TextRenderArg *sprite) {
+void renderTextSpriteWithTransparency(PaletteSpriteArg *sprite) {
     s32 left;
     s32 top;
     s32 right;
@@ -1133,8 +1133,8 @@ void renderTextSpriteWithTransparency(TextRenderArg *sprite) {
         (gfx + 3)->words.w0 = 0xFA000000;
 
         {
-            u8 alpha = sprite->color.components.alpha;
-            u32 color = (alpha << 24) | (alpha << 16) | (alpha << 8) | sprite->transparency;
+            u8 intensity = sprite->paletteEffect.components.effect.intensity;
+            u32 color = (intensity << 24) | (intensity << 16) | (intensity << 8) | sprite->primitiveAlpha;
             (gfx + 3)->words.w1 = color;
         }
 
@@ -1213,10 +1213,10 @@ void renderTintedSprite(TintedSpriteArg *sprite) {
     paletteBase = &frameEntry[sprite->spriteData->numFrames];
     frameEntry = &frameEntry[sprite->frameIndex];
 
-    if (sprite->paletteOverrideCount == 0) {
+    if (sprite->overridePaletteCount == 0) {
         paletteIndex = frameEntry->paletteIndex;
     } else {
-        paletteIndex = sprite->paletteOverrideCount - 1;
+        paletteIndex = sprite->overridePaletteCount - 1;
     }
 
     tileMode = sprite->tileMode & 3;
@@ -1261,8 +1261,8 @@ void renderTintedSprite(TintedSpriteArg *sprite) {
 
         gDPPipeSync(gDisplayListAllocPtr++);
         gDPSetRenderMode(gDisplayListAllocPtr++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
-        gDPSetEnvColor(gDisplayListAllocPtr++, sprite->r, sprite->g, sprite->b, sprite->a);
-        gDPSetPrimColor(gDisplayListAllocPtr++, 0, 0, 0xFF, 0xFF, 0xFF, sprite->primColor);
+        gDPSetEnvColor(gDisplayListAllocPtr++, sprite->envR, sprite->envG, sprite->envB, sprite->envA);
+        gDPSetPrimColor(gDisplayListAllocPtr++, 0, 0, 0xFF, 0xFF, 0xFF, sprite->primitiveAlpha);
         gDPSetCombineLERP(
             gDisplayListAllocPtr++,
             ENVIRONMENT,
@@ -1335,7 +1335,7 @@ void renderTintedSprite(TintedSpriteArg *sprite) {
     }
 }
 
-void renderAlphaBlendedTextSprite(TextRenderArg *sprite) {
+void renderAlphaBlendedTextSprite(PaletteSpriteArg *sprite) {
     s32 right;
     s32 bottom;
     s32 left;
@@ -1447,7 +1447,7 @@ void renderAlphaBlendedTextSprite(TextRenderArg *sprite) {
         gDPPipeSync(gDisplayListAllocPtr++);
         gDPSetRenderMode(gDisplayListAllocPtr++, G_RM_XLU_SURF, G_RM_XLU_SURF2);
         gDPSetCombineMode(gDisplayListAllocPtr++, G_CC_MODULATEIA_PRIM, G_CC_MODULATEIA_PRIM);
-        gDPSetPrimColor(gDisplayListAllocPtr++, 0, 0, 0xFF, 0xFF, 0xFF, sprite->color.components.alpha);
+        gDPSetPrimColor(gDisplayListAllocPtr++, 0, 0, 0xFF, 0xFF, 0xFF, sprite->paletteEffect.components.effect.alpha);
 
         gCachedPaletteAddr = (SpriteFrameEntry *)gDefaultFontPalette;
         if (format == 0) {
@@ -1474,7 +1474,7 @@ void renderAlphaBlendedTextSprite(TextRenderArg *sprite) {
     }
 }
 
-void renderFlippedScaledSpriteFrame(FlippedScaledSpriteArg *sprite) {
+void renderFlippedScaledSpriteFrame(TransformedSpriteArg *sprite) {
     s32 right;
     s32 bottom;
     s32 left;
@@ -1503,35 +1503,35 @@ void renderFlippedScaledSpriteFrame(FlippedScaledSpriteArg *sprite) {
     register s32 negOne __asm__("a2");
 #endif
 
-    frameEntry = sprite->spriteData->frames;
-    paletteBase = &frameEntry[sprite->spriteData->numFrames];
-    frameEntry = &frameEntry[sprite->frameIndex];
+    frameEntry = sprite->base.spriteData->frames;
+    paletteBase = &frameEntry[sprite->base.spriteData->numFrames];
+    frameEntry = &frameEntry[sprite->base.frameIndex];
 
     paletteMode = gSpritePaletteModes[frameEntry->paletteTableIndex];
     format = gSpriteTextureFormats[frameEntry->formatIndex];
-    scaleS = gTileTextureFlipTable[sprite->tileMode * 2];
-    scaleT = gTileTextureFlipTable[sprite->tileMode * 2 + 1];
+    scaleS = gTileTextureFlipTable[sprite->base.tileMode * 2];
+    scaleT = gTileTextureFlipTable[sprite->base.tileMode * 2 + 1];
 
-    if (sprite->overridePaletteCount == 0) {
+    if (sprite->base.overridePaletteCount == 0) {
         paletteIndex = frameEntry->paletteIndex;
     } else {
-        paletteIndex = sprite->overridePaletteCount - 1;
+        paletteIndex = sprite->base.overridePaletteCount - 1;
     }
 
-    if (sprite->scaleX > 0x7FFF || sprite->scaleX == 0) {
+    if (sprite->base.scaleX > 0x7FFF || sprite->base.scaleX == 0) {
         return;
     }
 
-    if (sprite->scaleY > 0x7FFF || sprite->scaleY == 0) {
+    if (sprite->base.scaleY > 0x7FFF || sprite->base.scaleY == 0) {
         return;
     }
 
-    sprite->tileMode = sprite->tileMode & 3;
-    heightScale = (30 << 12) / sprite->scaleY;
-    widthScale = (frameEntry->width << 12) / sprite->scaleX;
+    sprite->base.tileMode = sprite->base.tileMode & 3;
+    heightScale = (30 << 12) / sprite->base.scaleY;
+    widthScale = (frameEntry->width << 12) / sprite->base.scaleX;
 
-    left = (sprite->x * 4) - (widthScale / 2) + (gTextClipAndOffsetData.offsetX * 4);
-    top = (sprite->y * 4) - (heightScale / 2) + (gTextClipAndOffsetData.offsetY * 4);
+    left = (sprite->base.x * 4) - (widthScale / 2) + (gTextClipAndOffsetData.offsetX * 4);
+    top = (sprite->base.y * 4) - (heightScale / 2) + (gTextClipAndOffsetData.offsetY * 4);
     right = left + widthScale;
     bottom = top + heightScale;
 
@@ -1573,7 +1573,7 @@ void renderFlippedScaledSpriteFrame(FlippedScaledSpriteArg *sprite) {
         clipOffsetY = clipOffsetYBase;
     }
 
-    isFlipped = (sprite->flipX == 1);
+    isFlipped = (sprite->effect.flipX == 1);
     clipOffsetY += isFlipped * 0x80;
 
     if (gTextClipAndOffsetData.clipRight * 4 >= left && (gTextClipAndOffsetData.clipBottom * 4 >= top) &&
@@ -1588,7 +1588,7 @@ void renderFlippedScaledSpriteFrame(FlippedScaledSpriteArg *sprite) {
 
         gDPPipeSync(gDisplayListAllocPtr++);
 
-        if (sprite->scaleX >= 0x401 || sprite->scaleY >= 0x401) {
+        if (sprite->base.scaleX >= 0x401 || sprite->base.scaleY >= 0x401) {
             gSPObjRenderMode(gDisplayListAllocPtr++, G_OBJRM_SHRINKSIZE_1 | G_OBJRM_BILERP | G_OBJRM_ANTIALIAS);
         } else {
             gSPObjRenderMode(gDisplayListAllocPtr++, G_OBJRM_BILERP | G_OBJRM_ANTIALIAS);
@@ -1599,18 +1599,18 @@ void renderFlippedScaledSpriteFrame(FlippedScaledSpriteArg *sprite) {
             gDisplayListAllocPtr++,
             0,
             0,
-            sprite->alpha.components.intensity,
-            sprite->alpha.components.intensity,
-            sprite->alpha.components.intensity,
+            sprite->base.mode.shaded.shade.components.intensity,
+            sprite->base.mode.shaded.shade.components.intensity,
+            sprite->base.mode.shaded.shade.components.intensity,
             0xFF
         );
 
         {
-            s32 textureAddr = (s32)sprite->spriteData + frameEntry->textureOffset;
+            s32 textureAddr = (s32)sprite->base.spriteData + frameEntry->textureOffset;
             if (textureAddr != gCachedTextureAddr) {
                 gCachedTextureAddr = textureAddr;
                 loadSpriteTexture(
-                    (s32)sprite->spriteData + frameEntry->textureOffset,
+                    (s32)sprite->base.spriteData + frameEntry->textureOffset,
                     frameEntry->width,
                     frameEntry->height,
                     format,
@@ -1653,8 +1653,8 @@ void renderFlippedScaledSpriteFrame(FlippedScaledSpriteArg *sprite) {
             tile,
             clipOffsetX << 3,
             clipOffsetY << 3,
-            scaleS * sprite->scaleX,
-            scaleT * sprite->scaleY
+            scaleS * sprite->base.scaleX,
+            scaleT * sprite->base.scaleY
         );
         gDPPipeSync(gDisplayListAllocPtr++);
         gDPSetCombineMode(gDisplayListAllocPtr++, G_CC_DECALRGBA, G_CC_DECALRGBA);

@@ -145,15 +145,15 @@ void renderTintedSpriteGrid(
             TintedSpriteArg *tile = (TintedSpriteArg *)advanceLinearAlloc(sizeof(TintedSpriteArg));
             if (tile != NULL) {
                 tile->tileMode = 0;
-                tile->paletteOverrideCount = 0;
-                tile->a = colorA;
-                tile->r = (colorR * intensity) / 256;
-                tile->g = (colorG * intensity) / 256;
-                tile->b = (colorB * intensity) / 256;
+                tile->overridePaletteCount = 0;
+                tile->envA = colorA;
+                tile->envR = (colorR * intensity) / 256;
+                tile->envG = (colorG * intensity) / 256;
+                tile->envB = (colorB * intensity) / 256;
                 tile->x = tileX;
                 tileX += 16;
                 tile->spriteData = spriteData;
-                tile->primColor = 0xFF;
+                tile->primitiveAlpha = 0xFF;
                 tile->frameIndex = 4;
 
                 tile->y = tileY;
