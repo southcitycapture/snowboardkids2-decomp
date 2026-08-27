@@ -2,107 +2,80 @@
 
 #include "common.h"
 #include "data/data_table.h"
+#include "gbi.h"
+#include "math/geometry.h"
+#include "system/task_scheduler.h"
 
-struct Node;
+typedef enum {
+    SPRITE_ASSET_ENABLED = 1 << 0,
+    SPRITE_ASSET_VISIBLE = 1 << 1,
+} SpriteAssetStatusFlag;
 
 typedef struct {
     void *romStart;
     void *romEnd;
-    s32 size;
-} DmaEntry;
+    s32 decompressedSize;
+} SpriteDmaEntry;
 
 typedef struct {
-    /* 0x00 */ DataTable_19E80 *table;
-    u8 _pad[0xC];
-    /* 0x10 */ u16 index;
-} TableLookupContext;
-
-typedef struct {
-    /* 0x00 */ u16 unk0;
+    /* 0x00 */ union {
+        u16 packedOffsets;
+        struct {
+            s8 x;
+            s8 y;
+        } components;
+    } offset;
     /* 0x02 */ s16 command;
-    /* 0x04 */ u16 spriteFrame;
+    /* 0x04 */ union {
+        u16 spriteFrame;
+        u16 textureIndex;
+    } image;
     /* 0x06 */ u16 duration;
-} AnimationEntry;
+} SpriteAssetFrame;
 
 typedef struct {
-    /* 0x00 */ void *entries;
-    /* 0x04 */ u16 frameCount;
+    /* 0x00 */ SpriteAssetFrame *frames;
+    /* 0x04 */ union {
+        u16 value;
+        s16 signedValue;
+    } frameCount;
     /* 0x06 */ u16 initialDelay;
-} AnimSetEntry;
+} SpriteAnimationSet;
 
 typedef struct {
-    /* 0x00 */ u32 unk0;
-    /* 0x04 */ u16 unk4;
-    /* 0x06 */ u16 unk6;
-} AnimFrameEntry;
-
-typedef struct {
-    /* 0x00 */ u8 pad0[0x4];
-    /* 0x04 */ s16 frameCount;
-} AnimationHeader;
-
-typedef struct {
-    /* 0x00 */ u8 pad0[0x8];
-    /* 0x08 */ AnimationHeader *header;
-    /* 0x0C */ AnimationEntry *entries;
-    /* 0x10 */ u16 unk10;
-    /* 0x12 */ s16 currentSpriteFrame;
-    /* 0x14 */ s16 frameIndex;
-    /* 0x16 */ s16 frameTimer;
-} AnimationState;
-
-typedef struct {
-    /* 0x00 */ void *spriteData;
+    /* 0x00 */ DataTable_19E80 *assetData;
     /* 0x04 */ s16 assetIndex;
-    /* 0x06 */ u8 flags;
+    /* 0x06 */ u8 statusFlags;
     /* 0x07 */ u8 initialDelay;
-    /* 0x08 */ AnimSetEntry *animSet;
-    /* 0x0C */ AnimFrameEntry *frameEntries;
-    /* 0x10 */ s16 animIndex;
+    /* 0x08 */ SpriteAnimationSet *animationSet;
+    /* 0x0C */ SpriteAssetFrame *frames;
+    /* 0x10 */ s16 animationIndex;
     /* 0x12 */ s16 currentSpriteFrame;
     /* 0x14 */ s16 frameIndex;
     /* 0x16 */ s16 frameTimer;
-    /* 0x18 */ u8 pad18[0x10];
-    /* 0x28 */ void *spriteTable;
-    /* 0x2C */ u8 pad2C[0x20];
-} SpriteAssetState;
-
-typedef struct {
-    /* 0x00 */ s8 offsetX;
-    /* 0x01 */ s8 offsetY;
-    /* 0x02 */ u8 pad2[2];
-    /* 0x04 */ u16 textureIndex;
-    /* 0x06 */ u8 pad6[2];
-} SpriteEntry;
-
-typedef struct {
-    /* 0x00 */ u8 pad0[0x0C];
-    /* 0x0C */ SpriteEntry *spriteEntries;
-    /* 0x10 */ u8 pad10[4];
-    /* 0x14 */ s16 currentFrame;
-    /* 0x16 */ u8 pad16[2];
-    /* 0x18 */ void *displayListData;
-    /* 0x1C */ s32 positionX;
-    /* 0x20 */ s32 positionY;
-    /* 0x24 */ s32 positionZ;
-    /* 0x28 */ DataTable_19E80 *spriteTable;
+    /* 0x18 */ void *vertexData;
+    /* 0x1C */ Vec3i position;
+    /* 0x28 */ DataTable_19E80 *textureTable;
     /* 0x2C */ u16 textureIndex;
     /* 0x2E */ u8 alpha;
     /* 0x2F */ u8 flipHorizontal;
-    /* 0x30 */ u8 pad30[0x10];
+    /* 0x30 */ Mtx *translationMtx;
+    /* 0x34 */ Mtx *scaleMtx;
+    /* 0x38 */ Mtx *yRotationMtx;
+    /* 0x3C */ Mtx *zRotationMtx;
     /* 0x40 */ s32 scaleX;
     /* 0x44 */ s32 scaleY;
     /* 0x48 */ u16 renderMode;
     /* 0x4A */ u16 renderFlags;
-} SpriteState;
+} SpriteAssetState;
 
 s32 loadSpriteAsset(SpriteAssetState *state, s16 assetIndex);
-void *loadSpriteAssetData(s16 index);
+void *loadSpriteAssetData(s16 assetIndex);
 void releaseNodeMemoryRef(void **ptr);
-void setSpriteAnimation(void *state, s32 arg1, s32 animIndex, s32 arg3);
-s32 updateSpriteAnimation(void *state, s32 arg1);
+void setSpriteAnimation(SpriteAssetState *state, s32 playbackRate, s32 animationIndex, s32 loopFrame);
+s32 updateSpriteAnimation(SpriteAssetState *state, s32 playbackRate);
 void renderOpaqueSprite(
-    void *state,
+    SpriteAssetState *state,
     s32 slot,
     s32 posX,
     s32 posY,
@@ -113,7 +86,7 @@ void renderOpaqueSprite(
     u8 flipH
 );
 void renderSprite(
-    void *state,
+    SpriteAssetState *state,
     s32 slot,
     s32 posX,
     s32 posY,
@@ -124,13 +97,13 @@ void renderSprite(
     u8 flipH,
     u8 alpha
 );
-s32 getTableEntryValue(TableLookupContext *ctx);
+s32 getSpriteFrameWidth(SpriteAssetState *state);
 void initOscillatingModelTask(void);
 void initOscillatingSpriteTask(void *state);
 
-void enqueueTranslucentSprite(u16 slot, struct Node *node);
+void enqueueTranslucentSprite(u16 slot, Node *node);
 void setupAndEnqueueSprite(
-    SpriteState *state,
+    SpriteAssetState *state,
     s32 slot,
     s32 posX,
     s32 posY,

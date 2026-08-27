@@ -40,7 +40,7 @@ void updateFallingParticle(ParticleState *arg0) {
     SceneModel *particleOwner;
     s16 lifetime;
     s16 newLifetime;
-    void *sprite;
+    SpriteAssetState *sprite;
 
     if (arg0->owner->isDestroyed == 1) {
         terminateCurrentTask();
@@ -62,7 +62,7 @@ void updateFallingParticle(ParticleState *arg0) {
     if (particleOwner->visibilityEnabled != 0) {
         if (particleOwner->displayEnabled != 0) {
             setupAndEnqueueSprite(
-                (SpriteState *)sprite,
+                sprite,
                 particleOwner->viewport->callbackSlotIndex,
                 arg0->mode.falling.position.x + arg0->mode.falling.velocity.x,
                 arg0->mode.falling.position.y + arg0->mode.falling.velocity.y,
@@ -204,7 +204,7 @@ void updateDriftingParticle(ParticleState *arg0) {
 
     if (arg0->owner->visibilityEnabled != 0 && arg0->owner->displayEnabled != 0) {
         setupAndEnqueueSprite(
-            (SpriteState *)&arg0->spriteState,
+            &arg0->spriteState,
             arg0->owner->viewport->callbackSlotIndex,
             posX,
             posY,

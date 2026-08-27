@@ -11,7 +11,7 @@ typedef struct {
     /* 0x06 */ s16 animId;
     /* 0x08 */ s16 duration;
     /* 0x0A */ u8 opacity;
-    /* 0x0B */ u8 state;
+    /* 0x0B */ s8 state;
     /* 0x0C */ s32 targetScale;
     /* 0x10 */ s32 offsetX;
     /* 0x14 */ s32 offsetY;

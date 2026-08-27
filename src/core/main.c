@@ -145,9 +145,19 @@ typedef struct {
 } func_800014C8_20C8_arg;
 
 typedef struct {
-    u8 padding[0x8];
-    void *spriteAsset;
-} SpriteAnimationTaskState;
+    /* 0x00 */ func_80000C2C_182C_arg_unk0 *owner;
+    /* 0x04 */ s8 configIndex;
+    /* 0x05 */ s8 animationState;
+    /* 0x06 */ u8 _pad6[2];
+    /* 0x08 */ SpriteAssetState spriteState;
+    /* 0x54 */ union {
+        s16 spawnTimer;
+        struct {
+            Vec3i position;
+            s32 scale;
+        } spawned;
+    } effect;
+} SpriteEntityTaskState;
 
 typedef struct {
     u8 padding[0x84];
@@ -194,26 +204,26 @@ typedef struct {
 #include "data/shared_model_part_display_lists.c"
 
 void enqueueDisplayListIfVisible(func_80000C2C_182C_arg_unk0 *state, void *displayList);
-void updateSpawnedSpriteTask(func_80000C2C_182C_arg *arg0);
-void cleanupSpawnedSpriteTask(func_800014C8_20C8_arg *arg0);
+void updateSpawnedSpriteTask(SpriteEntityTaskState *state);
+void cleanupSpawnedSpriteTask(SpriteEntityTaskState *state);
 void updateRotatingModelTask(func_80000C2C_182C_arg *arg0);
 void cleanupRotatingModelTask(RotatingModelTaskState *state);
 void updateStaticModelTask(func_80000C2C_182C_arg *arg0);
 void cleanupStaticModelTask(SwingingModelTaskState *arg0);
 void updateAnimatedModelTask(AnimatedModelTaskUpdateState *arg0);
 void cleanupAnimatedModelTask(AnimatedModelTaskCleanupState *arg0);
-void cleanupSpriteAnimationTask(SpriteAnimationTaskState *state);
-void cleanupSpriteSpawnerTask(func_80000C2C_182C_arg *arg0);
-void updateSpriteSpawnerTask(func_80000C2C_182C_arg *);
-void initSpawnedSpriteTask(func_80000C2C_182C_arg *arg0);
-void updateSpriteAnimationTask(func_80000C2C_182C_arg *);
+void cleanupSpriteAnimationTask(SpriteEntityTaskState *state);
+void cleanupSpriteSpawnerTask(SpriteEntityTaskState *state);
+void updateSpriteSpawnerTask(SpriteEntityTaskState *state);
+void initSpawnedSpriteTask(SpriteEntityTaskState *state);
+void updateSpriteAnimationTask(SpriteEntityTaskState *state);
 void updateSwingingModelTask(func_80000C2C_182C_arg *);
 void cleanupSwingingModelTask(SwingingModelTaskState *);
 void initRotatingModelTask(func_80000C2C_182C_arg *arg0);
 void initSwingingModelTask(func_80000C2C_182C_arg *arg0);
-void initSpriteAnimationTask(func_80000C2C_182C_arg *arg0);
+void initSpriteAnimationTask(SpriteEntityTaskState *state);
 void initAnimatedModelTask(AnimatedModelTaskState *arg0);
-void initSpriteSpawnerTask(func_80000C2C_182C_arg *arg0);
+void initSpriteSpawnerTask(SpriteEntityTaskState *state);
 void initStaticModelTask(StaticModelTaskArg *arg0);
 
 extern s32 D_80088600;
@@ -908,36 +918,36 @@ void cleanupSwingingModelTask(SwingingModelTaskState *state) {
     state->uncompressedAsset = freeNodeMemory(state->uncompressedAsset);
 }
 
-void initSpriteAnimationTask(func_80000C2C_182C_arg *arg0) {
-    ModelEntityConfig *config = &modelEntityConfigs[arg0->unk0->unk84];
-    ModelEntityTaskConfig *subEntry = &config->taskConfigs[arg0->unk4];
+void initSpriteAnimationTask(SpriteEntityTaskState *state) {
+    ModelEntityConfig *config = &modelEntityConfigs[state->owner->unk84];
+    ModelEntityTaskConfig *subEntry = &config->taskConfigs[state->configIndex];
     setCleanupCallback(&cleanupSpriteAnimationTask);
-    loadSpriteAsset((SpriteAssetState *)&arg0->unk8, subEntry->unk16);
+    loadSpriteAsset(&state->spriteState, subEntry->unk16);
     setCallback(&updateSpriteAnimationTask);
 }
 
-void updateSpriteAnimationTask(func_80000C2C_182C_arg *arg0) {
-    ModelEntityConfig *config = &modelEntityConfigs[arg0->unk0->unk84];
-    SubEntryVariant *subEntry = (SubEntryVariant *)&config->taskConfigs[arg0->unk4];
+void updateSpriteAnimationTask(SpriteEntityTaskState *state) {
+    ModelEntityConfig *config = &modelEntityConfigs[state->owner->unk84];
+    SubEntryVariant *subEntry = (SubEntryVariant *)&config->taskConfigs[state->configIndex];
 
-    if (arg0->unk0->unk86 != 0) {
+    if (state->owner->unk86 != 0) {
         terminateCurrentTask();
     }
 
-    switch (arg0->unk5) {
+    switch (state->animationState) {
         case 0:
-            setSpriteAnimation(&arg0->unk8, 0x10000, subEntry->unk1A, -1);
-            arg0->unk5 = 1;
+            setSpriteAnimation(&state->spriteState, 0x10000, subEntry->unk1A, -1);
+            state->animationState = 1;
             break;
         case 1:
-            updateSpriteAnimation(&arg0->unk8, 0x10000);
+            updateSpriteAnimation(&state->spriteState, 0x10000);
             break;
     }
 
-    if (arg0->unk0->unk87 != 0) {
+    if (state->owner->unk87 != 0) {
         renderOpaqueSprite(
-            &arg0->unk8,
-            arg0->unk0->ptr->unk16,
+            &state->spriteState,
+            state->owner->ptr->unk16,
             subEntry->unk8,
             subEntry->unkC,
             subEntry->unk10,
@@ -949,8 +959,8 @@ void updateSpriteAnimationTask(func_80000C2C_182C_arg *arg0) {
     }
 }
 
-void cleanupSpriteAnimationTask(SpriteAnimationTaskState *state) {
-    releaseNodeMemoryRef((&state->spriteAsset));
+void cleanupSpriteAnimationTask(SpriteEntityTaskState *state) {
+    releaseNodeMemoryRef((void **)&state->spriteState.assetData);
 }
 
 void initStaticModelTask(StaticModelTaskArg *arg0) {
@@ -1052,45 +1062,45 @@ void cleanupAnimatedModelTask(AnimatedModelTaskCleanupState *state) {
     state->unk2C = freeNodeMemory(state->unk2C);
 }
 
-void initSpriteSpawnerTask(func_80000C2C_182C_arg *arg0) {
-    ModelEntityConfig *config = &modelEntityConfigs[arg0->unk0->unk84];
-    ModelEntityTaskConfig *subEntry = &config->taskConfigs[arg0->unk4];
+void initSpriteSpawnerTask(SpriteEntityTaskState *state) {
+    ModelEntityConfig *config = &modelEntityConfigs[state->owner->unk84];
+    ModelEntityTaskConfig *subEntry = &config->taskConfigs[state->configIndex];
     setCleanupCallback(&cleanupSpriteSpawnerTask);
-    loadSpriteAsset((SpriteAssetState *)&arg0->unk8, subEntry->unk16);
-    *(s16 *)&arg0->unk54 = 0;
+    loadSpriteAsset(&state->spriteState, subEntry->unk16);
+    state->effect.spawnTimer = 0;
     setCallback(&updateSpriteSpawnerTask);
 }
 
-void updateSpriteSpawnerTask(func_80000C2C_182C_arg *arg0) {
+void updateSpriteSpawnerTask(SpriteEntityTaskState *state) {
     s16 temp;
-    func_80000C2C_182C_arg *task;
+    SpriteEntityTaskState *task;
     u8 tempUnk4;
 
-    if (arg0->unk0->unk86 != 0) {
+    if (state->owner->unk86 != 0) {
         terminateCurrentTask();
     }
 
-    temp = *(s16 *)&arg0->unk54;
+    temp = state->effect.spawnTimer;
     if (temp <= 0) {
         task = scheduleTask(initSpawnedSpriteTask, 0, 0, 0xC8);
         if (task != NULL) {
-            task->unk0 = arg0->unk0;
-            tempUnk4 = arg0->unk4;
-            task->unk5 = 0;
-            task->unk4 = tempUnk4;
+            task->owner = state->owner;
+            tempUnk4 = state->configIndex;
+            task->animationState = 0;
+            task->configIndex = tempUnk4;
         } else {
-            *(s16 *)&arg0->unk54 = 0;
+            state->effect.spawnTimer = 0;
         }
     } else {
-        *(s16 *)&arg0->unk54 = temp - 1;
+        state->effect.spawnTimer = temp - 1;
     }
 }
 
-void cleanupSpriteSpawnerTask(func_80000C2C_182C_arg *arg0) {
-    releaseNodeMemoryRef((void **)&arg0->unk8);
+void cleanupSpriteSpawnerTask(SpriteEntityTaskState *state) {
+    releaseNodeMemoryRef((void **)&state->spriteState.assetData);
 }
 
-void initSpawnedSpriteTask(func_80000C2C_182C_arg *arg0) {
+void initSpawnedSpriteTask(SpriteEntityTaskState *state) {
     volatile s32 sp10;
     volatile s32 sp14;
     volatile s32 sp18;
@@ -1099,67 +1109,67 @@ void initSpawnedSpriteTask(func_80000C2C_182C_arg *arg0) {
     ModelEntityConfig *config;
     ModelEntityTaskConfig *subEntry;
 
-    config = &modelEntityConfigs[arg0->unk0->unk84];
-    subEntry = &config->taskConfigs[arg0->unk4];
+    config = &modelEntityConfigs[state->owner->unk84];
+    subEntry = &config->taskConfigs[state->configIndex];
 
     memcpy(&sp20, &identityMatrix, sizeof(Transform3D));
     setCleanupCallback(&cleanupSpawnedSpriteTask);
-    loadSpriteAsset((SpriteAssetState *)&arg0->unk8, subEntry->unk16);
+    loadSpriteAsset(&state->spriteState, subEntry->unk16);
 
     sp10 = ((randA() & 0x1F) - 0x10) << 0x10;
     sp14 = ((randA() & 1) - 4) << 0x10;
     sp18 = 0;
 
     createYRotationMatrix(&sp20, 0x1D83);
-    transformVector((s16 *)&sp10, (s16 *)&sp20, &arg0->unk54);
+    transformVector((s16 *)&sp10, (s16 *)&sp20, &state->effect.spawned.position);
 
-    arg0->unk54 = arg0->unk54 + subEntry->unk8;
-    arg0->unk58 = arg0->unk58 + subEntry->unkC;
-    arg0->unk5C = arg0->unk5C + subEntry->unk10;
-    arg0->unk60 = spawnedSpriteScales[randA() & 3];
+    state->effect.spawned.position.x += subEntry->unk8;
+    state->effect.spawned.position.y += subEntry->unkC;
+    state->effect.spawned.position.z += subEntry->unk10;
+    state->effect.spawned.scale = spawnedSpriteScales[randA() & 3];
 
     setCallback(&updateSpawnedSpriteTask);
 }
 
-void updateSpawnedSpriteTask(func_80000C2C_182C_arg *arg0) {
+void updateSpawnedSpriteTask(SpriteEntityTaskState *state) {
     ModelEntityConfig *config;
     SubEntryVariant *subEntry;
 
-    config = &modelEntityConfigs[arg0->unk0->unk84];
-    subEntry = (SubEntryVariant *)&config->taskConfigs[arg0->unk4];
+    config = &modelEntityConfigs[state->owner->unk84];
+    subEntry = (SubEntryVariant *)&config->taskConfigs[state->configIndex];
 
-    if (arg0->unk0->unk86 != 0) {
+    if (state->owner->unk86 != 0) {
         terminateCurrentTask();
     }
 
-    switch (arg0->unk5) {
+    switch (state->animationState) {
         case 0:
-            setSpriteAnimation(&arg0->unk8, 0x10000, subEntry->unk1A, -1);
-            arg0->unk5 = 1;
+            setSpriteAnimation(&state->spriteState, 0x10000, subEntry->unk1A, -1);
+            state->animationState = 1;
             break;
         case 1:
-            if (updateSpriteAnimation(&arg0->unk8, 0x10000) != 0) {
+            if (updateSpriteAnimation(&state->spriteState, 0x10000) != 0) {
                 terminateCurrentTask();
                 return;
             }
             break;
     }
 
-    if (arg0->unk0->unk87 != 0) {
+    if (state->owner->unk87 != 0) {
         renderOpaqueSprite(
-            &arg0->unk8,
-            arg0->unk0->ptr->unk16,
-            arg0->unk54,
-            arg0->unk58,
-            arg0->unk5C,
-            arg0->unk60,
-            arg0->unk60,
+            &state->spriteState,
+            state->owner->ptr->unk16,
+            state->effect.spawned.position.x,
+            state->effect.spawned.position.y,
+            state->effect.spawned.position.z,
+            state->effect.spawned.scale,
+            state->effect.spawned.scale,
             0,
             0
         );
     }
 }
 
-void cleanupSpawnedSpriteTask(func_800014C8_20C8_arg *arg0) {
-    releaseNodeMemoryRef((void **)&arg0->unk8);
+void cleanupSpawnedSpriteTask(SpriteEntityTaskState *state) {
+    releaseNodeMemoryRef((void **)&state->spriteState.assetData);
 }

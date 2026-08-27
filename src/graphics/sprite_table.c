@@ -27,7 +27,7 @@ typedef struct {
     /* 0x34 */ Transform3D transform;
 } SpriteRenderState;
 
-typedef void (*SetupAndEnqueueSprite_t)(SpriteState *, s32, s32, s32, s32, s32, s32, s16, u8, u8, s32);
+typedef void (*SetupAndEnqueueSprite_t)(SpriteAssetState *, s32, s32, s32, s32, s32, s32, s16, u8, u8, s32);
 
 extern s32 D_8008C920_8D520[];
 extern s32 gLookAtPtr;
@@ -36,7 +36,7 @@ extern Gfx *gDisplayListAllocPtr;
 static OutputStruct_19E80 gCachedSpriteTextureEntry;
 
 void setupAndEnqueueSprite(
-    SpriteState *state,
+    SpriteAssetState *state,
     s32 slot,
     s32 posX,
     s32 posY,
@@ -104,7 +104,7 @@ s32 gSpriteVtx_64x64[] = {
     (s32)0xFF80FF80, 0x00000000,      0x00001000, (s32)0xFFFFFFFF, 0x00000000, 0x00000000,
 };
 
-DmaEntry gSpriteDmaTable[] = {
+SpriteDmaEntry gSpriteDmaTable[] = {
     { &SPRITE_DMA_ASSET_00_ROM_START, &SPRITE_DMA_ASSET_00_ROM_END, 0x00000D80 },
     { &SPRITE_DMA_ASSET_01_ROM_START, &SPRITE_DMA_ASSET_01_ROM_END, 0x00000660 },
     { &SPRITE_DMA_ASSET_02_ROM_START, &SPRITE_DMA_ASSET_02_ROM_END, 0x000002A0 },
@@ -112,7 +112,7 @@ DmaEntry gSpriteDmaTable[] = {
     { &SPRITE_DMA_ASSET_04_ROM_START, &SPRITE_DMA_ASSET_04_ROM_END, 0x00001940 },
 };
 
-DmaEntry *gSpriteDmaTablePtr = gSpriteDmaTable;
+SpriteDmaEntry *gSpriteDmaTablePtr = gSpriteDmaTable;
 
 s32 gSpriteDmaTableInfo[] = { 0x00000005, 0x00000001, 0x00000000, 0x00000000 };
 
@@ -656,29 +656,29 @@ void enqueueTransformedSprite(u16 slot, Node *node) {
 }
 
 void setSpriteAssetEnabled(SpriteAssetState *state) {
-    state->flags |= 1;
+    state->statusFlags |= SPRITE_ASSET_ENABLED;
 }
 
 void clearSpriteAssetEnabled(SpriteAssetState *state) {
-    state->flags &= 0xFE;
+    state->statusFlags &= ~SPRITE_ASSET_ENABLED;
 }
 
 s32 isSpriteAssetEnabled(SpriteAssetState *state) {
-    return state->flags & 1;
+    return state->statusFlags & SPRITE_ASSET_ENABLED;
 }
 
 void setSpriteAssetVisible(SpriteAssetState *state) {
-    state->flags |= 2;
+    state->statusFlags |= SPRITE_ASSET_VISIBLE;
 }
 
 void clearSpriteAssetVisible(SpriteAssetState *state) {
-    state->flags &= 0xFD;
+    state->statusFlags &= ~SPRITE_ASSET_VISIBLE;
 }
 
 s32 isSpriteAssetVisible(SpriteAssetState *state) {
     u8 val;
 
-    val = state->flags & 2;
+    val = state->statusFlags & SPRITE_ASSET_VISIBLE;
     return val != 0;
 }
 
@@ -688,14 +688,14 @@ s32 loadSpriteAsset(SpriteAssetState *state, s16 index) {
 
     savedIndex = index;
     if (savedIndex >= getSpriteAssetCount()) {
-        state->spriteData = NULL;
+        state->assetData = NULL;
         state->assetIndex = 0;
         return 0;
     }
     entry = &D_8008C920_8D520[savedIndex * 5];
-    state->spriteData = loadCompressedData((void *)entry[0], (void *)entry[1], entry[2]);
+    state->assetData = loadCompressedData((void *)entry[0], (void *)entry[1], entry[2]);
     state->assetIndex = index;
-    state->flags = 0;
+    state->statusFlags = 0;
     return 1;
 }
 
@@ -715,54 +715,52 @@ void releaseNodeMemoryRef(void **ptr) {
     }
 }
 
-void setSpriteAnimation(void *arg0, s32 arg1, s32 animIndex, s32 arg3) {
-    SpriteAssetState *state = (SpriteAssetState *)arg0;
+void setSpriteAnimation(SpriteAssetState *state, s32 playbackRate, s32 animationIndex, s32 loopFrame) {
     s32 *entry;
-    s16 savedAnimIndex = animIndex;
-    s16 index = animIndex;
+    s16 savedAnimIndex = animationIndex;
+    s16 index = animationIndex;
     u16 timer;
     void *table;
     u16 delay;
 
     if (index == -1) {
-        state->animSet = NULL;
+        state->animationSet = NULL;
         return;
     }
 
     entry = &D_8008C920_8D520[state->assetIndex * 5];
     if (index < *(s16 *)(&entry[4])) {
-        state->animSet = (AnimSetEntry *)entry[3] + index;
-        state->frameEntries = state->animSet->entries;
-        state->animIndex = savedAnimIndex;
-        state->currentSpriteFrame = state->frameEntries->unk4;
+        state->animationSet = (SpriteAnimationSet *)entry[3] + index;
+        state->frames = state->animationSet->frames;
+        state->animationIndex = savedAnimIndex;
+        state->currentSpriteFrame = state->frames->image.spriteFrame;
         state->frameIndex = 0;
-        timer = state->frameEntries->unk6;
+        timer = state->frames->duration;
         state->frameTimer = timer;
-        table = state->spriteData;
-        delay = state->animSet->initialDelay;
-        state->spriteTable = table;
+        table = state->assetData;
+        delay = state->animationSet->initialDelay;
+        state->textureTable = table;
         state->initialDelay = delay;
     }
 }
 
-s32 updateSpriteAnimation(void *arg0, s32 arg1) {
-    AnimationState *state = (AnimationState *)arg0;
+s32 updateSpriteAnimation(SpriteAssetState *state, s32 playbackRate) {
     s32 result = 0;
     s32 looped = 0;
     s16 timer = state->frameTimer;
-    AnimationEntry *entry;
+    SpriteAssetFrame *entry;
     s16 command;
 
     if (timer > 0) {
         state->frameTimer = timer - 1;
     } else {
         state->frameIndex++;
-        if (state->frameIndex >= state->header->frameCount) {
+        if (state->frameIndex >= state->animationSet->frameCount.signedValue) {
             state->frameIndex = 0;
             looped = 1;
         }
 
-        entry = &state->entries[state->frameIndex];
+        entry = &state->frames[state->frameIndex];
         command = entry->command;
 
         if (command != 1) {
@@ -773,13 +771,13 @@ s32 updateSpriteAnimation(void *arg0, s32 arg1) {
                 goto case_default;
             }
             // command == 0: normal frame
-            state->currentSpriteFrame = entry->spriteFrame;
+            state->currentSpriteFrame = entry->image.spriteFrame;
             state->frameTimer = entry->duration;
         } else {
             // command == 1: jump to frame
             state->frameIndex = entry->duration;
-            entry = &state->entries[state->frameIndex];
-            state->currentSpriteFrame = entry->spriteFrame;
+            entry = &state->frames[state->frameIndex];
+            state->currentSpriteFrame = entry->image.spriteFrame;
             state->frameTimer = entry->duration;
             result = 1;
         }
@@ -787,8 +785,8 @@ s32 updateSpriteAnimation(void *arg0, s32 arg1) {
 
     case_default:
         state->frameIndex--;
-        entry = &state->entries[state->frameIndex];
-        state->currentSpriteFrame = entry->spriteFrame;
+        entry = &state->frames[state->frameIndex];
+        state->currentSpriteFrame = entry->image.spriteFrame;
         state->frameTimer = entry->duration;
         result = 2;
     }
@@ -801,21 +799,42 @@ end:
     return result;
 }
 
-void renderOpaqueSprite(void *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s16 arg7, u8 arg8) {
+void renderOpaqueSprite(
+    SpriteAssetState *state,
+    s32 slot,
+    s32 posX,
+    s32 posY,
+    s32 posZ,
+    s32 scaleX,
+    s32 scaleY,
+    s16 renderMode,
+    u8 flipHorizontal
+) {
     ((SetupAndEnqueueSprite_t)
-         setupAndEnqueueSprite)((SpriteState *)arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, 0xFF, 0);
+         setupAndEnqueueSprite)(state, slot, posX, posY, posZ, scaleX, scaleY, renderMode, flipHorizontal, 0xFF, 0);
 }
 
-void renderSprite(void *arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4, s32 arg5, s32 arg6, s16 arg7, u8 arg8, u8 arg9) {
+void renderSprite(
+    SpriteAssetState *state,
+    s32 slot,
+    s32 posX,
+    s32 posY,
+    s32 posZ,
+    s32 scaleX,
+    s32 scaleY,
+    s16 renderMode,
+    u8 flipHorizontal,
+    u8 alpha
+) {
     s32 pad[2];
 
     pad[0] = 0;
     ((void (*)(void *, s32, s32, s32, s32, s32, s32, s16, u8, u8))
-         setupAndEnqueueSprite)(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9);
+         setupAndEnqueueSprite)(state, slot, posX, posY, posZ, scaleX, scaleY, renderMode, flipHorizontal, alpha);
 }
 
 void setupAndEnqueueSprite(
-    SpriteState *state,
+    SpriteAssetState *state,
     s32 slot,
     s32 posX,
     s32 posY,
@@ -828,18 +847,18 @@ void setupAndEnqueueSprite(
     s16 renderFlags
 ) {
     OutputStruct_19E80 sp10;
-    SpriteEntry *entry;
+    SpriteAssetFrame *entry;
     s32 dimensions;
     s32 sign;
     s32 offsetX;
 
     sign = -(flipH != 0) | 1;
-    entry = state->spriteEntries + state->currentFrame;
-    offsetX = entry->offsetX;
-    state->positionX = posX + ((offsetX * sign) << 16);
-    state->positionY = posY + (entry->offsetY << 16);
-    state->positionZ = posZ;
-    state->textureIndex = entry->textureIndex;
+    entry = state->frames + state->frameIndex;
+    offsetX = entry->offset.components.x;
+    state->position.x = posX + ((offsetX * sign) << 16);
+    state->position.y = posY + (entry->offset.components.y << 16);
+    state->position.z = posZ;
+    state->textureIndex = entry->image.textureIndex;
     state->flipHorizontal = flipH;
     state->renderMode = renderMode;
     state->scaleX = scaleX >> 4;
@@ -847,47 +866,47 @@ void setupAndEnqueueSprite(
     state->alpha = alpha;
     state->renderFlags = renderFlags;
 
-    getTableEntryByU16Index(state->spriteTable, state->textureIndex, &sp10);
+    getTableEntryByU16Index(state->textureTable, state->textureIndex, &sp10);
 
     dimensions = (sp10.width << 16) | sp10.height;
 
     switch (dimensions) {
         case 0x80008:
-            state->displayListData = &gSpriteVtx_8x8;
+            state->vertexData = &gSpriteVtx_8x8;
             break;
         case 0x100010:
-            state->displayListData = &gSpriteVtx_16x16;
+            state->vertexData = &gSpriteVtx_16x16;
             break;
         case 0x100020:
-            state->displayListData = &gSpriteVtx_16x32;
+            state->vertexData = &gSpriteVtx_16x32;
             break;
         case 0x200010:
-            state->displayListData = &gSpriteVtx_32x16;
+            state->vertexData = &gSpriteVtx_32x16;
             break;
         case 0x200020:
-            state->displayListData = &gSpriteVtx_32x32;
+            state->vertexData = &gSpriteVtx_32x32;
             break;
         case 0x400020:
-            state->displayListData = &gSpriteVtx_64x32;
+            state->vertexData = &gSpriteVtx_64x32;
             break;
         case 0x200040:
-            state->displayListData = &gSpriteVtx_32x64;
+            state->vertexData = &gSpriteVtx_32x64;
             break;
         case 0x400040:
-            state->displayListData = &gSpriteVtx_64x64;
+            state->vertexData = &gSpriteVtx_64x64;
             break;
     }
 
     if ((alpha & 0xFF) == 0xFF) {
-        ((void (*)(s32, Node *))enqueueOpaqueSprite)(slot, (Node *)&state->displayListData);
+        ((void (*)(s32, Node *))enqueueOpaqueSprite)(slot, (Node *)&state->vertexData);
     } else {
-        ((void (*)(s32, Node *))enqueueTranslucentSprite)(slot, (Node *)&state->displayListData);
+        ((void (*)(s32, Node *))enqueueTranslucentSprite)(slot, (Node *)&state->vertexData);
     }
 }
 
-s32 getTableEntryValue(TableLookupContext *ctx) {
+s32 getSpriteFrameWidth(SpriteAssetState *state) {
     OutputStruct_19E80 output;
 
-    getTableEntryByU16Index(ctx->table, ctx->index, &output);
+    getTableEntryByU16Index(state->assetData, state->animationIndex, &output);
     return output.width;
 }
