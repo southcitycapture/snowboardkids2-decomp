@@ -17,79 +17,25 @@
 typedef struct {
     DataTable_19E80 *assetTable;
     BillboardSprite particle;
-    u8 padding2[0xC];
-    s32 particleType;
-    s32 iteration;
-    s32 velX;
+    Vec3i velocity;
+    s32 baseAssetIndex;
+    s32 frameCounter;
 } SprayEffectTask;
 
 typedef struct {
-    s32 padding0;
-    BillboardSprite particle;
-    Vec3i velocity;
-    s32 padding3;
-    s32 iteration;
-} SprayEffectUpdateTask;
-
-typedef struct {
-    BillboardSprite lam;
-} AssetWrapper;
-
-typedef struct {
-    MemoryAllocatorNode *assetTable;
-    AssetWrapper assets[2];
+    DataTable_19E80 *assetTable;
+    BillboardSprite particles[2];
     Vec3i velocity;
     s16 frameCounter;
-    s16 padding;
-    s16 particleType;
-} DualSnowSprayUpdateTask;
-
-typedef struct {
-    MemoryAllocatorNode *assetTable;
-    void *particleSlot;
-    Vec3i pos1;
-    u8 padding1[0xA];
-    s8 alpha1;
-    u8 padding2[0x5];
-    void *particleSlot2;
-    Vec3i pos2;
-    u8 padding3[0xA];
-    s8 alpha2;
-    u8 padding4[0x5];
-    Vec3i velocity;
-    s16 frameCounter;
-    s16 slotIndex;
-    s16 particleType;
+    s16 particleBufferIndex;
+    s16 baseAssetIndex;
 } DualSnowSprayTask;
 
 typedef struct {
-    s16 x;
-    s16 y;
-    MemoryAllocatorNode *assetTable;
-    s16 baseAssetIndex;
-    s8 assetType;
-    u8 paddingB;
-    s32 paddingC;
-    s32 frameCounter;
-    u16 renderPriority;
-    s16 halfSizeRender;
-} FloatingItemSpriteTask;
-
-typedef struct {
-    u8 padding[0x164];
-    s16 rotation[3];
-} GlintEffectSource;
-
-typedef struct {
-    GlintEffectSource *source;
-    void *assetTable;
+    Player *sourcePlayer;
+    DataTable_19E80 *assetTable;
     BillboardSprite particle;
 } GlintEffectTask;
-
-typedef struct {
-    s32 unk0;
-    void *unk4;
-} func_80051688_52288_arg;
 
 typedef struct {
     Player *player;
@@ -102,76 +48,39 @@ typedef struct {
 } SkiTrailTask;
 
 typedef struct {
-    Node n;
-    s32 unk2C;
-    s32 unk30;
-} NodeWithPayload;
-
-typedef struct {
-    MemoryAllocatorNode *assetTable;
-} DualSnowSprayAssetNode;
-
-typedef struct {
-    u8 padding[0x12C0];
-    void *unk12C0;
-} GameStateUnk44_Ext;
-
-typedef struct {
-    u8 padding[0x4C];
-    Vec3i *unk4C;
-    u8 padding2[0x434 - 0x50];
-    Vec3i *unk434;
-} func_80050C00_51800_Task_unk34;
-
-typedef struct {
-    /* 0x00 */ void *assetTable;
+    /* 0x00 */ DataTable_19E80 *assetTable;
     /* 0x04 */ BillboardSprite particle;
-    /* 0x24 */ s16 particleType;
+    /* 0x24 */ s16 baseAssetIndex;
     /* 0x26 */ u16 animFrame;
     /* 0x28 */ Vec3i velocity;
-    /* 0x34 */ func_80050C00_51800_Task_unk34 *sourceObj;
-    /* 0x38 */ s16 positionSelector;
+    /* 0x34 */ Player *sourcePlayer;
+    /* 0x38 */ s16 positionMode;
 } CharacterTrailParticleTask;
 
 typedef struct {
-    u8 padding[0x44];
-    void *unk44;
-} func_80050C80_51880_allocation;
-
-typedef struct {
-    void *unk0;
-    void *unk4;
-    u8 padding[0x1C];
-    s32 unk24;
-    s32 unk28;
+    DataTable_19E80 *assetTable;
+    BillboardSprite particle;
+    s32 baseAssetIndex;
+    s32 frameCounter;
 } ImpactStarTask;
 
 typedef struct {
-    BillboardSprite particle;
-} CharacterAttackEffectParticle;
-
-typedef struct {
-    CharacterAttackEffectParticle particles[6];
-    MemoryAllocatorNode *assetTable;
+    BillboardSprite particles[6];
+    DataTable_19E80 *assetTable;
     Player *sourcePlayer;
     Vec3i positionOffsets;
-    s8 particleType;
+    s8 baseAssetIndex;
     u8 frameCounter;
     u8 isVariant; // 0 = variant A, 1 = variant B (different alpha and offsets)
 } CharacterAttackEffectState;
 
-typedef struct {
-    u8 padding[0x76];
-    u8 raceUpdatePaused;
-} Alloc_CharacterAttackEffect;
-
 void loadFirstSprayParticle(SprayEffectTask *);
 void cleanupSprayEffect(void **);
-void updateSprayEffect(SprayEffectUpdateTask *);
+void updateSprayEffect(SprayEffectTask *);
 void initDualSnowSprayTask(DualSnowSprayTask *);
 void initDualSnowSprayTask_SingleSlot(DualSnowSprayTask *);
-void updateDualSnowSprayParticles(DualSnowSprayUpdateTask *);
-void cleanupDualSnowSprayAssetNode(DualSnowSprayAssetNode *);
+void updateDualSnowSprayParticles(DualSnowSprayTask *);
+void cleanupDualSnowSprayAssetNode(DualSnowSprayTask *);
 void initCharacterTrailParticleTask(MemoryAllocatorNode **);
 void loadCharacterTrailParticleAsset(CharacterTrailParticleTask *);
 void updateCharacterTrailParticle(CharacterTrailParticleTask *);
@@ -181,7 +90,7 @@ void updateImpactStar(ImpactStarTask *);
 void cleanupImpactStar(void **);
 void updateFloatingItemSprite(FloatingItemSpriteTask *);
 void cleanupFloatingItemSpriteTask(FloatingItemSpriteTask *);
-void updateDualSnowSprayParticles_SingleSlot(DualSnowSprayUpdateTask *);
+void updateDualSnowSprayParticles_SingleSlot(DualSnowSprayTask *);
 void cleanupDualSnowSprayTask(DualSnowSprayTask *);
 void updateGlintEffect(GlintEffectTask *);
 void cleanupGlintEffect(GlintEffectTask *);
@@ -189,7 +98,7 @@ void loadCharacterAttackEffectAssets(CharacterAttackEffectState *);
 void updateCharacterAttackEffect(CharacterAttackEffectState *);
 void cleanupCharacterAttackEffectTask(CharacterAttackEffectState *);
 void updateSkiTrailTask(SkiTrailTask *arg0);
-void cleanupSkiTrailTask(func_80051688_52288_arg *arg0);
+void cleanupSkiTrailTask(SkiTrailTask *task);
 
 u8 gCharacterParticleTypeMap[16] = {
     0xFF, 0x08, 0x26, 0x12, 0x17, 0x1C, 0xFF, 0x0D, 0x21, 0x0D, 0x17, 0x12, 0xFF, 0xFF, 0xFF, 0xFF,
@@ -231,16 +140,16 @@ void initSprayEffectTask(void **node) {
     setCallbackWithContinue(&loadFirstSprayParticle);
 }
 
-void loadFirstSprayParticle(SprayEffectTask *arg0) {
+void loadFirstSprayParticle(SprayEffectTask *task) {
     GameState *gs = (GameState *)getCurrentAllocation();
-    loadAssetMetadata(&arg0->particle, arg0->assetTable, arg0->particleType);
-    arg0->particle.alpha = 0xE0;
-    arg0->particle.vertices = (Vtx *)&gs->unk44->unkFC0->asset;
-    arg0->iteration = 0;
+    loadAssetMetadata(&task->particle, task->assetTable, task->baseAssetIndex);
+    task->particle.alpha = 0xE0;
+    task->particle.vertices = (Vtx *)&gs->unk44->unkFC0->asset;
+    task->frameCounter = 0;
     setCallbackWithContinue(&updateSprayEffect);
 }
 
-void updateSprayEffect(SprayEffectUpdateTask *arg0) {
+void updateSprayEffect(SprayEffectTask *task) {
     GameState *gs;
     s32 i;
     gs = (GameState *)getCurrentAllocation();
@@ -250,21 +159,21 @@ void updateSprayEffect(SprayEffectUpdateTask *arg0) {
         GameStateUnk44 *base;
 
         base = gs->unk44;
-        arg0->particle.vertices = (Vtx *)&base->unkFC0[arg0->iteration].asset;
+        task->particle.vertices = (Vtx *)&base->unkFC0[task->frameCounter].asset;
 
-        arg0->iteration = arg0->iteration + 1;
-        if (arg0->iteration == 4) {
+        task->frameCounter = task->frameCounter + 1;
+        if (task->frameCounter == 4) {
             terminateCurrentTask();
             return;
         }
-        arg0->particle.alpha = arg0->particle.alpha - 0x30;
-        arg0->particle.position.x += arg0->velocity.x;
-        arg0->particle.position.y += arg0->velocity.y;
-        arg0->particle.position.z += arg0->velocity.z;
+        task->particle.alpha = task->particle.alpha - 0x30;
+        task->particle.position.x += task->velocity.x;
+        task->particle.position.y += task->velocity.y;
+        task->particle.position.z += task->velocity.z;
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueAlphaBillboardSprite(i, &arg0->particle);
+        enqueueAlphaBillboardSprite(i, &task->particle);
     }
 }
 
@@ -272,52 +181,52 @@ void cleanupSprayEffect(void **arg0) {
     *arg0 = freeNodeMemory(*arg0);
 }
 
-void spawnSprayEffect(Vec3i *arg0, Vec3i *arg1, s32 arg2) {
-    NodeWithPayload *task = (NodeWithPayload *)scheduleTask(&initSprayEffectTask, 2, 0, 0xDC);
+void spawnSprayEffect(Vec3i *position, Vec3i *velocity, s32 baseAssetIndex) {
+    SprayEffectTask *task = (SprayEffectTask *)scheduleTask(&initSprayEffectTask, 2, 0, 0xDC);
     if (task != NULL) {
-        memcpy((void *)&task->n.freeNext, arg0, sizeof(Vec3i));
-        task->unk30 = arg2;
-        task->n.cleanupCallback = (void *)(arg1->x / 2);
-        task->n.payload = (void *)(arg1->y / 2);
-        task->unk2C = (arg1->z / 2);
+        memcpy(&task->particle.position, position, sizeof(Vec3i));
+        task->baseAssetIndex = baseAssetIndex;
+        task->velocity.x = velocity->x / 2;
+        task->velocity.y = velocity->y / 2;
+        task->velocity.z = velocity->z / 2;
     }
 }
 
 void initDualSnowSprayTask(DualSnowSprayTask *arg0) {
     GameState *gs = (GameState *)getCurrentAllocation();
     arg0->assetTable = load_3ECE40();
-    arg0->particleSlot = &gs->unk44->unk1080[arg0->slotIndex];
-    arg0->alpha1 = (u8)((randA() & 0x1F) + 0x70);
+    arg0->particles[0].vertices = (Vtx *)&gs->unk44->unk1080[arg0->particleBufferIndex];
+    arg0->particles[0].alpha = (u8)((randA() & 0x1F) + 0x70);
     arg0->frameCounter = 0;
-    arg0->particleSlot2 = arg0->particleSlot;
-    arg0->alpha2 = (u8)arg0->alpha1;
+    arg0->particles[1].vertices = arg0->particles[0].vertices;
+    arg0->particles[1].alpha = arg0->particles[0].alpha;
     setCleanupCallback(&cleanupDualSnowSprayAssetNode);
     setCallbackWithContinue(&updateDualSnowSprayParticles);
 }
 
-void updateDualSnowSprayParticles(DualSnowSprayUpdateTask *arg0) {
+void updateDualSnowSprayParticles(DualSnowSprayTask *arg0) {
     GameState *gs;
     s32 i;
 
     gs = (GameState *)getCurrentAllocation();
-    loadAssetMetadata(&arg0->assets[0].lam, arg0->assetTable, arg0->particleType + arg0->frameCounter);
+    loadAssetMetadata(&arg0->particles[0], arg0->assetTable, arg0->baseAssetIndex + arg0->frameCounter);
 
-    arg0->assets[1].lam.textureData = arg0->assets[0].lam.textureData;
-    arg0->assets[1].lam.paletteData = arg0->assets[0].lam.paletteData;
-    arg0->assets[1].lam.textureWidth = arg0->assets[0].lam.textureWidth;
-    arg0->assets[1].lam.textureHeight = arg0->assets[0].lam.textureHeight;
+    arg0->particles[1].textureData = arg0->particles[0].textureData;
+    arg0->particles[1].paletteData = arg0->particles[0].paletteData;
+    arg0->particles[1].textureWidth = arg0->particles[0].textureWidth;
+    arg0->particles[1].textureHeight = arg0->particles[0].textureHeight;
 
     for (i = 0; i < 4; i++) {
-        enqueueAlphaSprite(i, &arg0->assets[0].lam);
-        enqueueAlphaSprite(i, &arg0->assets[1].lam);
+        enqueueAlphaSprite(i, &arg0->particles[0]);
+        enqueueAlphaSprite(i, &arg0->particles[1]);
     }
 
     if (gs->gamePaused == 0) {
         if (arg0->frameCounter != 0) {
             for (i = 0; i < 2; i++) {
-                arg0->assets[i].lam.position.x += arg0->velocity.x;
-                arg0->assets[i].lam.position.y += arg0->velocity.y;
-                arg0->assets[i].lam.position.z += arg0->velocity.z;
+                arg0->particles[i].position.x += arg0->velocity.x;
+                arg0->particles[i].position.y += arg0->velocity.y;
+                arg0->particles[i].position.z += arg0->velocity.z;
             }
         }
 
@@ -328,7 +237,7 @@ void updateDualSnowSprayParticles(DualSnowSprayUpdateTask *arg0) {
     }
 }
 
-void cleanupDualSnowSprayAssetNode(DualSnowSprayAssetNode *arg0) {
+void cleanupDualSnowSprayAssetNode(DualSnowSprayTask *arg0) {
     arg0->assetTable = freeNodeMemory(arg0->assetTable);
 }
 
@@ -351,12 +260,12 @@ void spawnDualSnowSprayEffect(Vec3i *pos1, Vec3i *pos2, Vec3i *velocity, s32 slo
         return;
     }
 
-    memcpy(&task->pos1, pos1, sizeof(Vec3i));
-    memcpy(&task->pos2, pos2, sizeof(Vec3i));
+    memcpy(&task->particles[0].position, pos1, sizeof(Vec3i));
+    memcpy(&task->particles[1].position, pos2, sizeof(Vec3i));
 
     particleType = gCharacterParticleTypeMap[characterId];
-    task->slotIndex = slotIndex;
-    task->particleType = particleType;
+    task->particleBufferIndex = slotIndex;
+    task->baseAssetIndex = particleType;
 
     velX = velocity->x;
     signX = (u32)velX >> 31;
@@ -383,27 +292,31 @@ void initCharacterTrailParticleTask(MemoryAllocatorNode **node) {
     setCallbackWithContinue(&loadCharacterTrailParticleAsset);
 }
 
-void loadCharacterTrailParticleAsset(CharacterTrailParticleTask *arg0) {
+void loadCharacterTrailParticleAsset(CharacterTrailParticleTask *task) {
     s32 temp;
     s32 shift9;
     int new_var2;
     s32 new_var;
     getCurrentAllocation();
-    if (arg0->positionSelector >= 0) {
-        memcpy(&arg0->particle.position, &arg0->sourceObj->unk4C, sizeof(Vec3i));
+    if (task->positionMode >= 0) {
+        memcpy(
+            &task->particle.position,
+            &task->sourcePlayer->bodyPartDisplayObjects[0].transform.translation,
+            sizeof(Vec3i)
+        );
     } else {
-        memcpy(&arg0->particle.position, &arg0->sourceObj->unk434, sizeof(Vec3i));
-        arg0->particle.position.y += 0x80000;
+        memcpy(&task->particle.position, &task->sourcePlayer->worldPos, sizeof(Vec3i));
+        task->particle.position.y += 0x80000;
     }
     temp = (randA() & 0xFF) - 0x80;
     shift9 = (new_var = temp << 9);
-    arg0->particle.position.x += ((temp << 11) + shift9) << 1;
+    task->particle.position.x += ((temp << 11) + shift9) << 1;
     new_var2 = (randA() & 0xFF) - 0x80;
     temp = new_var2;
     shift9 = temp << 9;
-    arg0->animFrame = 0;
-    arg0->particle.position.z += ((temp << 11) + shift9) << 1;
-    loadAssetMetadata(&arg0->particle, arg0->assetTable, arg0->particleType);
+    task->animFrame = 0;
+    task->particle.position.z += ((temp << 11) + shift9) << 1;
+    loadAssetMetadata(&task->particle, task->assetTable, task->baseAssetIndex);
     setCallbackWithContinue(updateCharacterTrailParticle);
 }
 
@@ -418,7 +331,7 @@ void updateCharacterTrailParticle(CharacterTrailParticleTask *arg0) {
         temp = arg0->animFrame;
 
         if (temp % 3 == 0) {
-            loadAssetMetadata((&arg0->particle), arg0->assetTable, arg0->particleType + (temp >> 2));
+            loadAssetMetadata((&arg0->particle), arg0->assetTable, arg0->baseAssetIndex + (temp >> 2));
         }
 
         arg0->animFrame++;
@@ -449,31 +362,31 @@ void cleanupCharacterTrailParticleTask(s32 **arg0) {
     *arg0 = freeNodeMemory(*arg0);
 }
 
-void spawnCharacterTrailParticle(void *arg0) {
+void spawnCharacterTrailParticle(Player *player) {
     GameState *allocation;
     CharacterTrailParticleTask *task;
 
     allocation = (GameState *)getCurrentAllocation();
     task = (CharacterTrailParticleTask *)scheduleTask(&initCharacterTrailParticleTask, 2, 0, 0xEA);
     if (task != NULL) {
-        task->particleType = 0x35;
-        task->sourceObj = arg0;
+        task->baseAssetIndex = 0x35;
+        task->sourcePlayer = player;
         task->particle.alpha = 0xFF;
         task->velocity.x = 0;
         task->velocity.y = 0;
         task->velocity.z = 0;
-        task->positionSelector = 0;
+        task->positionMode = 0;
         task->particle.vertices = (Vtx *)&allocation->unk44->unkFC0;
     }
 }
 
-void spawnPlayerCharacterTrailParticle(Player *arg0, s32 arg1) {
-    func_80050C80_51880_allocation *allocation;
+void spawnPlayerCharacterTrailParticle(Player *player, s32 characterId) {
+    GameState *allocation;
     CharacterTrailParticleTask *task;
     u8 temp;
 
-    allocation = (func_80050C80_51880_allocation *)getCurrentAllocation();
-    temp = gCharacterParticleTypeMap[arg1];
+    allocation = (GameState *)getCurrentAllocation();
+    temp = gCharacterParticleTypeMap[characterId];
 
     if (temp == 0xFF) {
         return;
@@ -487,15 +400,15 @@ void spawnPlayerCharacterTrailParticle(Player *arg0, s32 arg1) {
 
     if (task != NULL) {
         u8 temp2;
-        task->sourceObj = (func_80050C00_51800_Task_unk34 *)arg0;
-        temp2 = gCharacterParticleTypeMap[arg1];
+        task->sourcePlayer = player;
+        temp2 = gCharacterParticleTypeMap[characterId];
         task->particle.alpha = 0x80;
-        task->particleType = temp2;
-        task->velocity.x = arg0->velocity.x / 2;
-        task->velocity.y = arg0->velocity.y / 2;
-        task->velocity.z = arg0->velocity.z / 2;
-        task->positionSelector = -1;
-        task->particle.vertices = (void *)((u32)allocation->unk44 + 0x1440);
+        task->baseAssetIndex = temp2;
+        task->velocity.x = player->velocity.x / 2;
+        task->velocity.y = player->velocity.y / 2;
+        task->velocity.z = player->velocity.z / 2;
+        task->positionMode = -1;
+        task->particle.vertices = allocation->unk44->characterTrailVertices;
     }
 }
 
@@ -505,18 +418,17 @@ void initImpactStarTask(MemoryAllocatorNode **node) {
     setCallbackWithContinue(&loadImpactStarAsset);
 }
 
-void loadImpactStarAsset(ImpactStarTask *arg0) {
+void loadImpactStarAsset(ImpactStarTask *task) {
     GameState *allocation;
-    void *temp;
+    Vtx *vertices;
 
     allocation = getCurrentAllocation();
-    temp = &((GameStateUnk44_Ext *)allocation->unk44)->unk12C0;
+    vertices = allocation->unk44->impactStarVertices;
+    task->baseAssetIndex = 0x40;
+    task->particle.vertices = vertices;
+    task->frameCounter = 0;
 
-    arg0->unk24 = 0x40;
-    arg0->unk4 = temp;
-    arg0->unk28 = 0;
-
-    loadAssetMetadata((BillboardSprite *)&arg0->unk4, arg0->unk0, arg0->unk24);
+    loadAssetMetadata(&task->particle, task->assetTable, task->baseAssetIndex);
 
     setCallbackWithContinue(&updateImpactStar);
 }
@@ -527,17 +439,17 @@ void updateImpactStar(ImpactStarTask *arg0) {
 
     alloc = getCurrentAllocation();
     if (alloc->gamePaused == 0) {
-        if ((arg0->unk28 & 1) == 0) {
-            loadAssetMetadata((BillboardSprite *)&arg0->unk4, arg0->unk0, arg0->unk24 + (arg0->unk28 >> 1));
+        if ((arg0->frameCounter & 1) == 0) {
+            loadAssetMetadata(&arg0->particle, arg0->assetTable, arg0->baseAssetIndex + (arg0->frameCounter >> 1));
         }
-        arg0->unk28++;
-        if (arg0->unk28 >= 0xA) {
+        arg0->frameCounter++;
+        if (arg0->frameCounter >= 0xA) {
             terminateCurrentTask();
         }
     }
 
     for (i = 0; i < 4; i++) {
-        enqueueTexturedBillboardSprite(i, (BillboardSprite *)&arg0->unk4);
+        enqueueTexturedBillboardSprite(i, &arg0->particle);
     }
 }
 
@@ -555,15 +467,15 @@ void spawnImpactStar(Vec3i *arg0) {
 }
 
 void initFloatingItemSpriteTask(FloatingItemSpriteTask *arg0) {
-    arg0->assetTable = load_3ECE40();
-    arg0->baseAssetIndex = 0x45;
+    arg0->sprite.spriteData = load_3ECE40();
+    arg0->sprite.frameIndex = 0x45;
     arg0->frameCounter = 0;
     setCleanupCallback(&cleanupFloatingItemSpriteTask);
     setCallbackWithContinue(&updateFloatingItemSprite);
 }
 
 void updateFloatingItemSprite(FloatingItemSpriteTask *arg0) {
-    arg0->baseAssetIndex = (arg0->frameCounter >> 1) + 0x45;
+    arg0->sprite.frameIndex = (arg0->frameCounter >> 1) + 0x45;
     arg0->frameCounter = arg0->frameCounter + 1;
 
     if (arg0->frameCounter == 0x10) {
@@ -575,20 +487,20 @@ void updateFloatingItemSprite(FloatingItemSpriteTask *arg0) {
             arg0->renderPriority,
             VIEWPORT_CALLBACK_LAYER_OPAQUE,
             renderSpriteFrameWithPalette,
-            arg0
+            &arg0->sprite
         );
     } else {
         pushViewportCallbackBySlot(
             arg0->renderPriority,
             VIEWPORT_CALLBACK_LAYER_OPAQUE,
             renderHalfSizeSpriteWithCustomPalette,
-            arg0
+            &arg0->sprite
         );
     }
 }
 
 void cleanupFloatingItemSpriteTask(FloatingItemSpriteTask *arg0) {
-    arg0->assetTable = freeNodeMemory(arg0->assetTable);
+    arg0->sprite.spriteData = freeNodeMemory(arg0->sprite.spriteData);
 }
 
 void spawnFloatingItemSprite(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4) {
@@ -596,12 +508,12 @@ void spawnFloatingItemSprite(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4) {
 
     task = (FloatingItemSpriteTask *)scheduleTask(&initFloatingItemSpriteTask, 2, 0, 0xE6);
     if (task != NULL) {
-        task->x = arg0;
-        task->y = arg1;
+        task->sprite.x = arg0;
+        task->sprite.y = arg1;
         if (arg2 != 0) {
-            task->assetType = 0x11;
+            task->sprite.paletteIndex = 0x11;
         } else {
-            task->assetType = 0x10;
+            task->sprite.paletteIndex = 0x10;
         }
         task->renderPriority = arg3;
         task->halfSizeRender = arg4;
@@ -611,38 +523,38 @@ void spawnFloatingItemSprite(s32 arg0, s32 arg1, s32 arg2, s32 arg3, s32 arg4) {
 void initDualSnowSprayTask_SingleSlot(DualSnowSprayTask *arg0) {
     GameState *gs = (GameState *)getCurrentAllocation();
     arg0->assetTable = load_3ECE40();
-    arg0->particleSlot = &gs->unk44->unk1340;
-    arg0->alpha1 = (u8)((randA() & 0x1F) + 0x70);
+    arg0->particles[0].vertices = gs->unk44->dualSnowSprayVertices;
+    arg0->particles[0].alpha = (u8)((randA() & 0x1F) + 0x70);
     arg0->frameCounter = 0;
-    arg0->particleSlot2 = arg0->particleSlot;
-    arg0->alpha2 = (u8)arg0->alpha1;
+    arg0->particles[1].vertices = arg0->particles[0].vertices;
+    arg0->particles[1].alpha = arg0->particles[0].alpha;
     setCleanupCallback(&cleanupDualSnowSprayTask);
     setCallbackWithContinue(&updateDualSnowSprayParticles_SingleSlot);
 }
 
-void updateDualSnowSprayParticles_SingleSlot(DualSnowSprayUpdateTask *arg0) {
+void updateDualSnowSprayParticles_SingleSlot(DualSnowSprayTask *arg0) {
     GameState *gs;
     s32 i;
 
     gs = (GameState *)getCurrentAllocation();
-    loadAssetMetadata(&arg0->assets[0].lam, arg0->assetTable, (arg0->frameCounter / 4) + 8);
+    loadAssetMetadata(&arg0->particles[0], arg0->assetTable, (arg0->frameCounter / 4) + 8);
 
-    arg0->assets[1].lam.textureData = arg0->assets[0].lam.textureData;
-    arg0->assets[1].lam.paletteData = arg0->assets[0].lam.paletteData;
-    arg0->assets[1].lam.textureWidth = arg0->assets[0].lam.textureWidth;
-    arg0->assets[1].lam.textureHeight = arg0->assets[0].lam.textureHeight;
+    arg0->particles[1].textureData = arg0->particles[0].textureData;
+    arg0->particles[1].paletteData = arg0->particles[0].paletteData;
+    arg0->particles[1].textureWidth = arg0->particles[0].textureWidth;
+    arg0->particles[1].textureHeight = arg0->particles[0].textureHeight;
 
     for (i = 0; i < 4; i++) {
-        enqueueAlphaSprite(i, &arg0->assets[0].lam);
-        enqueueAlphaSprite(i, &arg0->assets[1].lam);
+        enqueueAlphaSprite(i, &arg0->particles[0]);
+        enqueueAlphaSprite(i, &arg0->particles[1]);
     }
 
     if (gs->gamePaused == 0) {
         if (arg0->frameCounter != 0) {
             for (i = 0; i < 2; i++) {
-                arg0->assets[i].lam.position.x += arg0->velocity.x;
-                arg0->assets[i].lam.position.y += arg0->velocity.y;
-                arg0->assets[i].lam.position.z += arg0->velocity.z;
+                arg0->particles[i].position.x += arg0->velocity.x;
+                arg0->particles[i].position.y += arg0->velocity.y;
+                arg0->particles[i].position.z += arg0->velocity.z;
             }
         }
 
@@ -660,9 +572,9 @@ void cleanupDualSnowSprayTask(DualSnowSprayTask *arg0) {
 void spawnDualSnowSprayEffect_SingleSlot(Vec3i *pos1, Vec3i *pos2, Vec3i *velocity, s32 particleType) {
     DualSnowSprayTask *task = (DualSnowSprayTask *)scheduleTask(&initDualSnowSprayTask_SingleSlot, 2, 0, 0xDD);
     if (task != NULL) {
-        memcpy(&task->pos1, pos1, sizeof(Vec3i));
-        memcpy(&task->pos2, pos2, sizeof(Vec3i));
-        task->particleType = particleType;
+        memcpy(&task->particles[0].position, pos1, sizeof(Vec3i));
+        memcpy(&task->particles[1].position, pos2, sizeof(Vec3i));
+        task->baseAssetIndex = particleType;
         task->velocity.x = (s32)(velocity->x / 2);
         task->velocity.y = (s32)(velocity->y / 2);
         task->velocity.z = (s32)(velocity->z / 2);
@@ -671,15 +583,15 @@ void spawnDualSnowSprayEffect_SingleSlot(Vec3i *pos1, Vec3i *pos2, Vec3i *veloci
 
 void initSkiTrailTask(SkiTrailTask *task) {
     GameState *gs;
-    void *particleAsset;
+    Vtx *particleAsset;
     volatile SkiTrailTask *skiSlot;
     s32 i;
-    s32 dstOffset;
+    s32 transformOutputOffset;
     s16 *transforms;
 
     gs = (GameState *)getCurrentAllocation();
     task->assetTable = load_3ECE40();
-    particleAsset = (void *)((u8 *)gs->unk44 + 0x13C0);
+    particleAsset = gs->unk44->skiTrailVertices;
     task->particleLeft.alpha = 0xFF;
     task->particleLeft.vertices = particleAsset;
     task->particleRight.alpha = task->particleLeft.alpha;
@@ -689,31 +601,39 @@ void initSkiTrailTask(SkiTrailTask *task) {
 
     if (task->player->animationFlags & 2) {
         skiSlot = task;
-        dstOffset = 0x48;
+        transformOutputOffset = (u32) & ((SkiTrailTask *)0)->skiOffsets;
         transforms = gSkiTrailOffsetTransformsForward;
         do {
-            transformVector(transforms, (s16 *)&task->player->snowboardDisplayObject.transform, (u8 *)task + dstOffset);
+            transformVector(
+                transforms,
+                (s16 *)&task->player->snowboardDisplayObject.transform,
+                (Vec3i *)((u8 *)task + transformOutputOffset)
+            );
             skiSlot->skiOffsets[0].x -= task->player->worldPos.x;
             skiSlot->skiOffsets[0].y -= task->player->worldPos.y;
-            dstOffset += 0xC;
+            transformOutputOffset += sizeof(Vec3i);
             transforms += 6;
             i++;
             skiSlot->skiOffsets[0].z -= task->player->worldPos.z;
-            skiSlot = (SkiTrailTask *)((u8 *)skiSlot + 0xC);
+            skiSlot = (SkiTrailTask *)&skiSlot->particleLeft.position;
         } while (i < 2);
     } else {
         skiSlot = task;
-        dstOffset = 0x48;
+        transformOutputOffset = (u32) & ((SkiTrailTask *)0)->skiOffsets;
         transforms = gSkiTrailOffsetTransformsBackward;
         do {
-            transformVector(transforms, (s16 *)&task->player->snowboardDisplayObject.transform, (u8 *)task + dstOffset);
+            transformVector(
+                transforms,
+                (s16 *)&task->player->snowboardDisplayObject.transform,
+                (Vec3i *)((u8 *)task + transformOutputOffset)
+            );
             skiSlot->skiOffsets[0].x -= task->player->worldPos.x;
             skiSlot->skiOffsets[0].y -= task->player->worldPos.y;
-            dstOffset += 0xC;
+            transformOutputOffset += sizeof(Vec3i);
             transforms += 6;
             i++;
             skiSlot->skiOffsets[0].z -= task->player->worldPos.z;
-            skiSlot = (SkiTrailTask *)((u8 *)skiSlot + 0xC);
+            skiSlot = (SkiTrailTask *)&skiSlot->particleLeft.position;
         } while (i < 2);
     }
 
@@ -770,8 +690,8 @@ void updateSkiTrailTask(SkiTrailTask *task) {
     }
 }
 
-void cleanupSkiTrailTask(func_80051688_52288_arg *arg0) {
-    arg0->unk4 = freeNodeMemory(arg0->unk4);
+void cleanupSkiTrailTask(SkiTrailTask *task) {
+    task->assetTable = freeNodeMemory(task->assetTable);
 }
 
 void spawnSkiTrailTask(Player *player) {
@@ -796,7 +716,11 @@ void updateGlintEffect(GlintEffectTask *arg0) {
     GameState *gs;
 
     gs = (GameState *)getCurrentAllocation();
-    transformVector((s16 *)&gGlintEffectTransform, arg0->source->rotation, &arg0->particle.position);
+    transformVector(
+        (s16 *)&gGlintEffectTransform,
+        arg0->sourcePlayer->bodyPartDisplayObjects[5].transform.m[0],
+        &arg0->particle.position
+    );
 
     for (i = 0; i < 4; i++) {
         enqueueAlphaSprite(i, &arg0->particle);
@@ -814,10 +738,10 @@ void cleanupGlintEffect(GlintEffectTask *arg0) {
     arg0->assetTable = freeNodeMemory(arg0->assetTable);
 }
 
-void spawnGlintEffect(void *arg0) {
-    void *result = scheduleTask(&initGlintEffect, 2, 0, 0xDD);
-    if (result != NULL) {
-        *(void **)result = arg0;
+void spawnGlintEffect(Player *player) {
+    GlintEffectTask *task = (GlintEffectTask *)scheduleTask(&initGlintEffect, 2, 0, 0xDD);
+    if (task != NULL) {
+        task->sourcePlayer = player;
     }
 }
 
@@ -831,15 +755,15 @@ void loadCharacterAttackEffectAssets(CharacterAttackEffectState *arg0) {
     s32 i;
 
     for (i = 0; i < 6; i++) {
-        loadAssetMetadata(&arg0->particles[i].particle, arg0->assetTable, arg0->particleType);
-        arg0->particles[i].particle.vertices = (Vtx *)&gCharacterAttackEffectAssetTemplate;
+        loadAssetMetadata(&arg0->particles[i], arg0->assetTable, arg0->baseAssetIndex);
+        arg0->particles[i].vertices = (Vtx *)&gCharacterAttackEffectAssetTemplate;
 
         if (arg0->isVariant == 0) {
             memcpy(&arg0->positionOffsets, &gCharacterAttackEffectPositionOffsetsA, sizeof(Vec3i));
-            arg0->particles[i].particle.alpha = 0x90;
+            arg0->particles[i].alpha = 0x90;
         } else {
             memcpy(&arg0->positionOffsets, &gCharacterAttackEffectPositionOffsetsB, sizeof(Vec3i));
-            arg0->particles[i].particle.alpha = 0xF0;
+            arg0->particles[i].alpha = 0xF0;
         }
     }
 
@@ -851,15 +775,15 @@ void updateCharacterAttackEffect(CharacterAttackEffectState *arg0) {
     Vec3i result;
     Transform3D rotMatrix;
     Transform3D transformed;
-    Alloc_CharacterAttackEffect *alloc;
+    GameState *alloc;
 #ifdef CC_CHECK
-    CharacterAttackEffectParticle *particle;
+    BillboardSprite *particle;
     s32 rotation;
     Transform3D *rm;
     Transform3D *tf;
     s32 yOffset;
 #else
-    register CharacterAttackEffectParticle *particle __asm__("$16");
+    register BillboardSprite *particle __asm__("$16");
     register s32 rotation __asm__("$17");
     register Transform3D *rm __asm__("$21");
     register Transform3D *tf __asm__("$20");
@@ -869,10 +793,10 @@ void updateCharacterAttackEffect(CharacterAttackEffectState *arg0) {
     s32 j;
     u8 fc;
 
-    alloc = (Alloc_CharacterAttackEffect *)getCurrentAllocation();
+    alloc = (GameState *)getCurrentAllocation();
     j = 0;
 
-    if (alloc->raceUpdatePaused != 0) {
+    if (alloc->gamePaused != 0) {
         goto render;
     }
 
@@ -888,16 +812,16 @@ void updateCharacterAttackEffect(CharacterAttackEffectState *arg0) {
 
     for (j = 0; j < 6; j++) {
         createYRotationMatrix(rm, rotation & 0xFFFF);
-        func_8006BDBC_6C9BC(rm, &arg0->sourcePlayer->orientationHeadingTransform, tf);
+        matrixMultiply(rm, &arg0->sourcePlayer->orientationHeadingTransform, tf);
         transformVector2(&arg0->positionOffsets, tf, &result);
-        particle->particle.position.x = result.x + arg0->sourcePlayer->worldPos.x;
-        particle->particle.position.y = result.y + arg0->sourcePlayer->worldPos.y + yOffset;
-        particle->particle.position.z = result.z + arg0->sourcePlayer->worldPos.z;
+        particle->position.x = result.x + arg0->sourcePlayer->worldPos.x;
+        particle->position.y = result.y + arg0->sourcePlayer->worldPos.y + yOffset;
+        particle->position.z = result.z + arg0->sourcePlayer->worldPos.z;
 
         if (arg0->isVariant == 0) {
-            particle->particle.alpha = particle->particle.alpha - 9;
+            particle->alpha = particle->alpha - 9;
         } else {
-            particle->particle.alpha = particle->particle.alpha - 21;
+            particle->alpha = particle->alpha - 21;
         }
 
         particle++;
@@ -906,19 +830,19 @@ void updateCharacterAttackEffect(CharacterAttackEffectState *arg0) {
 
     fc = arg0->frameCounter;
     if (!(fc & 1)) {
-        loadAssetMetadata(&arg0->particles[0].particle, arg0->assetTable, arg0->particleType + ((s32)(fc << 24) >> 26));
+        loadAssetMetadata(&arg0->particles[0], arg0->assetTable, arg0->baseAssetIndex + ((s32)(fc << 24) >> 26));
         {
 #ifdef CC_CHECK
-            CharacterAttackEffectParticle *d;
+            BillboardSprite *d;
 #else
-            register CharacterAttackEffectParticle *d __asm__("$3");
+            register BillboardSprite *d __asm__("$3");
 #endif
             d = &arg0->particles[1];
             for (j = 1; j < 6; j++) {
-                d->particle.textureData = arg0->particles[0].particle.textureData;
-                d->particle.paletteData = arg0->particles[0].particle.paletteData;
-                d->particle.textureWidth = arg0->particles[0].particle.textureWidth;
-                d->particle.textureHeight = arg0->particles[0].particle.textureHeight;
+                d->textureData = arg0->particles[0].textureData;
+                d->paletteData = arg0->particles[0].paletteData;
+                d->textureWidth = arg0->particles[0].textureWidth;
+                d->textureHeight = arg0->particles[0].textureHeight;
                 d++;
             }
         }
@@ -936,7 +860,7 @@ render:
     do {
         particle = arg0->particles;
         do {
-            enqueueAlphaBillboardSprite(j, &particle->particle);
+            enqueueAlphaBillboardSprite(j, particle);
             i++;
             particle++;
         } while (i < 6);
@@ -954,7 +878,7 @@ void spawnCharacterAttackEffect(Player *player) {
         (CharacterAttackEffectState *)scheduleTask(&initCharacterAttackEffectState, 2, 0, 0xE7);
     if (task != NULL) {
         task->sourcePlayer = player;
-        task->particleType = 0x12;
+        task->baseAssetIndex = 0x12;
         task->isVariant = 0;
     }
 }
@@ -971,7 +895,7 @@ void spawnCharacterAttackEffectByType(Player *player, s32 characterId) {
     task = (CharacterAttackEffectState *)scheduleTask(&initCharacterAttackEffectState, 2, 0, 0xE7);
     if (task != NULL) {
         task->sourcePlayer = player;
-        task->particleType = particleType;
+        task->baseAssetIndex = particleType;
         task->isVariant = 1;
     }
 }

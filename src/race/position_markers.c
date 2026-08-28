@@ -103,7 +103,7 @@ u32 D_80090860_91460[] = {
 void initPlayerIndicator(PlayerIndicatorTask *task) {
     GameState *gameState = (GameState *)getCurrentAllocation();
     task->assetTable = load_3ECE40();
-    task->indicatorAsset = (u8 *)&gameState->unk44->unk1380;
+    task->indicatorAsset = (u8 *)&gameState->unk44->playerIndicatorVertices;
     setCleanupCallback(&cleanupPlayerIndicator);
     setCallbackWithContinue(&awaitPlayerIndicatorReady);
 }

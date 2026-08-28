@@ -339,7 +339,7 @@ s32 jingleTownBossChaseAttackMainPhase(Player *arg0) {
     if (!(arg0->animationFlags & 1)) {
         temp_s0 = &arg0->headingTransform;
         createYRotationMatrix(temp_s0, arg0->rotY);
-        func_8006BDBC_6C9BC((&arg0->orientationTransform), temp_s0, &sp10);
+        matrixMultiply((&arg0->orientationTransform), temp_s0, &sp10);
         temp_s1 = &arg0->velocity;
         transformVector3(temp_s1, &sp10, &sp30);
         sp30.x = 0;

@@ -132,10 +132,12 @@ typedef struct {
     u8 padding2[0x100];
     GameStateUnk44_Item unkFC0[3];
     GameStateUnk44_Item unk1080[3];
-    u8 padding3[0x1FF];
-    s32 unk1340;
-    u8 padding4[0x3C];
-    s32 unk1380;
+    u8 padding3[0x180];
+    Vtx impactStarVertices[8];
+    Vtx dualSnowSprayVertices[4];
+    Vtx playerIndicatorVertices[4];
+    Vtx skiTrailVertices[8];
+    Vtx characterTrailVertices[4];
 } GameStateUnk44;
 
 typedef struct {

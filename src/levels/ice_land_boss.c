@@ -414,7 +414,7 @@ s32 iceLandBossChaseAttackPhase(Player *arg0) {
 
     if (!(arg0->animationFlags & 0x1)) {
         createYRotationMatrix(&arg0->headingTransform, arg0->rotY);
-        func_8006BDBC_6C9BC((&arg0->orientationTransform), &arg0->headingTransform, &sp10);
+        matrixMultiply((&arg0->orientationTransform), &arg0->headingTransform, &sp10);
         transformVector3(&arg0->velocity, &sp10, &sp30);
         sp30.x = 0;
         transformVector2(&sp30, &sp10, &arg0->velocity);
@@ -652,7 +652,7 @@ s32 iceLandBossGroundProjectileAttackPhase(Player *boss) {
 
     if (!(boss->animationFlags & 1)) {
         createYRotationMatrix(&boss->headingTransform, boss->rotY);
-        func_8006BDBC_6C9BC((&boss->orientationTransform), &boss->headingTransform, &rotMatrix);
+        matrixMultiply((&boss->orientationTransform), &boss->headingTransform, &rotMatrix);
         transformVector3(&boss->velocity, &rotMatrix, &tempVec);
         tempVec.x = 0;
         transformVector2(&tempVec, &rotMatrix, &boss->velocity);
@@ -840,7 +840,7 @@ void updateIceLandBossLeanBoneTransforms(Player *arg0) {
     temp = &scratch;
     memcpy(temp, &arg0->bodyPartDisplayObjects[5].transform, sizeof(Transform3D));
     createYRotationMatrix(&squashMatrix, (u16)arg0->bossYawAngle);
-    func_8006BDBC_6C9BC((&squashMatrix), &scratch, &arg0->bodyPartDisplayObjects[5].transform);
+    matrixMultiply((&squashMatrix), &scratch, &arg0->bodyPartDisplayObjects[5].transform);
 }
 
 void renderIceLandBossWithSurfaceColors(Player *arg0) {

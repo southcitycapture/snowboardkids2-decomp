@@ -57,7 +57,8 @@ void createYRotationMatrix(Transform3D *, u16 angle);
 void createZRotationMatrix(Transform3D *, u16 angle);
 void createXRotationMatrix(s16 matrix[3][3], u16 angle);
 
-void func_8006BDBC_6C9BC(Transform3D *, Transform3D *, Transform3D *);
+// Multiplies the 3x3 rotation components: result = left * right
+void matrixMultiply(Transform3D *left, Transform3D *right, Transform3D *result);
 
 void setBonePosition(Transform3D *state, s32 x, s32 y, s32 z);
 

@@ -389,7 +389,7 @@ s32 crazyJungleBossChaseAttackPhase(Player *arg0) {
 
     if (!(arg0->animationFlags & 1)) {
         createYRotationMatrix(&arg0->headingTransform, arg0->rotY);
-        func_8006BDBC_6C9BC((&arg0->orientationTransform), &arg0->headingTransform, &sp10);
+        matrixMultiply((&arg0->orientationTransform), &arg0->headingTransform, &sp10);
         transformVector3(&arg0->velocity, &sp10, &sp30);
         sp30.x = 0;
         transformVector2(&sp30, &sp10, &arg0->velocity);
