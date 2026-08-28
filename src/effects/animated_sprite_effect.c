@@ -10,9 +10,7 @@ typedef struct {
     s32 unk0;
     s32 unk4;
     s32 unk8;
-    s32 posX;
-    s32 posY;
-    s32 posZ;
+    Vec3i position;
     s32 unk18;
     s32 unk1C;
 } SpriteEffectPositionNode;
@@ -22,9 +20,7 @@ typedef struct {
     /* 0x04 */ void *textureData;
     /* 0x08 */ BillboardSprite sprite1;
     /* 0x28 */ BillboardSprite sprite2;
-    /* 0x48 */ s32 velocityX;
-    /* 0x4C */ s32 velocityY;
-    /* 0x50 */ s32 velocityZ;
+    /* 0x48 */ Vec3i velocity;
     /* 0x54 */ s16 frameCounter;
     /* 0x56 */ s16 textureIndex;
 } SpriteEffectTask;
@@ -62,9 +58,9 @@ void updateSpriteEffectTask(SpriteEffectTask *task) {
         s32 i;
         SpriteEffectPositionNode *node = (SpriteEffectPositionNode *)task;
         for (i = 0; i < 2; i++) {
-            node[i].posX += task->velocityX;
-            node[i].posY += task->velocityY;
-            node[i].posZ += task->velocityZ;
+            node[i].position.x += task->velocity.x;
+            node[i].position.y += task->velocity.y;
+            node[i].position.z += task->velocity.z;
         }
     }
 
@@ -79,15 +75,15 @@ void cleanupSpriteEffectTask(SpriteEffectTask *task) {
     task->modelData = freeNodeMemory(task->modelData);
 }
 
-void scheduleSpriteEffectTask(void *startPos, void *endPos, Vec3i *velocity, s32 textureIndex) {
+void scheduleSpriteEffectTask(const Vec3i *startPosition, const Vec3i *endPosition, Vec3i *velocity, s32 textureIndex) {
     SpriteEffectTask *task = (SpriteEffectTask *)scheduleTask(&initSpriteEffectTask, 0, 0, 0);
     if (task != NULL) {
-        memcpy(&task->sprite1.position, startPos, sizeof(Vec3i));
-        memcpy(&task->sprite2.position, endPos, sizeof(Vec3i));
+        memcpy(&task->sprite1.position, startPosition, sizeof(Vec3i));
+        memcpy(&task->sprite2.position, endPosition, sizeof(Vec3i));
         task->textureIndex = textureIndex;
-        task->velocityX = velocity->x / 2;
-        task->velocityY = velocity->y / 2;
-        task->velocityZ = velocity->z / 2;
+        task->velocity.x = velocity->x / 2;
+        task->velocity.y = velocity->y / 2;
+        task->velocity.z = velocity->z / 2;
     }
 }
 

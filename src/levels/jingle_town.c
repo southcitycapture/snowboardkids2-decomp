@@ -42,7 +42,7 @@ void renderJingleTownTrain(JingleTownTrain *train) {
 void pullPlayersToTrain(JingleTownTrain *train) {
     GameState *gs;
     Vec3i pos;
-    s32 target[3];
+    Vec3i target;
     s32 i;
     Player *player;
 
@@ -53,10 +53,10 @@ void pullPlayersToTrain(JingleTownTrain *train) {
     for (i = 0; i < gs->numPlayers; i++) {
         player = &gs->players[i];
         if (isPlayerInRangeAndPull(&pos, 0xC0000, player) != 0) {
-            target[0] = ((player->worldPos.x + player->collisionOffset.x - pos.x) / 2) + pos.x;
-            target[1] = ((player->worldPos.y + player->collisionOffset.y - pos.x) / 2) + pos.y;
-            target[2] = ((player->worldPos.z + player->collisionOffset.z - pos.x) / 2) + pos.z;
-            setPlayerPullState(&gs->players[i], &target[0]);
+            target.x = ((player->worldPos.x + player->collisionOffset.x - pos.x) / 2) + pos.x;
+            target.y = ((player->worldPos.y + player->collisionOffset.y - pos.x) / 2) + pos.y;
+            target.z = ((player->worldPos.z + player->collisionOffset.z - pos.x) / 2) + pos.z;
+            setPlayerPullState(&gs->players[i], &target);
         }
     }
 }

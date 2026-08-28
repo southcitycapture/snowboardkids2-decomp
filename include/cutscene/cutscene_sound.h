@@ -14,11 +14,6 @@ typedef struct {
     s16 pan;
 } cutsceneSePlay_exec_arg;
 
-typedef struct {
-    u8 padding[0xF0];
-    CutsceneSlotData *unkF0;
-} cutsceneSe3dPlay_exec_arg1_item;
-
 void cutsceneSePlay_init(void);
 s32 cutsceneSePlay_validate(void);
 void cutsceneSe3dPlay_init(void);
@@ -28,6 +23,6 @@ s32 cutsceneSeStop_validate(void);
 
 void cutsceneSePlay_exec(cutsceneSePlay_exec_arg *arg0);
 
-void cutsceneSe3dPlay_exec(cutsceneSePlay_exec_arg *arg0, cutsceneSe3dPlay_exec_arg1_item *arg1, s8 arg2);
+void cutsceneSe3dPlay_exec(cutsceneSePlay_exec_arg *arg0, CutsceneSlot *slots, s8 slotIndex);
 
 void cutsceneSeStop_exec(cutsceneSePlay_exec_arg *arg0);

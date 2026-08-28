@@ -70,7 +70,7 @@ void setPlayerState50(Player *player) {
     }
 }
 
-void setPlayerPullState(Player *player, void *pullTarget) {
+void setPlayerPullState(Player *player, const Vec3i *pullTarget) {
     if (player->hitReactionState < 0x31) {
         if (!(player->behaviorFlags & 0x71F)) {
             player->hitReactionState = 0x31;

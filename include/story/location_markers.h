@@ -1,12 +1,11 @@
 #pragma once
 
 #include "common.h"
+#include "math/geometry.h"
 
 typedef struct {
     u8 padding0[0x34];
-    s32 positionX;
-    u8 padding1[0x4];
-    s32 positionZ;
+    Vec3i position;
 } StoryMapPlayerState;
 
 typedef struct {

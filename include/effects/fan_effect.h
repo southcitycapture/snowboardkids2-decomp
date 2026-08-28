@@ -4,7 +4,7 @@
 #include "cutscene/cutscene_manager.h"
 #include "ui/level_preview_3d.h"
 
-void playFanSoundAtPosition(s16 fanIndex, s16 arg1, s16 duration, CutsceneSlotData *cutsceneSlotData);
+void playFanSoundAtPosition(s16 fanIndex, s16 arg1, s16 duration, SceneModel *model);
 void playFanSoundOnChannel0(void);
 void stopFanSoundOnChannel0(void);
 void spawnFanEffect(SceneModel *, s16);

@@ -20,9 +20,7 @@ typedef struct {
 typedef struct {
     s32 unk0;
     s32 unk4;
-    s32 unk8;
-    s32 unkC;
-    s32 unk10;
+    Vec3i pos;
     s32 unk14;
     s16 unk18;
     s16 unk1A;
@@ -47,9 +45,7 @@ typedef struct {
 typedef struct {
     void *unk0;
     void *unk4;
-    s32 unk8;
-    s32 unkC;
-    s32 unk10;
+    Vec3i pos;
     s16 unk14;
     s16 unk16;
     s32 unk18;
@@ -231,136 +227,71 @@ extern s32 D_80088620;
 extern u32 D_80088610_89210;
 
 ModelEntityTaskConfig D_80088F20_89B20[] = {
-    { .unk0 = initRotatingModelTask,
-     .unk4 = &gTownRotatingModel0DisplayLists,
-     .unk8 = 0xFF8A0000,
-     .unkC = 0x00390000,
-     .unk10 = 0xFF8A0000,
-     .unk14 = -1,
-     .unk16 = -64 },
-    { .unk0 = initSwingingModelTask,
-     .unk4 = &gTownSwingingModel0DisplayLists,
-     .unk8 = 0xFF2E0000,
-     .unkC = 0x00410000,
-     .unk10 = 0xFFC80000,
-     .unk14 = 0,
-     .unk16 = 0x06AA,
-     .unk18 = 0x00000020,
-     .unk1C = 0x000001C7 },
-    { .unk0 = initSwingingModelTask,
-     .unk4 = &gTownSwingingModel1DisplayLists,
-     .unk8 = 0x002E0000,
-     .unkC = 0x00330000,
-     .unk10 = 0xFF590000,
-     .unk14 = 0,
-     .unk16 = 0x1EAB,
-     .unk18 = 0x00000010,
-     .unk1C = 0x000000E3 },
-    { .unk0 = initSwingingModelTask,
-     .unk4 = &gTownSwingingModel2DisplayLists,
-     .unk8 = 0x00AD0000,
-     .unkC = 0x00390000,
-     .unk10 = 0xFFAF0000,
-     .unk14 = 0,
-     .unk16 = 0x1956,
-     .unk18 = 0x00000010,
-     .unk1C = 0x000000E3 },
-    { .unk0 = initSwingingModelTask,
-     .unk4 = &gTownSwingingModel3DisplayLists,
-     .unk8 = 0x00BE0000,
-     .unkC = 0x00390000,
-     .unk10 = 0xFFF00000,
-     .unk14 = 0,
-     .unk16 = 0x1956,
-     .unk18 = -16,
-     .unk1C = 0x000000E3 },
-    { .unk0 = initRotatingModelTask,
-     .unk4 = &gTownRotatingModel1DisplayLists,
-     .unk8 = 0xFF8A0000,
-     .unkC = 0x00390000,
-     .unk10 = 0xFF8A0000,
-     .unk14 = -1,
-     .unk16 = -64 },
-    { .unk0 = initSwingingModelTask,
-     .unk4 = &gTownSwingingModel4DisplayLists,
-     .unk8 = 0xFF2E0000,
-     .unkC = 0x00410000,
-     .unk10 = 0xFFC80000,
-     .unk14 = 0,
-     .unk16 = 0x06AA,
-     .unk18 = 0x00000020,
-     .unk1C = 0x000001C7 },
-    { .unk0 = initSwingingModelTask,
-     .unk4 = &gTownSwingingModel5DisplayLists,
-     .unk8 = 0x002E0000,
-     .unkC = 0x00330000,
-     .unk10 = 0xFF590000,
-     .unk14 = 0,
-     .unk16 = 0x1EAB,
-     .unk18 = 0x00000010,
-     .unk1C = 0x000000E3 },
-    { .unk0 = initSwingingModelTask,
-     .unk4 = &gTownSwingingModel6DisplayLists,
-     .unk8 = 0x00AD0000,
-     .unkC = 0x00390000,
-     .unk10 = 0xFFAF0000,
-     .unk14 = 0,
-     .unk16 = 0x1956,
-     .unk18 = 0x00000010,
-     .unk1C = 0x000000E3 },
-    { .unk0 = initSwingingModelTask,
-     .unk4 = &gTownSwingingModel7PartDisplayLists,
-     .unk8 = 0x00BE0000,
-     .unkC = 0x00390000,
-     .unk10 = 0xFFF00000,
-     .unk14 = 0,
-     .unk16 = 0x1956,
-     .unk18 = -16,
-     .unk1C = 0x000000E3 }
+    { initRotatingModelTask, &gTownRotatingModel0DisplayLists, { 0xFF8A0000, 0x00390000, 0xFF8A0000 }, -1, -64 },
+    { initSwingingModelTask,
+     &gTownSwingingModel0DisplayLists,
+     { 0xFF2E0000, 0x00410000, 0xFFC80000 },
+     0, 0x06AA,
+     0x00000020, 0x000001C7 },
+    { initSwingingModelTask,
+     &gTownSwingingModel1DisplayLists,
+     { 0x002E0000, 0x00330000, 0xFF590000 },
+     0, 0x1EAB,
+     0x00000010, 0x000000E3 },
+    { initSwingingModelTask,
+     &gTownSwingingModel2DisplayLists,
+     { 0x00AD0000, 0x00390000, 0xFFAF0000 },
+     0, 0x1956,
+     0x00000010, 0x000000E3 },
+    { initSwingingModelTask,
+     &gTownSwingingModel3DisplayLists,
+     { 0x00BE0000, 0x00390000, 0xFFF00000 },
+     0, 0x1956,
+     -16,
+     0x000000E3 },
+    { initRotatingModelTask, &gTownRotatingModel1DisplayLists, { 0xFF8A0000, 0x00390000, 0xFF8A0000 }, -1, -64 },
+    { initSwingingModelTask,
+     &gTownSwingingModel4DisplayLists,
+     { 0xFF2E0000, 0x00410000, 0xFFC80000 },
+     0, 0x06AA,
+     0x00000020, 0x000001C7 },
+    { initSwingingModelTask,
+     &gTownSwingingModel5DisplayLists,
+     { 0x002E0000, 0x00330000, 0xFF590000 },
+     0, 0x1EAB,
+     0x00000010, 0x000000E3 },
+    { initSwingingModelTask,
+     &gTownSwingingModel6DisplayLists,
+     { 0x00AD0000, 0x00390000, 0xFFAF0000 },
+     0, 0x1956,
+     0x00000010, 0x000000E3 },
+    { initSwingingModelTask,
+     &gTownSwingingModel7PartDisplayLists,
+     { 0x00BE0000, 0x00390000, 0xFFF00000 },
+     0, 0x1956,
+     -16,
+     0x000000E3 }
 };
 
 ModelEntityTaskConfig D_80089088_89C88[] = {
-    { .unk0 = initSpriteAnimationTask,
-     .unk4 = 0x00000000,
-     .unk8 = 0x00380000,
-     .unkC = 0x004C0000,
-     .unk10 = 0xFF570000,
-     .unk14 = 0,
-     .unk16 = 1,
-     .unk18 = 0x00000000,
-     .unk1C = 0x00029999,
-     .unk20 = 0x00000000 }
+    { initSpriteAnimationTask,
+     0x00000000, { 0x00380000, 0x004C0000, 0xFF570000 },
+     0, 1,
+     0x00000000, 0x00029999,
+     0x00000000 }
 };
 
 ModelEntityTaskConfig D_800890AC_89CAC[] = {
-    { .unk0 = initAnimatedModelTask,
-     .unk4 = &gJungleAnimatedModel1DisplayLists,
-     .unk14 = 0,
-     .unk16 = 4,
-     .unk1C = 0x00000004 },
-    { .unk0 = initAnimatedModelTask,
-     .unk4 = &gJungleAnimatedModel0DisplayLists,
-     .unk14 = 0,
-     .unk16 = 4,
-     .unk1C = 0x00000008 },
-    { .unk0 = initSpriteSpawnerTask,
-     .unk8 = 0x00570000,
-     .unkC = 0x00020000,
-     .unk10 = 0xFF470000,
-     .unk16 = 4,
-     .unk1C = 0x00010000 },
-    { .unk0 = initStaticModelTask, .unk4 = &gJungleStaticModelDisplayLists }
+    { initAnimatedModelTask, &gJungleAnimatedModel1DisplayLists, { 0, 0, 0 },                            0, 4, 0, 0x00000004, 0 },
+    { initAnimatedModelTask, &gJungleAnimatedModel0DisplayLists, { 0, 0, 0 },                            0, 4, 0, 0x00000008, 0 },
+    { initSpriteSpawnerTask, 0,                                  { 0x00570000, 0x00020000, 0xFF470000 }, 0, 4, 0, 0x00010000, 0 },
+    { initStaticModelTask,   &gJungleStaticModelDisplayLists,    { 0, 0, 0 },                            0, 0, 0, 0,          0 }
 };
 
 ModelEntityTaskConfig D_8008913C_89D3C[] = {
-    { .unk0 = initAnimatedModelTask, .unk4 = &gJungle2AnimatedModel1DisplayLists, .unk16 = 4, .unk1C = 0x00000004 },
-    { .unk0 = initAnimatedModelTask, .unk4 = &gJungle2AnimatedModel0DisplayLists, .unk16 = 4, .unk1C = 0x00000008 },
-    { .unk0 = initSpriteSpawnerTask,
-     .unk8 = 0x00570000,
-     .unkC = 0x00020000,
-     .unk10 = 0xFF470000,
-     .unk16 = 4,
-     .unk1C = 0x00010000 }
+    { initAnimatedModelTask, &gJungle2AnimatedModel1DisplayLists, { 0, 0, 0 },                            0, 4, 0, 0x00000004, 0 },
+    { initAnimatedModelTask, &gJungle2AnimatedModel0DisplayLists, { 0, 0, 0 },                            0, 4, 0, 0x00000008, 0 },
+    { initSpriteSpawnerTask, 0,                                   { 0x00570000, 0x00020000, 0xFF470000 }, 0, 4, 0, 0x00010000, 0 }
 };
 
 ModelEntityConfig modelEntityConfigs[14] = {
@@ -811,9 +742,9 @@ void initRotatingModelTask(func_80000C2C_182C_arg *arg0) {
     arg0->unk30 = loadCompressedData(config->compressedDataStart, config->compressedDataEnd, config->decompressedSize);
     arg0->unk34 = 0;
     arg0->unk28 = taskConfig->unk4;
-    arg0->unk8.translation.x = taskConfig->unk8;
-    arg0->unk8.translation.y = taskConfig->unkC;
-    arg0->unk8.translation.z = taskConfig->unk10;
+    arg0->unk8.translation.x = taskConfig->pos.x;
+    arg0->unk8.translation.y = taskConfig->pos.y;
+    arg0->unk8.translation.z = taskConfig->pos.z;
     arg0->unk44 = 0;
 
     setCallback(&updateRotatingModelTask);
@@ -906,9 +837,9 @@ void updateSwingingModelTask(func_80000C2C_182C_arg *arg0) {
     createZRotationMatrix(&zRotMatrix, arg0->unk44);
     composeTransform3D(&zRotMatrix, &yRotMatrix, &arg0->unk8);
 
-    arg0->unk8.translation.x = subEntry->unk8;
-    arg0->unk8.translation.y = subEntry->unkC;
-    arg0->unk8.translation.z = subEntry->unk10;
+    arg0->unk8.translation.x = subEntry->pos.x;
+    arg0->unk8.translation.y = subEntry->pos.y;
+    arg0->unk8.translation.z = subEntry->pos.z;
 
     enqueueDisplayListIfVisible(arg0->unk0, &arg0->unk8);
 }
@@ -948,9 +879,9 @@ void updateSpriteAnimationTask(SpriteEntityTaskState *state) {
         renderOpaqueSprite(
             &state->spriteState,
             state->owner->ptr->unk16,
-            subEntry->unk8,
-            subEntry->unkC,
-            subEntry->unk10,
+            subEntry->pos.x,
+            subEntry->pos.y,
+            subEntry->pos.z,
             subEntry->unk1C,
             subEntry->unk1C,
             0,
@@ -994,9 +925,9 @@ void updateStaticModelTask(func_80000C2C_182C_arg *arg0) {
         terminateCurrentTask();
     }
 
-    arg0->unk8.translation.x = subEntry->unk8;
-    arg0->unk8.translation.y = subEntry->unkC;
-    arg0->unk8.translation.z = subEntry->unk10;
+    arg0->unk8.translation.x = subEntry->pos.x;
+    arg0->unk8.translation.y = subEntry->pos.y;
+    arg0->unk8.translation.z = subEntry->pos.z;
     enqueueDisplayListIfVisible(arg0->unk0, &arg0->unk8);
 }
 
@@ -1047,9 +978,9 @@ void updateAnimatedModelTask(AnimatedModelTaskUpdateState *state) {
     state->unk4E = state->unk4E + state->unk52;
     state->unk4C = (u8)state->unk4C;
     state->unk4E = (u8)state->unk4E;
-    state->unk8.transform.translation.x = subEntry->unk8;
-    state->unk8.transform.translation.y = subEntry->unkC;
-    state->unk8.transform.translation.z = subEntry->unk10;
+    state->unk8.transform.translation.x = subEntry->pos.x;
+    state->unk8.transform.translation.y = subEntry->pos.y;
+    state->unk8.transform.translation.z = subEntry->pos.z;
 
     if (state->unk0->unk87 != 0) {
         enqueueScrollingTextureRender(state->unk0->ptr->unk16, &state->unk8);
@@ -1123,9 +1054,9 @@ void initSpawnedSpriteTask(SpriteEntityTaskState *state) {
     createYRotationMatrix(&sp20, 0x1D83);
     transformVector((s16 *)&sp10, (s16 *)&sp20, &state->effect.spawned.position);
 
-    state->effect.spawned.position.x += subEntry->unk8;
-    state->effect.spawned.position.y += subEntry->unkC;
-    state->effect.spawned.position.z += subEntry->unk10;
+    state->effect.spawned.position.x += subEntry->pos.x;
+    state->effect.spawned.position.y += subEntry->pos.y;
+    state->effect.spawned.position.z += subEntry->pos.z;
     state->effect.spawned.scale = spawnedSpriteScales[randA() & 3];
 
     setCallback(&updateSpawnedSpriteTask);

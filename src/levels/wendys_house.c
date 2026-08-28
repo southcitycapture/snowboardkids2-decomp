@@ -39,9 +39,7 @@ typedef struct {
 typedef struct {
     s16 matrix[6];
     u8 _pad[0x8];
-    s32 posX;
-    s32 posY;
-    s32 posZ;
+    Vec3i position;
     void *displayLists;
     void *uncompressedAsset;
     void *compressedAsset;
@@ -49,9 +47,7 @@ typedef struct {
     u8 _pad2[0xC];
     s16 oscillationAngle;
     u8 _pad3[0x2];
-    s32 localOffsetX;
-    s32 localOffsetZ;
-    s32 unk48;
+    Vec3i localOffset;
 } RotatingPlatformTaskState;
 
 typedef struct {
@@ -82,14 +78,14 @@ void initRotatingPlatformTask(RotatingPlatformTaskState *arg0) {
     arg0->displayLists = (void *)((u32)getDisplayListTableForCourse(gameState->memoryPoolId) + 0xA0);
     arg0->uncompressedAsset = loadUncompressedAssetByIndex(gameState->memoryPoolId);
     arg0->compressedAsset = loadCompressedSegment2AssetByIndex(gameState->memoryPoolId);
-    arg0->posX = 0x03E90000;
-    arg0->posY = 0x1D500000;
-    arg0->posZ = 0xF8460000;
+    arg0->position.x = 0x03E90000;
+    arg0->position.y = 0x1D500000;
+    arg0->position.z = 0xF8460000;
     arg0->unk2C = 0;
     arg0->oscillationAngle = 0;
-    arg0->unk48 = 0;
-    arg0->localOffsetX = 0;
-    arg0->localOffsetZ = 0xFE6A0000;
+    arg0->localOffset.z = 0;
+    arg0->localOffset.x = 0;
+    arg0->localOffset.y = 0xFE6A0000;
     setCleanupCallback(cleanupRotatingPlatformTask);
     setCallback(updateRotatingPlatformTask);
 }
@@ -104,7 +100,7 @@ void updateRotatingPlatformTask(RotatingPlatformTaskState *arg0) {
     }
 
     createRotationMatrixYZ(arg0->matrix, (u16)(approximateSin(arg0->oscillationAngle) >> 4), 0xF800);
-    transformVector((s16 *)&arg0->localOffsetX, arg0->matrix, &temp);
+    transformVector((s16 *)&arg0->localOffset, arg0->matrix, &temp);
     handleOrientedAreaCollision(&temp, 0x500000, 0x100000, -0x800);
 
     if (gameState->gamePaused == 0) {

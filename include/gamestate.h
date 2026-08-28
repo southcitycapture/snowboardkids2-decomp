@@ -446,9 +446,7 @@ typedef struct {
     /* 0x1E6 */ u8 unk1E6;
     u8 PAD_A2[0x1C9];
     /* 0x3B0 */ Transform3D storyMapCharacterTransform;
-    s32 unk3D0;
-    s32 unk3D4;
-    s32 unk3D8;
+    Vec3i storyMapCharacterPosition;
     void *unk3DC;
     void *unk3E0;
     void *unk3E4;

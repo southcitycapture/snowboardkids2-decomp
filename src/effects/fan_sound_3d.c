@@ -22,7 +22,7 @@ typedef struct {
     s16 pan;
     s16 interval;
     s16 currentFrame;
-    CutsceneSlotData *cutsceneSlotData;
+    SceneModel *model;
 } RepeatingFanSound3DState;
 
 extern s8 gStopFanSoundTasks;
@@ -94,7 +94,7 @@ void scheduleRepeatingFanSoundAtPosition(
     s16 repeatCount,
     s16 pan,
     s16 interval,
-    CutsceneSlotData *cutsceneSlotData
+    SceneModel *model
 ) {
     s16 *result;
     s16 temp_arg4;
@@ -113,7 +113,7 @@ void scheduleRepeatingFanSoundAtPosition(
         result[3] = pan;
         result[4] = temp_arg4;
         result[5] = 0;
-        *(CutsceneSlotData **)&result[6] = cutsceneSlotData;
+        *(SceneModel **)&result[6] = model;
     }
 }
 
@@ -130,7 +130,7 @@ void updateRepeatingFanSound3D(RepeatingFanSound3DState *arg0) {
     }
 
     if ((arg0->currentFrame % arg0->interval) == 0) {
-        playFanSoundAtPosition(arg0->fanIndex, arg0->volume, arg0->pan, arg0->cutsceneSlotData);
+        playFanSoundAtPosition(arg0->fanIndex, arg0->volume, arg0->pan, arg0->model);
         arg0->remainingCount--;
     }
 

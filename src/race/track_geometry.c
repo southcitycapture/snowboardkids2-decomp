@@ -45,14 +45,14 @@ s8 dialogueNpcAnimations[] = {
 
 void initStoryMapRareEventWave(Func2E024Arg *arg0) {
     GameState *allocation;
-    s32 vec3[3];
+    Vec3i effectOffset;
     s32 i;
     Func297D8Arg *elements;
 
     allocation = getCurrentAllocation();
-    vec3[2] = 0;
-    vec3[0] = 0;
-    vec3[1] = 0x2C0000;
+    effectOffset.z = 0;
+    effectOffset.x = 0;
+    effectOffset.y = 0x2C0000;
 
     elements = arg0->elements;
     for (i = 0; i < arg0->unkD5; i++) {
@@ -77,15 +77,15 @@ void initStoryMapRareEventWave(Func2E024Arg *arg0) {
 
         createYRotationMatrix(&elements[i].matrix, elements[i].rotation);
 
-        memcpy(&elements[i].unk40, vec3, sizeof(Vec3i));
+        memcpy(&elements[i].effectOffset, &effectOffset, sizeof(Vec3i));
 
         if (i != 0) {
-            elements[i].unk40 += 0x30000;
+            elements[i].effectOffset.x += 0x30000;
         } else {
-            arg0->elements[0].unk40 += -0x60000;
+            arg0->elements[0].effectOffset.x += -0x60000;
         }
 
-        spawnSpriteEffectEx(elements[i].model, 0, 0x29, -1, &elements[i].unk40, 0x10000, 0, 2, 0, 0);
+        spawnSpriteEffectEx(elements[i].model, 0, 0x29, -1, &elements[i].effectOffset, 0x10000, 0, 2, 0, 0);
         setupStoryMapNpcModel(&elements[i]);
         allocation->npcPosX[i] = elements[i].matrix.translation.x;
         allocation->npcPosZ[i] = elements[i].matrix.translation.z;
@@ -129,13 +129,13 @@ void updateStoryMapRareEventWave(Func2E024Arg *arg0) {
 
 void initStoryMapRareEventIdle(Func2E024Arg *arg0) {
     GameState *allocation;
-    s32 vec3[3];
+    Vec3i effectOffset;
     s32 i;
 
     allocation = getCurrentAllocation();
-    vec3[2] = 0;
-    vec3[0] = 0;
-    vec3[1] = 0x280000;
+    effectOffset.z = 0;
+    effectOffset.x = 0;
+    effectOffset.y = 0x280000;
 
     for (i = 0; i < arg0->unkD5; i++) {
         memcpy(&arg0->elements[i].matrix, &identityMatrix, sizeof(Transform3D));
@@ -156,14 +156,14 @@ void initStoryMapRareEventIdle(Func2E024Arg *arg0) {
 
         createYRotationMatrix(&arg0->elements[i].matrix, arg0->elements[i].rotation);
 
-        memcpy(&arg0->elements[i].unk40, vec3, sizeof(Vec3i));
+        memcpy(&arg0->elements[i].effectOffset, &effectOffset, sizeof(Vec3i));
 
         if (i == 0) {
-            arg0->elements[i].unk44 = 0x290000;
-            arg0->elements[i].unk40 += 0xFFF70000;
+            arg0->elements[i].effectOffset.y = 0x290000;
+            arg0->elements[i].effectOffset.x += 0xFFF70000;
         } else {
-            arg0->elements[i].unk44 = 0x240000;
-            arg0->elements[i].unk40 += 0x60000;
+            arg0->elements[i].effectOffset.y = 0x240000;
+            arg0->elements[i].effectOffset.x += 0x60000;
         }
 
         setupStoryMapNpcModel(&arg0->elements[i]);
@@ -209,13 +209,13 @@ void updateStoryMapRareEventIdle(Func2E024Arg *arg0) {
             temp_a0 = randB() & 0x1F;
             arg0->timer[1] = (u8)temp_a0 + 0x18;
             if (gGlobalFrameCounter & 1) {
-                arg0->elements[0].unk44 = 0x290000;
+                arg0->elements[0].effectOffset.y = 0x290000;
                 spawnSpriteEffectEx(
                     arg0->elements[0].model,
                     0,
                     8,
                     (s16)(arg0->timer[1] - 4),
-                    &arg0->elements[0].unk40,
+                    &arg0->elements[0].effectOffset,
                     0x10000,
                     0,
                     2,
@@ -224,13 +224,13 @@ void updateStoryMapRareEventIdle(Func2E024Arg *arg0) {
                 );
             } else {
                 arg0->timer[1] = (u8)temp_a0 + 0x2C;
-                arg0->elements[0].unk44 = 0x290000;
+                arg0->elements[0].effectOffset.y = 0x290000;
                 spawnSpriteEffectEx(
                     arg0->elements[0].model,
                     0,
                     0x3E,
                     (s16)(arg0->timer[1] - 4),
-                    &arg0->elements[0].unk40,
+                    &arg0->elements[0].effectOffset,
                     0x10000,
                     0,
                     2,
@@ -242,7 +242,7 @@ void updateStoryMapRareEventIdle(Func2E024Arg *arg0) {
                     0,
                     0x3E,
                     (s16)arg0->timer[1],
-                    &arg0->elements[1].unk40,
+                    &arg0->elements[1].effectOffset,
                     0x10000,
                     0,
                     2,
@@ -270,15 +270,15 @@ void updateStoryMapRareEventIdle(Func2E024Arg *arg0) {
 
 void initStoryMapRareEventMagicShow(Func2E024Arg *arg0) {
     GameState *gameState;
-    s32 effectOffset[3];
+    Vec3i effectOffset;
     s32 i;
 
     gameState = getCurrentAllocation();
     arg0->unkD2 = 0;
     arg0->elements[0].unk5A = 0;
-    effectOffset[2] = 0;
-    effectOffset[0] = 0;
-    effectOffset[1] = 0x2C0000;
+    effectOffset.z = 0;
+    effectOffset.x = 0;
+    effectOffset.y = 0x2C0000;
 
     for (i = 0; i < arg0->unkD5; i++) {
         memcpy(&arg0->elements[i].matrix, &identityMatrix, sizeof(Transform3D));
@@ -288,13 +288,13 @@ void initStoryMapRareEventMagicShow(Func2E024Arg *arg0) {
             arg0->elements[0].matrix.translation.x = 0xFFF50000;
             arg0->elements[0].matrix.translation.z = 0xFFB30000;
             arg0->elements[0].animState = 0;
-            memcpy(&arg0->elements[0].unk40, effectOffset, sizeof(Vec3i));
+            memcpy(&arg0->elements[0].effectOffset, &effectOffset, sizeof(Vec3i));
             setAnimationIndex(arg0->elements[0].model, -1);
         } else {
             arg0->elements[1].matrix.translation.x = 0x1B0000;
             arg0->elements[1].matrix.translation.z = 0xFFB30000;
             arg0->elements[1].animState = 0x1B;
-            memcpy(&arg0->elements[1].unk40, effectOffset, sizeof(Vec3i));
+            memcpy(&arg0->elements[1].effectOffset, &effectOffset, sizeof(Vec3i));
             setItemDisplayEnabled(arg0->elements[1].model, 1);
             setAnimationIndex(arg0->elements[1].model, 4);
         }
@@ -331,8 +331,30 @@ void updateStoryMapRareEventMagicShow(Func2E024Arg *arg0) {
                 arg0->elements[0].unk5A = 0;
                 arg0->elements[1].animState = 0x1C;
                 setAnimationIndex(arg0->elements[1].model, 3);
-                spawnSpriteEffectEx(arg0->elements[0].model, 0, 6, 0xF, &arg0->elements[0].unk40, 0x10000, 0, 2, 0, 0);
-                spawnSpriteEffectEx(arg0->elements[1].model, 0, 6, 0xF, &arg0->elements[1].unk40, 0x10000, 0, 2, 0, 0);
+                spawnSpriteEffectEx(
+                    arg0->elements[0].model,
+                    0,
+                    6,
+                    0xF,
+                    &arg0->elements[0].effectOffset,
+                    0x10000,
+                    0,
+                    2,
+                    0,
+                    0
+                );
+                spawnSpriteEffectEx(
+                    arg0->elements[1].model,
+                    0,
+                    6,
+                    0xF,
+                    &arg0->elements[1].effectOffset,
+                    0x10000,
+                    0,
+                    2,
+                    0,
+                    0
+                );
             }
             break;
 
@@ -369,28 +391,28 @@ void updateStoryMapRareEventMagicShow(Func2E024Arg *arg0) {
             arg0->elements[0].unk62 = 0;
             arg0->elements[1].unk62 = 0;
             if (getFreeNodeCount(2) == 0x14) {
-                arg0->elements[0].unk40 = (s32)0xFFF90000;
-                arg0->elements[0].unk44 = 0x220000;
+                arg0->elements[0].effectOffset.x = (s32)0xFFF90000;
+                arg0->elements[0].effectOffset.y = 0x220000;
                 spawnSpriteEffectEx(
                     arg0->elements[0].model,
                     0,
                     0x24,
                     -1,
-                    &arg0->elements[0].unk40,
+                    &arg0->elements[0].effectOffset,
                     0x10000,
                     1,
                     2,
                     1,
                     0
                 );
-                arg0->elements[1].unk40 = 0x90000;
-                arg0->elements[1].unk44 = 0x260000;
+                arg0->elements[1].effectOffset.x = 0x90000;
+                arg0->elements[1].effectOffset.y = 0x260000;
                 spawnSpriteEffectEx(
                     arg0->elements[1].model,
                     0,
                     0x24,
                     -1,
-                    &arg0->elements[1].unk40,
+                    &arg0->elements[1].effectOffset,
                     0x10000,
                     0,
                     2,
@@ -398,14 +420,14 @@ void updateStoryMapRareEventMagicShow(Func2E024Arg *arg0) {
                     0
                 );
             } else if (getFreeNodeCount(2) == 0x13) {
-                arg0->elements[0].unk40 = (s32)0xFFF90000;
-                arg0->elements[0].unk44 = 0x220000;
+                arg0->elements[0].effectOffset.x = (s32)0xFFF90000;
+                arg0->elements[0].effectOffset.y = 0x220000;
                 spawnSpriteEffectEx(
                     arg0->elements[0].model,
                     0,
                     0x24,
                     -1,
-                    &arg0->elements[0].unk40,
+                    &arg0->elements[0].effectOffset,
                     0x10000,
                     1,
                     2,
@@ -453,16 +475,16 @@ void initStoryMapRareEventJuggling(Func2E024Arg *container) {
             container->elements[0].matrix.translation.z = -0x4E0000;
             setAnimationIndex(container->elements[0].model, 1);
             container->elements[0].animState = 0x11;
-            container->elements[0].unk44 = 0x260000;
+            container->elements[0].effectOffset.y = 0x260000;
             container->elements[0].unk5E = 0;
-            container->elements[0].unk40 = 0;
-            container->elements[0].unk48 = 0;
+            container->elements[0].effectOffset.x = 0;
+            container->elements[0].effectOffset.z = 0;
             spawnSpriteEffectEx(
                 container->elements[0].model,
                 0,
                 0x29,
                 -1,
-                &container->elements[0].unk40,
+                &container->elements[0].effectOffset,
                 0x10000,
                 0,
                 2,
@@ -475,15 +497,15 @@ void initStoryMapRareEventJuggling(Func2E024Arg *container) {
             setAnimationIndex(container->elements[1].model, 2);
             container->elements[1].animState = 0x1E;
             container->elements[1].unk5E = 1;
-            container->elements[1].unk40 = 0x40000;
-            container->elements[1].unk44 = 0x280000;
-            container->elements[1].unk48 = 0;
+            container->elements[1].effectOffset.x = 0x40000;
+            container->elements[1].effectOffset.y = 0x280000;
+            container->elements[1].effectOffset.z = 0;
             spawnSpriteEffectEx(
                 container->elements[1].model,
                 0,
                 0x24,
                 -1,
-                &container->elements[1].unk40,
+                &container->elements[1].effectOffset,
                 0x10000,
                 0,
                 2,
@@ -543,8 +565,30 @@ void updateStoryMapRareEventJuggling(Func2E024Arg *arg0) {
     case23:
         elements[i].unk62 = 0;
         if (getFreeNodeCount(2) == 0x14) {
-            spawnSpriteEffectEx(arg0->elements[0].model, 0, 0x29, -1, &arg0->elements[0].unk40, 0x10000, 0, 2, 0, 0);
-            spawnSpriteEffectEx(arg0->elements[1].model, 0, 0x24, -1, &arg0->elements[1].unk40, 0x10000, 0, 2, 0, 0);
+            spawnSpriteEffectEx(
+                arg0->elements[0].model,
+                0,
+                0x29,
+                -1,
+                &arg0->elements[0].effectOffset,
+                0x10000,
+                0,
+                2,
+                0,
+                0
+            );
+            spawnSpriteEffectEx(
+                arg0->elements[1].model,
+                0,
+                0x24,
+                -1,
+                &arg0->elements[1].effectOffset,
+                0x10000,
+                0,
+                2,
+                0,
+                0
+            );
         }
 
     cont:
@@ -566,7 +610,7 @@ void updateStoryMapRareEventJuggling(Func2E024Arg *arg0) {
 void initStoryMapRareEventSledding(Func2E024Arg *arg0) {
     Transform3D localMatrix;
     Transform3D worldMatrix;
-    s32 effectOffset[3];
+    Vec3i effectOffset;
     GameState *allocation;
     Transform3D *localMatrixPtr;
     s32 i;
@@ -578,9 +622,9 @@ void initStoryMapRareEventSledding(Func2E024Arg *arg0) {
     s32 sinVal;
 
     allocation = (GameState *)getCurrentAllocation();
-    effectOffset[0] = 0xFFFD0000;
-    effectOffset[2] = 0;
-    effectOffset[1] = 0x240000;
+    effectOffset.x = 0xFFFD0000;
+    effectOffset.z = 0;
+    effectOffset.y = 0x240000;
 
     for (i = 0; i < arg0->unkD5; i++) {
         new_var = &worldMatrix;
@@ -616,7 +660,7 @@ void initStoryMapRareEventSledding(Func2E024Arg *arg0) {
         arg0->elements[i].matrix.translation.z = (result >> 13) << 8;
         arg0->elements[i].unk5E = 0;
 
-        memcpy(&arg0->elements[i].unk40, effectOffset, sizeof(Vec3i));
+        memcpy(&arg0->elements[i].effectOffset, &effectOffset, sizeof(Vec3i));
 
         arg0->elements[i].animState = 9;
         arg0->elements[i].unk52 = 9;
@@ -742,7 +786,7 @@ void updateStoryMapRareEventSledding(Func2E024Arg *arg0) {
                         0,
                         0x24,
                         0x14,
-                        &arg0->elements[0].unk40,
+                        &arg0->elements[0].effectOffset,
                         0x10000,
                         1,
                         2,
@@ -765,7 +809,7 @@ void updateStoryMapRareEventSledding(Func2E024Arg *arg0) {
                         0,
                         0x24,
                         0x14,
-                        &arg0->elements[1].unk40,
+                        &arg0->elements[1].effectOffset,
                         0x10000,
                         1,
                         2,
@@ -798,15 +842,15 @@ void initStoryMapRareEventSnowman(Func2E024Arg *container) {
             setAnimationIndex(container->elements[0].model, 4);
             container->elements[0].animState = 0x11;
             container->elements[0].unk5E = 0x63;
-            container->elements[0].unk44 = 0x1D0000;
-            container->elements[0].unk40 = 0xFFFC0000;
-            container->elements[0].unk48 = 0;
+            container->elements[0].effectOffset.y = 0x1D0000;
+            container->elements[0].effectOffset.x = 0xFFFC0000;
+            container->elements[0].effectOffset.z = 0;
             spawnSpriteEffectEx(
                 container->elements[0].model,
                 0,
                 0x2F,
                 -1,
-                &container->elements[0].unk40,
+                &container->elements[0].effectOffset,
                 0x10000,
                 0,
                 2,
@@ -816,18 +860,18 @@ void initStoryMapRareEventSnowman(Func2E024Arg *container) {
         } else {
             container->elements[1].matrix.translation.x = 0x200000;
             container->elements[1].unk5E = 0x62;
-            container->elements[1].unk44 = 0x260000;
+            container->elements[1].effectOffset.y = 0x260000;
             container->elements[1].matrix.translation.z = 0xFFBC0000;
             container->elements[1].animState = 0;
             container->elements[1].unk5A = 0;
-            container->elements[1].unk40 = 0;
-            container->elements[1].unk48 = 0;
+            container->elements[1].effectOffset.x = 0;
+            container->elements[1].effectOffset.z = 0;
             spawnSpriteEffectEx(
                 container->elements[1].model,
                 0,
                 7,
                 0x2D,
-                &container->elements[1].unk40,
+                &container->elements[1].effectOffset,
                 0x10000,
                 0,
                 2,
@@ -916,15 +960,15 @@ void initStoryMapRareEventCheering(Func2E024Arg *arg0) {
             arg0->elements[1].unk5E = 0;
         }
 
-        arg0->elements[i].unk48 = 0;
-        arg0->elements[i].unk40 = 0;
+        arg0->elements[i].effectOffset.z = 0;
+        arg0->elements[i].effectOffset.x = 0;
 
         if (i == 0) {
-            arg0->elements[0].unk44 = 0x290000;
-            arg0->elements[0].unk40 += -0x90000;
+            arg0->elements[0].effectOffset.y = 0x290000;
+            arg0->elements[0].effectOffset.x += -0x90000;
         } else {
-            arg0->elements[i].unk40 = 0x60000;
-            arg0->elements[i].unk44 = 0x290000;
+            arg0->elements[i].effectOffset.x = 0x60000;
+            arg0->elements[i].effectOffset.y = 0x290000;
         }
 
         arg0->elements[i].rotation = 0x800 + i * 0x1000;
@@ -1047,7 +1091,7 @@ void updateStoryMapRareEventCheering(Func2E024Arg *arg0) {
                 0,
                 0x3E,
                 temp_v0_5 + 0x1A,
-                &arg0->elements[0].unk40,
+                &arg0->elements[0].effectOffset,
                 new_var,
                 0,
                 2,
@@ -1059,7 +1103,7 @@ void updateStoryMapRareEventCheering(Func2E024Arg *arg0) {
                 0,
                 0x3E,
                 (s16)(arg0->timer[1] - 4),
-                &arg0->elements[1].unk40,
+                &arg0->elements[1].effectOffset,
                 new_var,
                 0,
                 2,
@@ -1257,9 +1301,9 @@ void prepareStoryMapNpcDialogue(void *ptr) {
 
         if (((state->rareEventType == 1) & (i == 0)) && gGameSessionContext->characterIds[0] == 3) {
             setAnimationIndex(state->elements[i].model, -1);
-            state->elements[i].unk48 = 0;
-            state->elements[i].unk40 = 0;
-            state->elements[i].unk44 = 0x240000;
+            state->elements[i].effectOffset.z = 0;
+            state->elements[i].effectOffset.x = 0;
+            state->elements[i].effectOffset.y = 0x240000;
         } else if (((state->rareEventType == 6) & (i == 1)) && gGameSessionContext->characterIds[0] == 3) {
             setAnimationIndex(state->elements[i].model, -1);
         } else {

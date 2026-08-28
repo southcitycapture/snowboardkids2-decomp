@@ -6,9 +6,7 @@
 
 typedef struct {
     /* 0x00 */ DisplayListObject renderObject;
-    /* 0x3C */ s32 pivotX;
-    /* 0x40 */ s32 pivotY;
-    /* 0x44 */ s32 pivotZ;
+    /* 0x3C */ Vec3i pivot;
     /* 0x48 */ s16 swingPhase;
     /* 0x4A */ s16 swingAngle;
     /* 0x4C */ s16 bobPhase;

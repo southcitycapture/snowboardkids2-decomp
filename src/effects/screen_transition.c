@@ -23,19 +23,13 @@ typedef struct {
 typedef struct {
     struct {
         u8 padding[0x2C];
-        s32 posX;
-        s32 posY;
-        s32 posZ;
+        Vec3i position;
     } *positionData;
     DataTable_19E80 *modelData;
     BillboardSprite assetMetadata;
     BillboardSprite sprite2;
-    s32 sprite1OffsetX;
-    s32 sprite1OffsetY;
-    s32 sprite1OffsetZ;
-    s32 sprite2OffsetX;
-    s32 sprite2OffsetY;
-    s32 sprite2OffsetZ;
+    Vec3i sprite1Offset;
+    Vec3i sprite2Offset;
     s16 frameIndex;
     s16 effectParam;
 } TrickSpriteEffectUpdateState;
@@ -47,9 +41,7 @@ typedef struct {
             s16 rotationY;
         } *modelPtr;
         u8 padding[0x28];
-        s32 posX;
-        s32 posY;
-        s32 posZ;
+        Vec3i position;
     } *positionData;
     void *modelData;
     s32 *vertexData;
@@ -126,9 +118,9 @@ void initTrickSpriteEffectTask(TrickSpriteEffectInitState *initState) {
             &initState->positionData->modelPtr->rotationY,
             &initState->spritePositions[i]
         );
-        initState->spritePositions[i].x -= initState->positionData->posX;
-        initState->spritePositions[i].y -= initState->positionData->posY;
-        initState->spritePositions[i].z -= initState->positionData->posZ;
+        initState->spritePositions[i].x -= initState->positionData->position.x;
+        initState->spritePositions[i].y -= initState->positionData->position.y;
+        initState->spritePositions[i].z -= initState->positionData->position.z;
     }
 
     initState->frameIndex = 0;
@@ -144,12 +136,12 @@ void updateTrickSpriteEffect(TrickSpriteEffectUpdateState *state) {
     state->sprite2.paletteData = state->assetMetadata.paletteData;
     state->sprite2.textureWidth = state->assetMetadata.textureWidth;
     state->sprite2.textureHeight = state->assetMetadata.textureHeight;
-    state->assetMetadata.position.x = state->sprite1OffsetX + state->positionData->posX;
-    state->assetMetadata.position.y = state->sprite1OffsetY + state->positionData->posY;
-    state->assetMetadata.position.z = state->sprite1OffsetZ + state->positionData->posZ;
-    state->sprite2.position.x = state->sprite2OffsetX + state->positionData->posX;
-    state->sprite2.position.y = state->sprite2OffsetY + state->positionData->posY;
-    state->sprite2.position.z = state->sprite2OffsetZ + state->positionData->posZ;
+    state->assetMetadata.position.x = state->sprite1Offset.x + state->positionData->position.x;
+    state->assetMetadata.position.y = state->sprite1Offset.y + state->positionData->position.y;
+    state->assetMetadata.position.z = state->sprite1Offset.z + state->positionData->position.z;
+    state->sprite2.position.x = state->sprite2Offset.x + state->positionData->position.x;
+    state->sprite2.position.y = state->sprite2Offset.y + state->positionData->position.y;
+    state->sprite2.position.z = state->sprite2Offset.z + state->positionData->position.z;
 
     enqueueAlphaSprite(0, &state->assetMetadata);
     enqueueAlphaSprite(0, &state->sprite2);

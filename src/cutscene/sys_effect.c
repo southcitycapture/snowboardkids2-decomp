@@ -12,7 +12,7 @@ typedef struct {
         Transform3D mat;
         struct {
             s16 padding[10];
-            s32 x, y, z;
+            Vec3i translation;
         } vec;
     } u;
 } MatrixWithVec;
@@ -98,7 +98,7 @@ void cutsceneEffectMLight_exec(cutsceneEffectMLight_exec_arg *arg0, CutsceneMana
     Transform3D sp10;
     Transform3D sp30;
     MatrixWithVec sp50;
-    s32 sp70[3];
+    Vec3i transformedPosition;
     CutsceneSlot *slot;
     UIResource *resource;
     Transform3D *rotMatrix;
@@ -111,23 +111,23 @@ void cutsceneEffectMLight_exec(cutsceneEffectMLight_exec_arg *arg0, CutsceneMana
 
     memcpy(&sp30, (u8 *)slot->model + 0x18, sizeof(Transform3D));
 
-    transformVector((s16 *)&arg0->positionVec, (s16 *)&sp30, sp70);
+    transformVector((s16 *)&arg0->position, (s16 *)&sp30, &transformedPosition);
 
     switch (arg0->effectMode) {
         case 0:
             memcpy(&sp50, &sp30, sizeof(Transform3D));
-            sp50.u.vec.x = sp70[0];
-            sp50.u.vec.y = sp70[1];
-            sp50.u.vec.z = sp70[2];
+            sp50.u.vec.translation.x = transformedPosition.x;
+            sp50.u.vec.translation.y = transformedPosition.y;
+            sp50.u.vec.translation.z = transformedPosition.z;
             resource = *(UIResource **)((u8 *)slot->model + 0x10);
             spawnScrollingTextureEffect(resource->unk16, &sp50, arg0->colorIndex, arg0->effectMode);
             break;
         case 1:
             createZRotationMatrix(rotMatrix, 0x1000);
             composeTransform3D(rotMatrix, &sp30, &sp50.u.mat);
-            sp50.u.vec.x = sp70[0];
-            sp50.u.vec.y = sp70[1];
-            sp50.u.vec.z = sp70[2];
+            sp50.u.vec.translation.x = transformedPosition.x;
+            sp50.u.vec.translation.y = transformedPosition.y;
+            sp50.u.vec.translation.z = transformedPosition.z;
             resource = *(UIResource **)((u8 *)slot->model + 0x10);
             spawnTrickBurstEffect(resource->unk16, &sp50, arg0->colorIndex, 0x4000);
             break;

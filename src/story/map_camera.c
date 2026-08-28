@@ -29,12 +29,8 @@ typedef struct {
 typedef struct {
     /* 0x00 */ s16 matrix[9]; // 3x3 rotation matrix (0x12 bytes)
     /* 0x12 */ s16 pad12;
-    /* 0x14 */ s32 translateX;
-    /* 0x18 */ s32 translateY;
-    /* 0x1C */ s32 translateZ;
-    /* 0x20 */ s32 cameraX;
-    /* 0x24 */ s32 cameraY;
-    /* 0x28 */ s32 cameraZ;
+    /* 0x14 */ Vec3i translation;
+    /* 0x20 */ Vec3i cameraPosition;
     /* 0x2C */ s32 pitchAngle;
     /* 0x30 */ s16 rollAngle;
     /* 0x32 */ s16 yawAngle;
@@ -133,14 +129,14 @@ void initStoryMapMiniCamera(StoryMapMiniCameraState *arg0) {
 
     allocation = (GameState *)getCurrentAllocation();
 
-    arg0->cameraX = 0;
-    arg0->cameraY = 0x200000;
-    arg0->cameraZ = 0;
+    arg0->cameraPosition.x = 0;
+    arg0->cameraPosition.y = 0x200000;
+    arg0->cameraPosition.z = 0;
     memcpy(arg0, &identityMatrix, sizeof(Transform3D));
 
-    arg0->translateX = 0;
-    arg0->translateY = 0;
-    arg0->translateZ = 0x280000;
+    arg0->translation.x = 0;
+    arg0->translation.y = 0;
+    arg0->translation.z = 0x280000;
     arg0->pitchAngle = 0;
     arg0->rollAngle = 0;
 
@@ -157,9 +153,9 @@ void initStoryMapMiniCamera(StoryMapMiniCameraState *arg0) {
 
     createViewportTransform(
         &sp20,
-        arg0->cameraX,
-        arg0->cameraY,
-        arg0->cameraZ,
+        arg0->cameraPosition.x,
+        arg0->cameraPosition.y,
+        arg0->cameraPosition.z,
         arg0->pitchAngle,
         arg0->rollAngle,
         arg0->yawAngle
@@ -203,9 +199,9 @@ void updateStoryMapMiniCamera(StoryMapMiniCameraState *arg0) {
 
     createViewportTransform(
         &sp20,
-        arg0->cameraX,
-        arg0->cameraY,
-        arg0->cameraZ,
+        arg0->cameraPosition.x,
+        arg0->cameraPosition.y,
+        arg0->cameraPosition.z,
         arg0->pitchAngle,
         arg0->rollAngle,
         arg0->yawAngle

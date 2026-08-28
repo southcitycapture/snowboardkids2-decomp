@@ -207,9 +207,9 @@ void initStoryMapNpcFloatEffect(Func297D8Arg *arg0) {
     arg0->unk5A = 0;
     createYRotationMatrix(&arg0->matrix, arg0->rotation);
     setupStoryMapNpcModel(arg0);
-    arg0->unk48 = 0;
-    arg0->unk40 = 0;
-    arg0->unk44 = 0x280000;
+    arg0->effectOffset.z = 0;
+    arg0->effectOffset.x = 0;
+    arg0->effectOffset.y = 0x280000;
     setCallback(updateStoryMapNpcFloatEffect);
 }
 
@@ -239,7 +239,7 @@ void updateStoryMapNpcFloatEffect(Func297D8Arg *arg0) {
             if (arg0->unk5A >= 0) {
                 arg0->unk5E = 9;
                 arg0->animState = 0;
-                spawnSpriteEffectEx(arg0->model, 0, 6, 10, &arg0->unk40, 0x10000, 0, 2, 0, 0);
+                spawnSpriteEffectEx(arg0->model, 0, 6, 10, &arg0->effectOffset, 0x10000, 0, 2, 0, 0);
             }
         }
     }
@@ -323,9 +323,9 @@ void initStoryMapNpcThinkEffect(Func297D8Arg *arg0) {
     arg0->unk61 = 0;
     arg0->unk62 = 0;
     arg0->unk5A = 0;
-    arg0->unk48 = 0;
-    arg0->unk40 = 0;
-    arg0->unk44 = 0x260000;
+    arg0->effectOffset.z = 0;
+    arg0->effectOffset.x = 0;
+    arg0->effectOffset.y = 0x260000;
     createYRotationMatrix(&arg0->matrix, arg0->rotation);
     setupStoryMapNpcModel(arg0);
     setCallback(updateStoryMapNpcThinkEffect);
@@ -387,7 +387,7 @@ void updateStoryMapNpcThinkEffect(Func297D8Arg *arg0) {
                 arg0->animState = 0xA;
                 arg0->unk5A = 0;
                 arg0->unk61 = temp;
-                spawnSpriteEffectEx(arg0->model, 0, 7, 0x2D, &arg0->unk40, 0x10000, 0, 2, 0, 0);
+                spawnSpriteEffectEx(arg0->model, 0, 7, 0x2D, &arg0->effectOffset, 0x10000, 0, 2, 0, 0);
             }
         }
     }
@@ -442,13 +442,13 @@ void initStoryMapNpcIdleNoAnim2(Func297D8Arg *arg0) {
 }
 
 void initStoryMapNpcIdleWithEffect(Func297D8Arg *arg0) {
-    arg0->unk44 = 0x260000;
+    arg0->effectOffset.y = 0x260000;
     arg0->unk5E = 0;
     arg0->unk61 = 0;
     arg0->unk62 = 0;
-    arg0->unk48 = 0;
-    arg0->unk40 = 0;
-    spawnSpriteEffectEx(arg0->model, 0, 0x29, -1, &arg0->unk40, 0x10000, 0, 2, 0, 0);
+    arg0->effectOffset.z = 0;
+    arg0->effectOffset.x = 0;
+    spawnSpriteEffectEx(arg0->model, 0, 0x29, -1, &arg0->effectOffset, 0x10000, 0, 2, 0, 0);
     arg0->unk5A = 0;
     createYRotationMatrix(&arg0->matrix, arg0->rotation);
     setAnimationIndex(arg0->model, 1);
@@ -457,13 +457,13 @@ void initStoryMapNpcIdleWithEffect(Func297D8Arg *arg0) {
 }
 
 void initStoryMapNpcIdleWithEffect2(Func297D8Arg *arg0) {
-    arg0->unk44 = 0x260000;
+    arg0->effectOffset.y = 0x260000;
     arg0->unk5E = 0;
     arg0->unk61 = 0;
     arg0->unk62 = 0;
-    arg0->unk48 = 0;
-    arg0->unk40 = 0;
-    spawnSpriteEffectEx(arg0->model, 0, 9, -1, &arg0->unk40, 0x10000, 0, 2, 0, 0);
+    arg0->effectOffset.z = 0;
+    arg0->effectOffset.x = 0;
+    spawnSpriteEffectEx(arg0->model, 0, 9, -1, &arg0->effectOffset, 0x10000, 0, 2, 0, 0);
     arg0->unk5A = 0;
     createYRotationMatrix(&arg0->matrix, arg0->rotation);
     if (arg0->unk5C == 1) {

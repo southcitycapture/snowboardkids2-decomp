@@ -92,9 +92,9 @@ void initLevelPreviewCharacter(LevelPreviewCharacterState *arg0) {
     value = characterStartWaypoints[charIndex];
 
     // Initialize arg0 structure
-    arg0->posZ = 0;
-    arg0->posY = 0;
-    arg0->posX = 0;
+    arg0->position.z = 0;
+    arg0->position.y = 0;
+    arg0->position.x = 0;
     arg0->currentRotation = 0;
     arg0->startWaypoint = value;
 
@@ -107,9 +107,9 @@ void initLevelPreviewCharacter(LevelPreviewCharacterState *arg0) {
 
     arg0->cameraHorzOffset = 0x2E000;
     arg0->cameraDistance = 0x800000;
-    arg0->targetZ = 0;
-    arg0->targetY = 0;
-    arg0->targetX = 0;
+    arg0->targetPosition.z = 0;
+    arg0->targetPosition.y = 0;
+    arg0->targetPosition.x = 0;
     arg0->animationPhase = 0;
     arg0->extraRotation = 0;
     arg0->heightOffset = 0xA00000;
@@ -157,12 +157,12 @@ void setupLevelPreviewCamera(LevelPreviewCharacterState *state) {
     memcpy(&state->transform, &identityMatrix, sizeof(Transform3D));
     memcpy(state, waypointEnd, sizeof(Vec3i));
 
-    state->posY = getTrackHeightAtPosition(&state->gameData, state->startWaypoint, state);
+    state->position.y = getTrackHeightAtPosition(&state->gameData, state->startWaypoint, state);
 
     if (levelSelect->levelIdList[levelSelect->selectedIndex] == 5) {
-        state->posY = state->posY + state->altHeightOffset;
+        state->position.y = state->position.y + state->altHeightOffset;
     } else {
-        state->posY = state->posY + state->heightOffset;
+        state->position.y = state->position.y + state->heightOffset;
     }
 
     memcpy(&state->transform.translation, state, sizeof(Vec3i));
@@ -181,24 +181,24 @@ void setupLevelPreviewCamera(LevelPreviewCharacterState *state) {
     if (scaled < 0) {
         scaled += 0x1FFF;
     }
-    state->targetX = (scaled >> 13) << 8;
+    state->targetPosition.x = (scaled >> 13) << 8;
 
     scaled = approximateCos((s16)state->currentRotation) * 5 << 12;
     if (scaled < 0) {
         scaled += 0x1FFF;
     }
-    state->targetZ = (scaled >> 13) << 8;
+    state->targetPosition.z = (scaled >> 13) << 8;
 
-    state->targetX = state->targetX + state->posX;
-    state->targetZ = state->targetZ + state->posZ;
+    state->targetPosition.x = state->targetPosition.x + state->position.x;
+    state->targetPosition.z = state->targetPosition.z + state->position.z;
 
-    angle = findTrackSector(&state->gameData, state->currentWaypoint, &state->targetX);
+    angle = findTrackSector(&state->gameData, state->currentWaypoint, &state->targetPosition.x);
     state->currentWaypoint = angle;
 
-    state->targetY = getTrackHeightAtPosition(&state->gameData, angle, &state->targetX);
-    state->targetY = state->targetY + state->heightOffset;
+    state->targetPosition.y = getTrackHeightAtPosition(&state->gameData, angle, &state->targetPosition.x);
+    state->targetPosition.y = state->targetPosition.y + state->heightOffset;
 
-    computeLookAtMatrix((Vec3i *)&state->targetX, (Vec3i *)state, &lookAtTransform);
+    computeLookAtMatrix(&state->targetPosition, &state->position, &lookAtTransform);
 
     memcpy(&offsetTransform, &identityMatrix, sizeof(Transform3D));
     offsetTransform.translation.z = state->cameraDistance;
@@ -270,8 +270,8 @@ void updateLevelPreviewCharacterAndCamera(LevelPreviewCharacterState *state) {
         scaled += 0x1FFF;
     }
     waypointStart[2] = (scaled >> 13) << 8;
-    state->posX = state->posX - waypointStart[0];
-    state->posZ = state->posZ - waypointStart[2];
+    state->position.x = state->position.x - waypointStart[0];
+    state->position.z = state->position.z - waypointStart[2];
     {
         u16 waypoint;
         u16 newWaypoint;
@@ -281,7 +281,8 @@ void updateLevelPreviewCharacterAndCamera(LevelPreviewCharacterState *state) {
             u16 angle;
             state->startWaypoint = waypoint;
             getTrackSegmentWaypoints(&state->gameData, newWaypoint, waypointStart, waypointEnd);
-            angle = (computeAngleToPosition(waypointStart[0], waypointStart[2], state->posX, state->posZ) - 0x1000) &
+            angle = (computeAngleToPosition(waypointStart[0], waypointStart[2], state->position.x, state->position.z) -
+                     0x1000) &
                     0x1FFF;
             state->targetRotation = angle;
             if (((angle - state->currentRotation) & 0x1FFF) >= 0x1001) {
@@ -292,22 +293,22 @@ void updateLevelPreviewCharacterAndCamera(LevelPreviewCharacterState *state) {
         }
     }
     if (levelSelect->levelIdList[levelSelect->selectedIndex] == 5) {
-        heightTarget = (state->posY - state->altHeightOffset) + ((s32)0xFFFDB340);
+        heightTarget = (state->position.y - state->altHeightOffset) + ((s32)0xFFFDB340);
     } else {
-        heightTarget = (state->posY - state->heightOffset) + ((s32)0xFFFDB340);
+        heightTarget = (state->position.y - state->heightOffset) + ((s32)0xFFFDB340);
     }
     {
         s32 trackHeight;
         trackHeight = getTrackHeightAtPosition(&state->gameData, state->startWaypoint, state);
-        state->posY = heightTarget;
+        state->position.y = heightTarget;
         if (heightTarget < trackHeight) {
-            state->posY = trackHeight;
+            state->position.y = trackHeight;
         }
     }
     if (levelSelect->levelIdList[levelSelect->selectedIndex] == 5) {
-        state->posY = state->posY + state->altHeightOffset;
+        state->position.y = state->position.y + state->altHeightOffset;
     } else {
-        state->posY = state->posY + state->heightOffset;
+        state->position.y = state->position.y + state->heightOffset;
     }
     memcpy(&state->transform.translation, state, sizeof(Vec3i));
     createYRotationMatrix(&state->transform, state->currentRotation);
@@ -316,25 +317,25 @@ void updateLevelPreviewCharacterAndCamera(LevelPreviewCharacterState *state) {
     if (scaled < 0) {
         scaled += 0x1FFF;
     }
-    state->targetX = (scaled >> 13) << 8;
+    state->targetPosition.x = (scaled >> 13) << 8;
     scaled = (approximateCos((s16)state->currentRotation) * 5) << 12;
     if (scaled < 0) {
         scaled += 0x1FFF;
     }
     gameData = &state->gameData;
-    targetPtr = &state->targetX;
-    state->targetZ = (scaled >> 13) << 8;
-    state->targetX = state->targetX + state->posX;
-    state->targetZ = state->targetZ + state->posZ;
-    heightTarget = (state->targetY - state->heightOffset) + ((s32)0xFFFDB340);
+    targetPtr = &state->targetPosition.x;
+    state->targetPosition.z = (scaled >> 13) << 8;
+    state->targetPosition.x = state->targetPosition.x + state->position.x;
+    state->targetPosition.z = state->targetPosition.z + state->position.z;
+    heightTarget = (state->targetPosition.y - state->heightOffset) + ((s32)0xFFFDB340);
     cameraWaypoint = findTrackSector(gameData, state->currentWaypoint, targetPtr);
     state->currentWaypoint = cameraWaypoint;
-    state->targetY = getTrackHeightAtPosition(gameData, cameraWaypoint & 0xFFFF, targetPtr);
-    if (state->targetY < heightTarget) {
-        state->targetY = heightTarget;
+    state->targetPosition.y = getTrackHeightAtPosition(gameData, cameraWaypoint & 0xFFFF, targetPtr);
+    if (state->targetPosition.y < heightTarget) {
+        state->targetPosition.y = heightTarget;
     }
-    state->targetY = state->targetY + state->heightOffset;
-    computeLookAtMatrix((Vec3i *)targetPtr, (Vec3i *)state, &lookAtTransform);
+    state->targetPosition.y = state->targetPosition.y + state->heightOffset;
+    computeLookAtMatrix((Vec3i *)targetPtr, &state->position, &lookAtTransform);
     memcpy(&offsetTransform, &identityMatrix, sizeof(Transform3D));
     offsetTransform.translation.z = state->cameraDistance;
     composeTransform3D(&offsetTransform, &lookAtTransform, &cameraTransform);
@@ -385,7 +386,8 @@ void updateLevelPreviewCamera(LevelPreviewCharacterState *state) {
     getTrackSegmentWaypoints(gameData, waypoint, waypointStart, waypointEnd);
 
     state->targetRotation =
-        (computeAngleToPosition(waypointEnd[0], waypointEnd[2], state->posX, state->posZ) - 0x1000) & 0x1FFF;
+        (computeAngleToPosition(waypointEnd[0], waypointEnd[2], state->position.x, state->position.z) - 0x1000) &
+        0x1FFF;
 
     rotation = (state->currentRotation + 0x1000) & 0x1FFF;
     state->currentRotation = rotation;
@@ -396,7 +398,7 @@ void updateLevelPreviewCamera(LevelPreviewCharacterState *state) {
         state->turnDirection = 0;
     }
 
-    computeLookAtMatrix((Vec3i *)&state->targetX, (Vec3i *)state, (Transform3D *)lookAtTransform);
+    computeLookAtMatrix(&state->targetPosition, &state->position, (Transform3D *)lookAtTransform);
 
     memcpy(&offsetTransform, &identityMatrix, sizeof(Transform3D));
 
@@ -467,9 +469,9 @@ void moveCharacterToStartWaypoint(LevelPreviewCharacterState *state) {
         scaled += 0x1FFF;
     }
     waypointStart[2] = (scaled >> 13) << 8;
-    state->posX = state->posX - waypointStart[0];
-    state->posY = state->posY + waypointStart[1];
-    state->posZ = state->posZ - waypointStart[2];
+    state->position.x = state->position.x - waypointStart[0];
+    state->position.y = state->position.y + waypointStart[1];
+    state->position.z = state->position.z - waypointStart[2];
     {
         u16 waypoint;
         u16 newWaypoint;
@@ -479,8 +481,9 @@ void moveCharacterToStartWaypoint(LevelPreviewCharacterState *state) {
             u16 angle;
             state->startWaypoint = waypoint;
             getTrackSegmentWaypoints(&state->gameData, newWaypoint, waypointStart, waypointEnd);
-            angle =
-                (computeAngleToPosition(waypointEnd[0], waypointEnd[2], state->posX, state->posZ) - 0x1000) & 0x1FFF;
+            angle = (computeAngleToPosition(waypointEnd[0], waypointEnd[2], state->position.x, state->position.z) -
+                     0x1000) &
+                    0x1FFF;
             state->targetRotation = angle;
             if (((angle - state->currentRotation) & 0x1FFF) >= 0x1001) {
                 state->turnDirection = 1;
@@ -490,22 +493,22 @@ void moveCharacterToStartWaypoint(LevelPreviewCharacterState *state) {
         }
     }
     if (levelSelect->levelIdList[levelSelect->selectedIndex] == 5) {
-        heightTarget = (state->posY - state->altHeightOffset) + ((s32)0xFFFDB340);
+        heightTarget = (state->position.y - state->altHeightOffset) + ((s32)0xFFFDB340);
     } else {
-        heightTarget = (state->posY - state->heightOffset) + ((s32)0xFFFDB340);
+        heightTarget = (state->position.y - state->heightOffset) + ((s32)0xFFFDB340);
     }
     {
         s32 trackHeight;
         trackHeight = getTrackHeightAtPosition(&state->gameData, state->startWaypoint, state);
-        state->posY = heightTarget;
+        state->position.y = heightTarget;
         if (heightTarget < trackHeight) {
-            state->posY = trackHeight;
+            state->position.y = trackHeight;
         }
     }
     if (levelSelect->levelIdList[levelSelect->selectedIndex] == 5) {
-        state->posY = state->posY + state->altHeightOffset;
+        state->position.y = state->position.y + state->altHeightOffset;
     } else {
-        state->posY = state->posY + state->heightOffset;
+        state->position.y = state->position.y + state->heightOffset;
     }
     memcpy(&state->transform.translation, state, sizeof(Vec3i));
     createYRotationMatrix(&state->transform, state->currentRotation);
@@ -517,26 +520,26 @@ void moveCharacterToStartWaypoint(LevelPreviewCharacterState *state) {
         if (scaled < 0) {
             scaled += 0x1FFF;
         }
-        state->targetX = (scaled >> 13) << 8;
+        state->targetPosition.x = (scaled >> 13) << 8;
         scaled = (approximateCos(cameraRotation) * 5) << 12;
         if (scaled < 0) {
             scaled += 0x1FFF;
         }
     }
     gameData = &state->gameData;
-    targetPtr = &state->targetX;
-    state->targetZ = (scaled >> 13) << 8;
-    state->targetX = state->targetX + state->posX;
-    state->targetZ = state->targetZ + state->posZ;
-    heightTarget = (state->targetY - state->heightOffset) + ((s32)0xFFFDB340);
+    targetPtr = &state->targetPosition.x;
+    state->targetPosition.z = (scaled >> 13) << 8;
+    state->targetPosition.x = state->targetPosition.x + state->position.x;
+    state->targetPosition.z = state->targetPosition.z + state->position.z;
+    heightTarget = (state->targetPosition.y - state->heightOffset) + ((s32)0xFFFDB340);
     cameraWaypoint = findTrackSector(gameData, state->currentWaypoint, targetPtr);
     state->currentWaypoint = cameraWaypoint;
-    state->targetY = getTrackHeightAtPosition(gameData, cameraWaypoint & 0xFFFF, targetPtr);
-    if (state->targetY < heightTarget) {
-        state->targetY = heightTarget;
+    state->targetPosition.y = getTrackHeightAtPosition(gameData, cameraWaypoint & 0xFFFF, targetPtr);
+    if (state->targetPosition.y < heightTarget) {
+        state->targetPosition.y = heightTarget;
     }
-    state->targetY = state->targetY + state->heightOffset;
-    computeLookAtMatrix((Vec3i *)targetPtr, (Vec3i *)state, &lookAtTransform);
+    state->targetPosition.y = state->targetPosition.y + state->heightOffset;
+    computeLookAtMatrix((Vec3i *)targetPtr, &state->position, &lookAtTransform);
     memcpy(&offsetTransform, &identityMatrix, sizeof(Transform3D));
     offsetTransform.translation.z = state->cameraDistance;
     composeTransform3D(&offsetTransform, &lookAtTransform, &cameraTransform);
@@ -568,7 +571,8 @@ void resumeLevelPreviewAfterHold(LevelPreviewCharacterState *state) {
 
         getTrackSegmentWaypoints(gameData, temp, pos1, pos2);
 
-        state->targetRotation = (computeAngleToPosition(pos1[0], pos1[2], state->posX, state->posZ) - 0x1000) & 0x1FFF;
+        state->targetRotation =
+            (computeAngleToPosition(pos1[0], pos1[2], state->position.x, state->position.z) - 0x1000) & 0x1FFF;
 
         state->currentRotation = (state->currentRotation + 0x1000) & 0x1FFF;
 
@@ -602,7 +606,7 @@ s32 sampleMaxSurroundingTerrainHeight(LevelPreviewCharacterState *state) {
     s32 terrainHeight;
 
     levelSelect = (LevelSelectState *)getCurrentAllocation();
-    maxHeight = state->targetY;
+    maxHeight = state->targetPosition.y;
     sampleAngle = (u16)((state->animationPhase - 0x400) & 0x1FFF);
     sampleRadius = 0x500;
 
@@ -628,8 +632,8 @@ s32 sampleMaxSurroundingTerrainHeight(LevelPreviewCharacterState *state) {
         }
         samplePos[2] = (scaled >> 13) << 8;
 
-        samplePos[0] += state->targetX;
-        samplePos[2] += state->targetZ;
+        samplePos[0] += state->targetPosition.x;
+        samplePos[2] += state->targetPosition.z;
 
         terrainHeight = getTrackHeightAtPosition(
             gameData,

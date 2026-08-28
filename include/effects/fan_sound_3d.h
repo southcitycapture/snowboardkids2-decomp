@@ -10,5 +10,5 @@ void scheduleRepeatingFanSoundAtPosition(
     s16 repeatCount,
     s16 pan,
     s16 interval,
-    CutsceneSlotData *cutsceneSlotData
+    SceneModel *model
 );

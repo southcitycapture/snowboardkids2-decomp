@@ -7,18 +7,18 @@
 #include "system/task_scheduler.h"
 #include "ui/level_preview_3d.h"
 
-#define INIT_TASK_STATE(v)              \
-    (v)->parentModel = arg0;            \
-    (v)->layer = arg1;                  \
-    (v)->animId = arg2;                 \
-    (v)->duration = arg3;               \
-    (v)->opacity = arg6;                \
-    (v)->state = 0;                     \
-    (v)->offsetX = arg4->animDuration1; \
-    (v)->offsetY = arg4->animDuration2; \
-    (v)->offsetZ = arg4->animDuration3; \
-    (v)->targetScale = arg5;            \
-    (v)->rotation = arg9;               \
+#define INIT_TASK_STATE(v)          \
+    (v)->parentModel = arg0;        \
+    (v)->layer = arg1;              \
+    (v)->animId = arg2;             \
+    (v)->duration = arg3;           \
+    (v)->opacity = arg6;            \
+    (v)->state = 0;                 \
+    (v)->offset.x = arg4->offset.x; \
+    (v)->offset.y = arg4->offset.y; \
+    (v)->offset.z = arg4->offset.z; \
+    (v)->targetScale = arg5;        \
+    (v)->rotation = arg9;           \
     (v)->useParentPos = arg10;
 
 typedef enum {
@@ -45,9 +45,7 @@ typedef struct {
 
 typedef struct {
     /* 0x00 */ u8 _pad0[0x14];
-    /* 0x14 */ s32 x;
-    /* 0x18 */ s32 y;
-    /* 0x1C */ s32 z;
+    /* 0x14 */ Vec3i position;
 } SpriteEffectPosition;
 
 typedef struct {
@@ -58,9 +56,7 @@ typedef struct {
     /* 0x0A */ u8 opacity;
     /* 0x0B */ u8 _padB[1];
     /* 0x0C */ s32 scale;
-    /* 0x10 */ s32 offsetX;
-    /* 0x14 */ s32 offsetY;
-    /* 0x18 */ s32 offsetZ;
+    /* 0x10 */ Vec3i offset;
     /* 0x1C */ s16 rotation;
     /* 0x1E */ s16 useParentPos;
     /* 0x20 */ SpriteAssetState spriteState;
@@ -74,9 +70,7 @@ typedef struct {
     /* 0x0A */ u8 opacity;
     /* 0x0B */ s8 state;
     /* 0x0C */ s32 targetScale;
-    /* 0x10 */ s32 offsetX;
-    /* 0x14 */ s32 offsetY;
-    /* 0x18 */ s32 offsetZ;
+    /* 0x10 */ Vec3i offset;
     /* 0x1C */ s16 rotation;
     /* 0x1E */ s16 useParentPos;
     /* 0x20 */ SpriteAssetState spriteState;
@@ -94,9 +88,7 @@ typedef struct {
     /* 0x0A */ u8 opacity;
     /* 0x0B */ s8 state;
     /* 0x0C */ s32 targetScale;
-    /* 0x10 */ s32 offsetX;
-    /* 0x14 */ s32 offsetY;
-    /* 0x18 */ s32 offsetZ;
+    /* 0x10 */ Vec3i offset;
     /* 0x1C */ s16 rotation;
     /* 0x1E */ s16 useParentPos;
     /* 0x20 */ SpriteAssetState spriteState;
@@ -112,9 +104,7 @@ typedef struct {
     /* 0x0A */ u8 opacity;
     /* 0x0B */ s8 state;
     /* 0x0C */ s32 unkC;
-    /* 0x10 */ s32 offsetX;
-    /* 0x14 */ s32 offsetY;
-    /* 0x18 */ s32 offsetZ;
+    /* 0x10 */ Vec3i offset;
     /* 0x1C */ u16 rotation;
     /* 0x1E */ s16 useParentPos;
     /* 0x20 */ SpriteAssetState spriteState;
@@ -129,9 +119,7 @@ typedef struct {
     /* 0x0A */ u8 opacity;
     /* 0x0B */ s8 state;
     /* 0x0C */ s32 scale;
-    /* 0x10 */ s32 offsetX;
-    /* 0x14 */ s32 offsetY;
-    /* 0x18 */ s32 offsetZ;
+    /* 0x10 */ Vec3i offset;
     /* 0x1C */ s16 rotation;
     /* 0x1E */ s16 useParentPos;
     /* 0x20 */ SpriteAssetState spriteState;
@@ -146,9 +134,7 @@ typedef struct {
     /* 0x0A */ u8 opacity;
     /* 0x0B */ u8 _padB[1];
     /* 0x0C */ s32 scale;
-    /* 0x10 */ s32 offsetX;
-    /* 0x14 */ s32 offsetY;
-    /* 0x18 */ s32 offsetZ;
+    /* 0x10 */ Vec3i offset;
     /* 0x1C */ s16 rotation;
     /* 0x1E */ s16 useParentPos;
     /* 0x20 */ SpriteAssetState spriteState;
@@ -583,9 +569,9 @@ void updateSimpleSpriteEffect(SimpleSpriteEffectState *arg0) {
 
     pos = getSpriteEffectPosition(arg0->positionSource, arg0->useParentPos);
 
-    x = pos->x + arg0->offsetX;
-    y = pos->y + arg0->offsetY;
-    z = pos->z + arg0->offsetZ;
+    x = pos->position.x + arg0->offset.x;
+    y = pos->position.y + arg0->offset.y;
+    z = pos->position.z + arg0->offset.z;
     layer = arg0->layer;
 
     renderOpaqueSprite(spriteState, layer, x, y, z, arg0->scale, arg0->scale, arg0->rotation, arg0->opacity);
@@ -695,9 +681,9 @@ void updateScalingSpriteEffect(ScalingSpriteEffectState *arg0) {
     pos = getSpriteEffectPosition(arg0->positionSource, arg0->useParentPos);
 
     layer = arg0->layer;
-    x = pos->x + arg0->offsetX;
-    y = pos->y + arg0->offsetY;
-    z = pos->z + arg0->offsetZ;
+    x = pos->position.x + arg0->offset.x;
+    y = pos->position.y + arg0->offset.y;
+    z = pos->position.z + arg0->offset.z;
 
     renderOpaqueSprite(spriteState, layer, x, y, z, arg0->scaleX, arg0->scaleY, arg0->rotation, arg0->opacity);
 
@@ -746,10 +732,10 @@ void updateRadialBurstSpriteEffect(RadialBurstSpriteEffectState *arg0) {
     temp_pos = getSpriteEffectPosition(arg0->positionSource, arg0->useParentPos);
     pos = temp_pos;
     {
-        s32 posX = pos->x;
-        baseX = posX + arg0->offsetX;
-        baseY = pos->y + arg0->offsetY;
-        baseZ = pos->z + arg0->offsetZ;
+        s32 posX = pos->position.x;
+        baseX = posX + arg0->offset.x;
+        baseY = pos->position.y + arg0->offset.y;
+        baseZ = pos->position.z + arg0->offset.z;
         phase = (*(s32 *)&arg0->bobPhaseHi - 0xAA) & 0x1FFF;
         *(s32 *)&arg0->bobPhaseHi = phase;
         xOffset = (arg0->currentScale >> 8) * ((approximateSin(phase) << 3) >> 8);
@@ -851,9 +837,9 @@ void updateSpinFadeSpriteEffect(SpinFadeSpriteEffectState *arg0) {
     spriteState = &arg0->spriteState;
     pos = getSpriteEffectPosition(arg0->positionSource, arg0->useParentPos);
 
-    x = pos->x + arg0->offsetX;
-    y = pos->y + arg0->offsetY;
-    z = pos->z + arg0->offsetZ;
+    x = pos->position.x + arg0->offset.x;
+    y = pos->position.y + arg0->offset.y;
+    z = pos->position.z + arg0->offset.z;
     layer = arg0->layer;
 
     renderOpaqueSprite(spriteState, layer, x, y, z, arg0->scale, arg0->scale, (s16)arg0->rotation, arg0->opacity);
@@ -911,9 +897,9 @@ void updateDropShrinkSpriteEffect(DropShrinkSpriteEffectState *arg0) {
     spriteState = &arg0->spriteState;
     pos = getSpriteEffectPosition(arg0->positionSource, arg0->useParentPos);
 
-    x = pos->x + arg0->offsetX;
-    y = pos->y + arg0->offsetY + arg0->dropOffset;
-    z = pos->z + arg0->offsetZ;
+    x = pos->position.x + arg0->offset.x;
+    y = pos->position.y + arg0->offset.y + arg0->dropOffset;
+    z = pos->position.z + arg0->offset.z;
     layer = arg0->layer;
 
     renderOpaqueSprite(spriteState, layer, x, y, z, arg0->scale, arg0->scale, arg0->rotation, arg0->opacity);
@@ -964,9 +950,9 @@ void updateRiseStretchSpriteEffect(SpriteEffectTaskState *arg0) {
 
     temp = getSpriteEffectPosition((SpriteEffectPositionSource *)arg0->parentModel, arg0->useParentPos);
 
-    x = temp->x + arg0->offsetX;
-    y = temp->y + arg0->offsetY + arg0->effectScratch0;
-    z = temp->z + arg0->offsetZ;
+    x = temp->position.x + arg0->offset.x;
+    y = temp->position.y + arg0->offset.y + arg0->effectScratch0;
+    z = temp->position.z + arg0->offset.z;
 
     renderSprite(
         &arg0->spriteState,
@@ -1015,9 +1001,9 @@ void updateFloatBobbingSpriteEffect(FloatBobbingSpriteEffectState *arg0) {
 
     pos = getSpriteEffectPosition(arg0->positionSource, arg0->useParentPos);
 
-    x = pos->x + arg0->offsetX;
-    y = pos->y + arg0->offsetY + arg0->bobOffset;
-    z = pos->z + arg0->offsetZ;
+    x = pos->position.x + arg0->offset.x;
+    y = pos->position.y + arg0->offset.y + arg0->bobOffset;
+    z = pos->position.z + arg0->offset.z;
 
     renderSprite(&arg0->spriteState, arg0->layer, x, y, z, 0x10000, arg0->scale, arg0->rotation, arg0->opacity, 0xFF);
 }

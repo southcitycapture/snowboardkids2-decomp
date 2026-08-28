@@ -1194,7 +1194,7 @@ s32 distance_3d(s32 x, s32 y, s32 z) {
 }
 
 void computeLookAtMatrix(Vec3i *from, Vec3i *to, Transform3D *out) {
-    s32 diff[3];
+    Vec3i diff;
     s32 horzDist;
     s32 sinPitch;
     s32 cosPitch;
@@ -1204,27 +1204,27 @@ void computeLookAtMatrix(Vec3i *from, Vec3i *to, Transform3D *out) {
     s32 temp;
     s32 temp2;
 
-    diff[0] = to->x - from->x;
-    diff[1] = to->y - from->y;
-    diff[2] = to->z - from->z;
+    diff.x = to->x - from->x;
+    diff.y = to->y - from->y;
+    diff.z = to->z - from->z;
 
-    horzDist = isqrt64((s64)diff[0] * diff[0] + (s64)diff[2] * diff[2]);
+    horzDist = isqrt64((s64)diff.x * diff.x + (s64)diff.z * diff.z);
 
     sinPitch = 0;
     cosPitch = 0x2000;
     sinYaw = 0;
     cosYaw = 0x2000;
 
-    totalDist = isqrt64((s64)diff[1] * diff[1] + (s64)horzDist * horzDist);
+    totalDist = isqrt64((s64)diff.y * diff.y + (s64)horzDist * horzDist);
 
     if (totalDist != 0) {
-        sinPitch = (s64)diff[1] * 0x2000 / totalDist;
+        sinPitch = (s64)diff.y * 0x2000 / totalDist;
         cosPitch = (s64)horzDist * 0x2000 / totalDist;
     }
 
     if (horzDist != 0) {
-        sinYaw = -(s64)diff[0] * 0x2000 / horzDist;
-        cosYaw = -(s64)diff[2] * 0x2000 / horzDist;
+        sinYaw = -(s64)diff.x * 0x2000 / horzDist;
+        cosYaw = -(s64)diff.z * 0x2000 / horzDist;
     }
 
     temp = sinPitch * sinYaw;

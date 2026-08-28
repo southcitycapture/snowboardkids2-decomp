@@ -7,9 +7,7 @@ typedef struct {
     /* 0x00 */ ViewportNode node1;
     /* 0x1C8 */ ViewportNode node2;
     /* 0x390 */ u8 padding2[0x20];
-    /* 0x3B0 */ s32 unk3D0;
-    /* 0x3B4 */ s32 unk3D4;
-    /* 0x3B8 */ s32 unk3D8;
+    /* 0x3B0 */ Vec3i storyMapCharacterPosition;
     /* 0x3BC */ void *unk3DC;
     /* 0x3C0 */ void *unk3E0;
     /* 0x3C4 */ void *unk3E4;

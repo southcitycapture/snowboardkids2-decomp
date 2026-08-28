@@ -9,9 +9,7 @@ typedef struct {
     /* 0x14 */ Vec3i viewTranslation;
     /* 0x20 */ s16 orientMatrix[9];
     /* 0x32 */ u8 pad32[0x2];
-    /* 0x34 */ s32 cameraX;
-    /* 0x38 */ s32 cameraY;
-    /* 0x3C */ s32 cameraZ;
+    /* 0x34 */ Vec3i cameraPosition;
     /* 0x40 */ u8 pad40[0x4];
     /* 0x44 */ s16 viewAngle;
     /* 0x46 */ s16 targetAngle;

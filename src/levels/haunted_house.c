@@ -392,9 +392,9 @@ void initSwingingPendulumTrap(SwingingPendulumTrap *arg0) {
     arg0->renderObject.displayLists = &temp_v0_3->sceneryDisplayLists1;
 
     arg0->phaseTimer = 0xF;
-    arg0->pivotX = 0xFD71ABE1;
-    arg0->pivotY = 0x1E37049C;
-    arg0->pivotZ = 0xF61F3676;
+    arg0->pivot.x = 0xFD71ABE1;
+    arg0->pivot.y = 0x1E37049C;
+    arg0->pivot.z = 0xF61F3676;
     arg0->bobPhase = 0;
     arg0->swingPhase = 0;
     arg0->swingAngle = 0x400;
@@ -480,7 +480,7 @@ void updateSwingingPendulumTrap(SwingingPendulumTrap *arg0) {
         }
     }
 
-    memcpy(&arg0->renderObject.transform.translation, &arg0->pivotX, sizeof(Vec3i));
+    memcpy(&arg0->renderObject.transform.translation, &arg0->pivot, sizeof(Vec3i));
     arg0->renderObject.transform.translation.y =
         arg0->renderObject.transform.translation.y + approximateSin(arg0->bobPhase) * 0x1C0;
 

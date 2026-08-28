@@ -15,7 +15,7 @@ extern AIPlayerParamEntry gAIPlayerParams[8][0x11];
 
 void setPlayerProjectileHitState(Player *player);
 void setPlayerState50(Player *player);
-void setPlayerPullState(Player *player, void *pullTarget);
+void setPlayerPullState(Player *player, const Vec3i *pullTarget);
 void setPlayerCollisionKnockbackState(Player *player, s16 knockbackAngle, s32 knockbackStrength);
 void setPlayerHomingProjectileRetaliationState(Player *player);
 void setPlayerParachuteState(Player *player);

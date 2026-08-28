@@ -79,12 +79,12 @@ void playFanSoundEffect(s16 fanIndex, s16 volume, s16 pan, s16 channel) {
     }
 }
 
-void playFanSoundAtPosition(s16 fanIndex, s16 arg1, s16 duration, CutsceneSlotData *cutsceneSlotData) {
+void playFanSoundAtPosition(s16 fanIndex, s16 arg1, s16 duration, SceneModel *model) {
     Vec3i position;
     s16 soundId;
 
-    if (cutsceneSlotData != NULL) {
-        memcpy(&position, &cutsceneSlotData->unk2C, sizeof(Vec3i));
+    if (model != NULL) {
+        memcpy(&position, &model->transform.translation, sizeof(Vec3i));
     } else {
         position.x = 0;
         position.y = 0;

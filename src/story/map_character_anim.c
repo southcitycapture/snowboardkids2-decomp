@@ -58,12 +58,12 @@ void initStoryMapCamera(StoryMapCameraState *camera) {
     mode = getStoryMapCameraMode();
 
     if (mode == 3) {
-        camera->cameraX = 0xFFE60000;
-        camera->cameraZ = 0xFF9C0000;
-        camera->orbitAngle = atan2Fixed(camera->cameraX, camera->cameraZ);
+        camera->cameraPosition.x = 0xFFE60000;
+        camera->cameraPosition.z = 0xFF9C0000;
+        camera->orbitAngle = atan2Fixed(camera->cameraPosition.x, camera->cameraPosition.z);
 
-        x = camera->cameraX;
-        z = camera->cameraZ;
+        x = camera->cameraPosition.x;
+        z = camera->cameraPosition.z;
         camera->orbitRadius = isqrt64(MAGNITUDE_SQ_2D(x, z));
 
         camera->targetAngle = 0;
@@ -88,18 +88,18 @@ void initStoryMapCamera(StoryMapCameraState *camera) {
         if (temp < 0) {
             temp += 0x1FFF;
         }
-        camera->cameraX = (temp >> 13) << 8;
+        camera->cameraPosition.x = (temp >> 13) << 8;
 
         temp = approximateCos(camera->orbitAngle);
         temp = temp * -(camera->orbitRadius >> 8);
         if (temp < 0) {
             temp += 0x1FFF;
         }
-        camera->cameraZ = (temp >> 13) << 8;
+        camera->cameraPosition.z = (temp >> 13) << 8;
     }
 
-    state->storyMapCameraX = camera->cameraX;
-    state->storyMapCameraZ = camera->cameraZ;
+    state->storyMapCameraX = camera->cameraPosition.x;
+    state->storyMapCameraZ = camera->cameraPosition.z;
     state->storyMapCameraOrbitAngle = camera->orbitAngle;
     state->storyMapCameraOrbitRadius = camera->orbitRadius;
     state->storyMapCameraViewAngle = camera->viewAngle & 0x1FFF;
@@ -157,7 +157,7 @@ void updateStoryMapCameraFreeRoam(StoryMapCameraState *camera) {
         walkSpeed = 4;
     }
 
-    memcpy(&savedPos, &camera->cameraX, sizeof(Vec3i));
+    memcpy(&savedPos, &camera->cameraPosition, sizeof(Vec3i));
     memcpy(&pos, &savedPos, sizeof(Vec3i));
     state->unk426 = 1;
 
@@ -229,7 +229,7 @@ void updateStoryMapCameraFreeRoam(StoryMapCameraState *camera) {
 
     if ((isqrt64(MAGNITUDE_SQ_2D(pos.x, pos.z)) - 0x240000) > 0x640000U) {
         if (stickX) {
-            memcpy(&savedPos, &camera->cameraX, sizeof(Vec3i));
+            memcpy(&savedPos, &camera->cameraPosition, sizeof(Vec3i));
             memcpy(&pos, &savedPos, sizeof(Vec3i));
 
             camera->orbitRadius = isqrt64(MAGNITUDE_SQ_2D(pos.x, pos.z));
@@ -239,7 +239,7 @@ void updateStoryMapCameraFreeRoam(StoryMapCameraState *camera) {
             temp_v1 = ((-moveX * (savedPos.x >> 8)) / (camera->orbitRadius >> 8));
             pos.z += (temp_v1 << 16);
         } else {
-            memcpy(&pos, &camera->cameraX, sizeof(Vec3i));
+            memcpy(&pos, &camera->cameraPosition, sizeof(Vec3i));
         }
 
         camera->orbitAngle = atan2Fixed(pos.x, pos.z);
@@ -267,7 +267,7 @@ void updateStoryMapCameraFreeRoam(StoryMapCameraState *camera) {
         }
     }
 
-    memcpy(&camera->cameraX, &pos, sizeof(Vec3i));
+    memcpy(&camera->cameraPosition, &pos, sizeof(Vec3i));
     camera->orbitAngle = atan2Fixed(pos.x, pos.z);
     camera->orbitRadius = isqrt64(MAGNITUDE_SQ_2D(pos.x, pos.z));
 
@@ -302,10 +302,10 @@ void updateStoryMapCameraFreeRoam(StoryMapCameraState *camera) {
     createYRotationMatrix((Transform3D *)&camera->orientMatrix, (u16)camera->orbitAngle);
     composeTransform3D((Transform3D *)camera, (Transform3D *)&camera->orientMatrix, &combinedMatrix);
 
-    state->storyMapCameraX = camera->cameraX;
-    state->storyMapCameraZ = camera->cameraZ;
+    state->storyMapCameraX = camera->cameraPosition.x;
+    state->storyMapCameraZ = camera->cameraPosition.z;
     memcpy(&state->storyMapCharacterTransform, &combinedMatrix, sizeof(Transform3D));
-    memcpy(&state->unk3D0, &combinedMatrix.translation, sizeof(Vec3i));
+    memcpy(&state->storyMapCharacterPosition, &combinedMatrix.translation, sizeof(Vec3i));
     state->storyMapCameraOrbitRadius = camera->orbitRadius;
     state->storyMapCameraOrbitAngle = camera->orbitAngle;
     state->storyMapCameraViewAngle = camera->viewAngle & 0x1FFF;
@@ -325,7 +325,7 @@ void updateStoryMapCameraFreeRoam(StoryMapCameraState *camera) {
 
         if ((lowThresh < orbitAngle && orbitAngle < 0x1000) || (!(orbitAngle < 0x1001) & (orbitAngle < highThresh))) {
             setViewportFadeValue(NULL, 0xFF, 0x10);
-            if (camera->cameraX > 0) {
+            if (camera->cameraPosition.x > 0) {
                 setStoryMapCameraMode(1);
             } else {
                 setStoryMapCameraMode(2);
@@ -369,7 +369,7 @@ void startStoryMapCameraTravel(StoryMapCameraState *camera) {
     targetX <<= 16;
     targetZ <<= 16;
 
-    result = computeAngleToPosition(camera->cameraX, camera->cameraZ, targetX, targetZ);
+    result = computeAngleToPosition(camera->cameraPosition.x, camera->cameraPosition.z, targetX, targetZ);
     camera->targetAngle = (s16)result;
     camera->viewAngle = (s16)result;
 
@@ -379,8 +379,8 @@ void startStoryMapCameraTravel(StoryMapCameraState *camera) {
         camera->viewAngle = result - 0x1000;
     }
 
-    targetX -= camera->cameraX;
-    targetZ -= camera->cameraZ;
+    targetX -= camera->cameraPosition.x;
+    targetZ -= camera->cameraPosition.z;
 
     masked = camera->viewAngle & 0x1FFF;
     camera->viewAngle = masked;
@@ -418,15 +418,15 @@ void updateStoryMapCameraTravel(StoryMapCameraState *camera) {
     if (temp < 0) {
         temp += 0x1FFF;
     }
-    camera->cameraX = camera->cameraX + ((temp >> 13) << 4);
+    camera->cameraPosition.x = camera->cameraPosition.x + ((temp >> 13) << 4);
 
     temp = approximateCos(camera->viewAngle) * velocity;
     if (temp < 0) {
         temp += 0x1FFF;
     }
-    camera->cameraZ = camera->cameraZ + ((temp >> 13) << 4);
+    camera->cameraPosition.z = camera->cameraPosition.z + ((temp >> 13) << 4);
 
-    angle = atan2Fixed(camera->cameraX, camera->cameraZ);
+    angle = atan2Fixed(camera->cameraPosition.x, camera->cameraPosition.z);
 
     createYRotationMatrix((Transform3D *)&camera->orientMatrix, (u16)angle);
     createYRotationMatrix((Transform3D *)camera, (u16)(camera->viewAngle - angle));
@@ -435,8 +435,8 @@ void updateStoryMapCameraTravel(StoryMapCameraState *camera) {
 
     memcpy(&state->storyMapCharacterTransform, &localMatrix, sizeof(Transform3D));
 
-    state->storyMapCameraX = camera->cameraX;
-    state->storyMapCameraZ = camera->cameraZ;
+    state->storyMapCameraX = camera->cameraPosition.x;
+    state->storyMapCameraZ = camera->cameraPosition.z;
 
     if (getViewportFadeMode(0) == 0) {
         storyMapLocationIndex = state->discoveredLocationId;
@@ -468,23 +468,23 @@ void initStoryMapCameraAtLocation(StoryMapCameraState *camera) {
     memcpy(&camera->orientMatrix, &identityMatrix, sizeof(Transform3D));
     memcpy(camera, &identityMatrix, sizeof(Transform3D));
 
-    camera->cameraX = storyMapLocationCoords[state->discoveredLocationId].x;
-    camera->cameraZ = storyMapLocationCoords[state->discoveredLocationId].z;
+    camera->cameraPosition.x = storyMapLocationCoords[state->discoveredLocationId].x;
+    camera->cameraPosition.z = storyMapLocationCoords[state->discoveredLocationId].z;
 
-    camera->cameraX <<= 16;
-    camera->cameraZ <<= 16;
+    camera->cameraPosition.x <<= 16;
+    camera->cameraPosition.z <<= 16;
 
-    camera->orbitAngle = atan2Fixed(camera->cameraX, camera->cameraZ);
+    camera->orbitAngle = atan2Fixed(camera->cameraPosition.x, camera->cameraPosition.z);
 
-    x = camera->cameraX;
-    z = camera->cameraZ;
+    x = camera->cameraPosition.x;
+    z = camera->cameraPosition.z;
     camera->orbitRadius = isqrt64((s64)x * x + (s64)z * z);
 
     camera->targetAngle = 0;
     camera->viewAngle = 0;
 
-    state->storyMapCameraX = camera->cameraX;
-    state->storyMapCameraZ = camera->cameraZ;
+    state->storyMapCameraX = camera->cameraPosition.x;
+    state->storyMapCameraZ = camera->cameraPosition.z;
     state->storyMapCameraOrbitAngle = camera->orbitAngle;
     state->storyMapCameraOrbitRadius = camera->orbitRadius;
     state->storyMapCameraViewAngle = camera->viewAngle & 0x1FFF;
@@ -511,15 +511,15 @@ void approachStoryMapOrigin(StoryMapCameraState *camera) {
     state = getCurrentAllocation();
 
     sinVal = approximateSin(camera->orbitAngle);
-    camera->cameraX = camera->cameraX + (sinVal << 4);
+    camera->cameraPosition.x = camera->cameraPosition.x + (sinVal << 4);
 
     cosVal = approximateCos(camera->orbitAngle);
-    camera->cameraZ = camera->cameraZ + (cosVal << 4);
+    camera->cameraPosition.z = camera->cameraPosition.z + (cosVal << 4);
 
     composeTransform3D((Transform3D *)camera, (Transform3D *)&camera->orientMatrix, &localMatrix);
 
-    state->storyMapCameraX = camera->cameraX;
-    state->storyMapCameraZ = camera->cameraZ;
+    state->storyMapCameraX = camera->cameraPosition.x;
+    state->storyMapCameraZ = camera->cameraPosition.z;
 
     memcpy(&state->storyMapCharacterTransform, &localMatrix, sizeof(Transform3D));
 
@@ -527,8 +527,8 @@ void approachStoryMapOrigin(StoryMapCameraState *camera) {
     state->storyMapCameraOrbitRadius = camera->orbitRadius;
     state->storyMapCameraViewAngle = camera->viewAngle & 0x1FFF;
 
-    x = camera->cameraX;
-    z = camera->cameraZ;
+    x = camera->cameraPosition.x;
+    z = camera->cameraPosition.z;
     sumSquares = MAGNITUDE_SQ_2D(x, z);
     distance = isqrt64(sumSquares);
 
@@ -539,7 +539,7 @@ void approachStoryMapOrigin(StoryMapCameraState *camera) {
 
 void updateStoryMapCameraOrbit(StoryMapCameraState *camera) {
     s32 combinedMatrix[8];
-    s32 cameraPosition[3];
+    Vec3i cameraPosition;
     s32 pad3C[5];
     s32 sp58;
     u32 sp5C;
@@ -551,7 +551,7 @@ void updateStoryMapCameraOrbit(StoryMapCameraState *camera) {
     s8 orbitSpeed;
 
     state = getCurrentAllocation();
-    memcpy(cameraPosition, &camera->cameraX, sizeof(Vec3i));
+    memcpy(&cameraPosition, &camera->cameraPosition, sizeof(Vec3i));
 
     mode = getStoryMapCameraMode();
     orbitSpeed = -3;
@@ -559,23 +559,24 @@ void updateStoryMapCameraOrbit(StoryMapCameraState *camera) {
         orbitSpeed = 3;
     }
 
-    camera->cameraX = camera->cameraX + (((orbitSpeed * (cameraPosition[2] >> 8)) / (camera->orbitRadius >> 8)) << 16);
+    camera->cameraPosition.x =
+        camera->cameraPosition.x + (((orbitSpeed * (cameraPosition.z >> 8)) / (camera->orbitRadius >> 8)) << 16);
 
-    zDelta = (-orbitSpeed * (cameraPosition[0] >> 8)) / (camera->orbitRadius >> 8);
-    camera->cameraZ = camera->cameraZ + (zDelta << 16);
+    zDelta = (-orbitSpeed * (cameraPosition.x >> 8)) / (camera->orbitRadius >> 8);
+    camera->cameraPosition.z = camera->cameraPosition.z + (zDelta << 16);
 
-    camera->orbitAngle = atan2Fixed(camera->cameraX, camera->cameraZ);
+    camera->orbitAngle = atan2Fixed(camera->cameraPosition.x, camera->cameraPosition.z);
 
-    x = camera->cameraX;
-    z = camera->cameraZ;
+    x = camera->cameraPosition.x;
+    z = camera->cameraPosition.z;
     camera->orbitRadius = isqrt64((s64)x * x + (s64)z * z);
 
     orientMatrixPtr = (Transform3D *)&camera->orientMatrix;
     createYRotationMatrix(orientMatrixPtr, camera->orbitAngle);
     composeTransform3D((Transform3D *)camera, orientMatrixPtr, (Transform3D *)combinedMatrix);
 
-    state->storyMapCameraX = camera->cameraX;
-    state->storyMapCameraZ = camera->cameraZ;
+    state->storyMapCameraX = camera->cameraPosition.x;
+    state->storyMapCameraZ = camera->cameraPosition.z;
     memcpy(&state->storyMapCharacterTransform, combinedMatrix, sizeof(Transform3D));
     state->storyMapCameraOrbitAngle = camera->orbitAngle;
     state->storyMapCameraOrbitRadius = camera->orbitRadius;

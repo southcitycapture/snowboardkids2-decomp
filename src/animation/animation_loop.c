@@ -8,17 +8,17 @@
 #include "os_cont.h"
 #include "system/task_scheduler.h"
 
-#define DIFFY_ALGO(x)                                          \
-    s32 absStep;                                               \
-    s32 diff;                                                  \
-    posStep = arg0->pos##x##Step;                              \
-    diff = (arg0->pos##x##Target - arg0->pos##x##Current) / 6; \
-    absFrac = (diff > 0) ? (diff) : (-diff);                   \
-    absStep = (posStep > 0) ? (posStep) : (-posStep);          \
-    if (absStep < absFrac) {                                   \
-        diff = posStep;                                        \
-    }                                                          \
-    arg0->pos##x##Current += diff;
+#define DIFFY_ALGO(axis)                                          \
+    s32 absStep;                                                  \
+    s32 diff;                                                     \
+    posStep = arg0->positionStep.axis;                            \
+    diff = (arg0->targetPosition.axis - arg0->position.axis) / 6; \
+    absFrac = (diff > 0) ? (diff) : (-diff);                      \
+    absStep = (posStep > 0) ? (posStep) : (-posStep);             \
+    if (absStep < absFrac) {                                      \
+        diff = posStep;                                           \
+    }                                                             \
+    arg0->position.axis += diff;
 
 #define DIFFY_ROT_ALGO(x)                          \
     s32 absStep;                                   \
@@ -83,15 +83,15 @@ void initAnimationLoopState(CutsceneCameraState *arg0, u16 arg1) {
     arg0->rotYDuration = 0;
     arg0->rotXDurationCopy = 0;
     arg0->rotYDurationCopy = 0;
-    arg0->posXCurrent = 0;
-    arg0->posYCurrent = 0;
-    arg0->posZCurrent = 0;
-    arg0->posXTarget = 0;
-    arg0->posYTarget = 0;
-    arg0->posZTarget = 0;
-    arg0->posXStep = 0;
-    arg0->posYStep = 0;
-    arg0->posZStep = 0;
+    arg0->position.x = 0;
+    arg0->position.y = 0;
+    arg0->position.z = 0;
+    arg0->targetPosition.x = 0;
+    arg0->targetPosition.y = 0;
+    arg0->targetPosition.z = 0;
+    arg0->positionStep.x = 0;
+    arg0->positionStep.y = 0;
+    arg0->positionStep.z = 0;
     arg0->posXDuration = 0;
     arg0->posYDuration = 0;
     arg0->posZDuration = 0;
@@ -117,9 +117,9 @@ void finalizeAnimationLoop(CutsceneCameraState *arg0) {
     Transform3D sp70;
     Transform3D *temp_s0;
 
-    gScaleMatrix.translation.x = arg0->posXCurrent;
-    gScaleMatrix.translation.y = arg0->posYCurrent + arg0->posYOffset;
-    gScaleMatrix.translation.z = arg0->posZCurrent;
+    gScaleMatrix.translation.x = arg0->position.x;
+    gScaleMatrix.translation.y = arg0->position.y + arg0->posYOffset;
+    gScaleMatrix.translation.z = arg0->position.z;
 
     createYRotationMatrix(&sp70, arg0->rotYCurrent);
 
@@ -151,23 +151,23 @@ void handleAnimationLoopDebugInput(CutsceneCameraState *arg0) {
     switch (mode) {
         case 0:
             if (gControllerInputs[3] & Z_TRIG) {
-                arg0->posXCurrent = 0;
+                arg0->position.x = 0;
             } else {
-                temp = arg0->posXCurrent;
+                temp = arg0->position.x;
                 temp += gDebugCameraBaseStep << 12;
-                arg0->posXCurrent = temp;
+                arg0->position.x = temp;
             }
 
             buttonCheck = gButtonsPressed[0];
 
             if (buttonCheck & R_TRIG) {
-                temp = arg0->posYCurrent;
+                temp = arg0->position.y;
                 temp += gAnalogStickY << 12;
-                arg0->posYCurrent = temp;
+                arg0->position.y = temp;
             } else if (buttonCheck & Z_TRIG) {
-                temp = arg0->posZCurrent;
+                temp = arg0->position.z;
                 temp -= gAnalogStickY << 12;
-                arg0->posZCurrent = temp;
+                arg0->position.z = temp;
             } else if (buttonCheck & L_TRIG) {
                 u16 temp_angle = arg0->rotXCurrent;
                 temp_angle -= gAnalogStickY;
@@ -181,21 +181,21 @@ void handleAnimationLoopDebugInput(CutsceneCameraState *arg0) {
 
         case 1:
             if (gControllerInputs[3] & Z_TRIG) {
-                arg0->posXCurrent = 0;
+                arg0->position.x = 0;
             } else if (gButtonsPressed[3] & R_TRIG) {
-                temp = arg0->posXCurrent;
+                temp = arg0->position.x;
                 temp += gDebugCameraBaseStep << 16;
-                arg0->posXCurrent = temp;
+                arg0->position.x = temp;
             } else {
-                temp = arg0->posXCurrent;
+                temp = arg0->position.x;
                 temp += gDebugCameraBaseStep << 12;
-                arg0->posXCurrent = temp;
+                arg0->position.x = temp;
             }
 
             if (gButtonsPressed[0] & R_TRIG) {
-                temp = arg0->posYCurrent;
+                temp = arg0->position.y;
                 temp += gAnalogStickY << 12;
-                arg0->posYCurrent = temp;
+                arg0->position.y = temp;
             }
             break;
     }
@@ -212,31 +212,31 @@ void initCutsceneCameraRotationAndPos(CutsceneCameraState *arg0, s16 rotX, s16 r
     arg0->rotYDuration = 0;
     arg0->rotXDurationCopy = 0;
     arg0->rotYDurationCopy = 0;
-    arg0->posYCurrent = posY;
-    arg0->posYTarget = posY;
-    arg0->posXStep = 0;
-    arg0->posYStep = 0;
-    arg0->posZStep = 0;
+    arg0->position.y = posY;
+    arg0->targetPosition.y = posY;
+    arg0->positionStep.x = 0;
+    arg0->positionStep.y = 0;
+    arg0->positionStep.z = 0;
     arg0->posYDuration = 0;
     arg0->posZDuration = 0;
     arg0->posYDurationCopy = 0;
     arg0->posZDurationCopy = 0;
     arg0->animMode = 0;
-    arg0->posZCurrent = posZ;
-    arg0->posZTarget = posZ;
+    arg0->position.z = posZ;
+    arg0->targetPosition.z = posZ;
 }
 
 void initCutsceneCameraWithX(CutsceneCameraState *arg0, s16 rotX, s16 rotY, s32 posY, s32 posZ, s32 posX) {
     initCutsceneCameraRotationAndPos(arg0, rotX, rotY, posY, posZ);
-    arg0->posXCurrent = posX;
-    arg0->posXTarget = posX;
-    arg0->posXStep = 0;
+    arg0->position.x = posX;
+    arg0->targetPosition.x = posX;
+    arg0->positionStep.x = 0;
     arg0->posXDuration = 0;
     arg0->posXDurationCopy = 0;
 }
 
 void copyRotDurationToPosX(CutsceneCameraState *arg0, CutsceneCameraState *arg1) {
-    arg0->posXCurrent = *(s32 *)&arg1->rotXDuration;
+    arg0->position.x = *(s32 *)&arg1->rotXDuration;
 }
 
 void animateCameraRotationX(CutsceneCameraState *arg0, s16 targetRotX, s16 duration) {
@@ -294,37 +294,37 @@ void animateCameraRotationY(CutsceneCameraState *arg0, s16 targetRotY, s16 durat
 void animateCameraPositionX(CutsceneCameraState *arg0, s32 targetX, s16 duration) {
     s32 quotient;
 
-    quotient = (targetX - arg0->posXCurrent) / duration;
+    quotient = (targetX - arg0->position.x) / duration;
 
     arg0->animMode = 0;
-    arg0->posXTarget = targetX;
+    arg0->targetPosition.x = targetX;
     arg0->posXDuration = duration;
     arg0->posXDurationCopy = duration;
-    arg0->posXStep = quotient;
+    arg0->positionStep.x = quotient;
 }
 
 void animateCameraPositionY(CutsceneCameraState *arg0, s32 targetY, s16 duration) {
     s32 quotient;
 
-    quotient = (targetY - arg0->posYCurrent) / duration;
+    quotient = (targetY - arg0->position.y) / duration;
 
     arg0->animMode = 0;
-    arg0->posYTarget = targetY;
+    arg0->targetPosition.y = targetY;
     arg0->posYDuration = duration;
     arg0->posYDurationCopy = duration;
-    arg0->posYStep = quotient;
+    arg0->positionStep.y = quotient;
 }
 
 void animateCameraPositionZ(CutsceneCameraState *arg0, s32 targetZ, s16 duration) {
     s32 quotient;
 
-    quotient = (targetZ - arg0->posZCurrent) / duration;
+    quotient = (targetZ - arg0->position.z) / duration;
 
     arg0->animMode = 0;
-    arg0->posZTarget = targetZ;
+    arg0->targetPosition.z = targetZ;
     arg0->posZDuration = duration;
     arg0->posZDurationCopy = duration;
-    arg0->posZStep = quotient;
+    arg0->positionStep.z = quotient;
 }
 
 void animateCameraRotationYContinuous(CutsceneCameraState *camera, s16 step, s16 duration) {
@@ -368,19 +368,19 @@ s16 advanceCameraAnimation(CutsceneCameraState *arg0) {
         DIFFY_ROT_ALGO(Y)
     }
     if (arg0->posXDurationCopy >= 17) {
-        arg0->posXCurrent += arg0->posXStep;
+        arg0->position.x += arg0->positionStep.x;
     } else {
-        DIFFY_ALGO(X)
+        DIFFY_ALGO(x)
     }
     if (arg0->posYDurationCopy >= 17) {
-        arg0->posYCurrent += arg0->posYStep;
+        arg0->position.y += arg0->positionStep.y;
     } else {
-        DIFFY_ALGO(Y)
+        DIFFY_ALGO(y)
     }
     if (arg0->posZDurationCopy >= 17) {
-        arg0->posZCurrent = arg0->posZCurrent + arg0->posZStep;
+        arg0->position.z = arg0->position.z + arg0->positionStep.z;
     } else {
-        DIFFY_ALGO(Z)
+        DIFFY_ALGO(z)
     }
     if (arg0->rotXDurationCopy > 0) {
         arg0->rotXDurationCopy--;
@@ -433,8 +433,8 @@ s16 advanceSceneManager(CutsceneCameraState *arg0) {
     s8 temp;
 
     if (arg0->inputMode == 1) {
-        arg0->posYTarget = 0x166666;
-        arg0->posYCurrent = 0x166666;
+        arg0->targetPosition.y = 0x166666;
+        arg0->position.y = 0x166666;
     }
 
     temp = arg0->animMode;

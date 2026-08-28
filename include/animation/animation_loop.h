@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include "math/geometry.h"
 
 typedef struct {
     u8 _pad[0x20];
@@ -14,15 +15,9 @@ typedef struct {
     s16 rotYDuration;
     s16 rotXDurationCopy;
     s16 rotYDurationCopy;
-    s32 posXCurrent;
-    s32 posYCurrent;
-    s32 posZCurrent;
-    s32 posXTarget;
-    s32 posYTarget;
-    s32 posZTarget;
-    s32 posXStep;
-    s32 posYStep;
-    s32 posZStep;
+    Vec3i position;
+    Vec3i targetPosition;
+    Vec3i positionStep;
     s16 posXDuration;
     s16 posYDuration;
     s16 posZDuration;

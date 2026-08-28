@@ -12,12 +12,8 @@ typedef struct {
         } lighting;
         struct {
             /* 0x1D8 */ u8 pad1D8[0x0C];
-            /* 0x1E4 */ s32 posX;
-            /* 0x1E8 */ s32 posY;
-            /* 0x1EC */ s32 posZ;
-            /* 0x1F0 */ s32 velocityX;
-            /* 0x1F4 */ s32 velocityY;
-            /* 0x1F8 */ s32 velocityZ;
+            /* 0x1E4 */ Vec3i position;
+            /* 0x1F0 */ Vec3i velocity;
             /* 0x1FC */ s16 posFramesX;
             /* 0x1FE */ s16 posFramesY;
             /* 0x200 */ s16 posFramesZ;
@@ -41,7 +37,7 @@ void disableSceneRenderViewportEffect(SceneRenderNode *node);
 void setNodeRenderMode(SceneRenderNode *node, s32 renderMode);
 void setNodeWipeColor(SceneRenderNode *node, u8 r, u8 g, u8 b);
 void setNodeScaleTarget(SceneRenderNode *node, s32 scale, s16 frames);
-void setNodePositionTarget(SceneRenderNode *node, s32 *targetPos, s16 frames);
+void setNodePositionTarget(SceneRenderNode *node, Vec3i *targetPosition, s16 frames);
 void initSceneRenderNode(
     SceneRenderNode *node,
     u16 slotIndex,

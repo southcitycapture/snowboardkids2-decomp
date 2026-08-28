@@ -101,7 +101,7 @@ void cleanupShootCrossTargets(ShootCrossTargets *arg0) {
 }
 
 s32 checkProjectileTargetHit(Vec3i *projectilePos, s32 hitRange) {
-    s32 pos[3];
+    Vec3i pos;
     s32 unused[2];
     GameState *gameState;
     ShootCrossTargets *targets;
@@ -139,14 +139,14 @@ check_count:
     negRange = -range;
 
     do {
-        memcpy(pos, projectilePos, sizeof(Vec3i));
+        memcpy(&pos, projectilePos, sizeof(Vec3i));
         idx = i << 4;
-        x = pos[0] - targets->targets[i].position.x;
-        pos[0] = x;
-        y = (pos[1] + yOffset) - targets->targets[i].position.y;
-        pos[1] = y;
-        z = pos[2] - targets->targets[i].position.z;
-        pos[2] = z;
+        x = pos.x - targets->targets[i].position.x;
+        pos.x = x;
+        y = (pos.y + yOffset) - targets->targets[i].position.y;
+        pos.y = y;
+        z = pos.z - targets->targets[i].position.z;
+        pos.z = z;
 
         if (negRange < x) {
             if (x < range) {

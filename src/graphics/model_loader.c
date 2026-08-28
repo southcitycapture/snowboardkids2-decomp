@@ -212,8 +212,8 @@ void disableSceneRenderViewportEffect(SceneRenderNode *node) {
     node->state.anim.renderFlags &= ~1;
 }
 
-void copyNodePosition(SceneRenderNode *node, void *position) {
-    memcpy(&node->state.anim.posX, position, sizeof(Vec3i));
+void copyNodePosition(SceneRenderNode *node, const Vec3i *position) {
+    memcpy(&node->state.anim.position, position, sizeof(Vec3i));
 }
 
 void setNodeScale(SceneRenderNode *node, s32 scale) {
@@ -241,26 +241,26 @@ void setNodeScaleTarget(SceneRenderNode *node, s32 scale, s16 frames) {
     }
 }
 
-void setNodePositionTarget(SceneRenderNode *node, s32 *targetPos, s16 frames) {
+void setNodePositionTarget(SceneRenderNode *node, Vec3i *targetPosition, s16 frames) {
     s16 temp = frames;
 
     if (frames == 0) {
         node->state.anim.posFramesX = 0;
         node->state.anim.posFramesY = 0;
         node->state.anim.posFramesZ = 0;
-        node->state.anim.velocityX = 0;
-        node->state.anim.velocityY = 0;
-        node->state.anim.velocityZ = 0;
-        node->state.anim.posX = targetPos[0];
-        node->state.anim.posY = targetPos[1];
-        node->state.anim.posZ = targetPos[2];
+        node->state.anim.velocity.x = 0;
+        node->state.anim.velocity.y = 0;
+        node->state.anim.velocity.z = 0;
+        node->state.anim.position.x = targetPosition->x;
+        node->state.anim.position.y = targetPosition->y;
+        node->state.anim.position.z = targetPosition->z;
     } else {
         node->state.anim.posFramesX = temp;
         node->state.anim.posFramesY = temp;
         node->state.anim.posFramesZ = temp;
-        node->state.anim.velocityX = (targetPos[0] - node->state.anim.posX) / frames;
-        node->state.anim.velocityY = (targetPos[1] - node->state.anim.posY) / frames;
-        node->state.anim.velocityZ = (targetPos[2] - node->state.anim.posZ) / frames;
+        node->state.anim.velocity.x = (targetPosition->x - node->state.anim.position.x) / frames;
+        node->state.anim.velocity.y = (targetPosition->y - node->state.anim.position.y) / frames;
+        node->state.anim.velocity.z = (targetPosition->z - node->state.anim.position.z) / frames;
     }
 }
 
@@ -336,9 +336,9 @@ void loadSceneRenderTaskData(SceneRenderTask *ctx) {
     data = &gCutsceneSceneRenderAssetData;
     node = ctx->node;
     modelScale = 0x2000;
-    node->state.anim.velocityZ = 0;
-    node->state.anim.velocityY = 0;
-    node->state.anim.velocityX = 0;
+    node->state.anim.velocity.z = 0;
+    node->state.anim.velocity.y = 0;
+    node->state.anim.velocity.x = 0;
     if (((!(&gCutsceneSceneRenderAssetData)->vertStart2) && (!(&gCutsceneSceneRenderAssetData)->vertStart2)) &&
         (!(&gCutsceneSceneRenderAssetData)->vertStart2)) {}
     ctx->object1.segment1 =
@@ -391,7 +391,7 @@ void updateSceneRenderTask(SceneRenderTask *ctx) {
                 nodeD = ctx->node;
                 transform = &ctx->object1.transform;
                 memcpy(transform, &nodeD->base.viewTransform, sizeof(Transform3D));
-                memcpy(&ctx->object1.transform.translation, &ctx->node->state.anim.posX, sizeof(Vec3i));
+                memcpy(&ctx->object1.transform.translation, &ctx->node->state.anim.position, sizeof(Vec3i));
                 nodeA = ctx->node;
                 scaleFactor = (s16)((s64)(nodeA->state.anim.scale >> 8) * 0x2000 >> 8);
                 scaleMatrix(transform, scaleFactor, scaleFactor, scaleFactor);
@@ -401,7 +401,7 @@ void updateSceneRenderTask(SceneRenderTask *ctx) {
                 createZRotationMatrix(rotMatrix, nodeB->state.anim.rotationAngle);
                 memcpy(tempMatrix, &ctx->node->base.viewTransform, sizeof(Transform3D));
                 composeTransform3D(rotMatrix, tempMatrix, &ctx->object2.transform);
-                memcpy(&ctx->object2.transform.translation, &ctx->node->state.anim.posX, sizeof(Vec3i));
+                memcpy(&ctx->object2.transform.translation, &ctx->node->state.anim.position, sizeof(Vec3i));
                 nodeA = ctx->node;
                 scaleFactor = (s16)((s64)(nodeA->state.anim.scale >> 8) * 0x2000 >> 8);
                 scaleMatrix(&ctx->object2.transform, scaleFactor, scaleFactor, scaleFactor);
@@ -422,19 +422,19 @@ void updateSceneRenderTask(SceneRenderTask *ctx) {
             nodeC = ctx->node;
         }
         if (nodeC->state.anim.posFramesX > 0) {
-            nodeC->state.anim.posX += nodeC->state.anim.velocityX;
+            nodeC->state.anim.position.x += nodeC->state.anim.velocity.x;
             nodeB = ctx->node;
             nodeB->state.anim.posFramesX--;
         }
         nodeC = ctx->node;
         if (nodeC->state.anim.posFramesY > 0) {
-            nodeC->state.anim.posY += nodeC->state.anim.velocityY;
+            nodeC->state.anim.position.y += nodeC->state.anim.velocity.y;
             nodeB = ctx->node;
             nodeB->state.anim.posFramesY--;
         }
         nodeC = ctx->node;
         if (nodeC->state.anim.posFramesZ > 0) {
-            nodeC->state.anim.posZ += nodeC->state.anim.velocityZ;
+            nodeC->state.anim.position.z += nodeC->state.anim.velocity.z;
             nodeB = ctx->node;
             nodeB->state.anim.posFramesZ--;
         }

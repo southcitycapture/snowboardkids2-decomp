@@ -13,7 +13,7 @@ s32 cutsceneSys2Wipe_validate(void) {
 
 void cutsceneSys2Wipe_exec(cutsceneSys2Wipe_exec_arg0 *params, cutsceneSys2Wipe_exec_arg1 *state, s8 slot_index) {
     cutsceneSys2Wipe_exec_arg1_slot *slot;
-    Vec3 world_pos;
+    Vec3i world_pos;
     s32 temp_rotation;
 
     slot = &state->slots[slot_index];
@@ -30,7 +30,7 @@ void cutsceneSys2Wipe_exec(cutsceneSys2Wipe_exec_arg0 *params, cutsceneSys2Wipe_
     temp_rotation = (s32)(params->rotation_y) << 0x10;
 
     setNodeScaleTarget(&state->sceneRenderNode, temp_rotation / 100, params->unk2);
-    setNodePositionTarget(&state->sceneRenderNode, (s32 *)&world_pos, params->unk2);
+    setNodePositionTarget(&state->sceneRenderNode, &world_pos, params->unk2);
     setNodeRenderMode(&state->sceneRenderNode, params->render_flags);
 }
 

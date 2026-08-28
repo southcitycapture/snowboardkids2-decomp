@@ -51,15 +51,15 @@ s32 cutsceneSe3dPlay_validate(void) {
     return 0;
 }
 
-void cutsceneSe3dPlay_exec(cutsceneSePlay_exec_arg *arg0, cutsceneSe3dPlay_exec_arg1_item *arg1, s8 arg2) {
-    CutsceneSlotData **slotPtr;
-    CutsceneSlotData *slotData;
+void cutsceneSe3dPlay_exec(cutsceneSePlay_exec_arg *arg0, CutsceneSlot *slots, s8 slotIndex) {
+    SceneModel **modelPtr;
+    SceneModel *model;
 
-    slotPtr = &arg1[arg2].unkF0;
-    slotData = *slotPtr;
+    modelPtr = &slots[slotIndex].slotData.unkA4.ptr;
+    model = *modelPtr;
 
     if (arg0->repeatCount == 1) {
-        playFanSoundAtPosition(arg0->soundEffectId, arg0->volume, arg0->channelOrInterval, slotData);
+        playFanSoundAtPosition(arg0->soundEffectId, arg0->volume, arg0->channelOrInterval, model);
         return;
     }
 
@@ -69,7 +69,7 @@ void cutsceneSe3dPlay_exec(cutsceneSePlay_exec_arg *arg0, cutsceneSe3dPlay_exec_
         arg0->repeatCount,
         arg0->channelOrInterval,
         arg0->minInterval,
-        slotData
+        model
     );
 }
 

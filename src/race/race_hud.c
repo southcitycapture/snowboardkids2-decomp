@@ -508,13 +508,13 @@ extern DisplayLists D_8009A6A0_9B2A0;
 CompressedAsset gSceneAnimationDataAssets[] = {
 #include "generated/course_definitions/scene_animation_assets.inc"
 };
-s32 gCourseSceneryOffset[3] = { 0x00B90000, 0x00000000, 0xFF8D4000 };
-s32 gFlyingSceneryInitOffset[3] = { 0x009A8000, 0x00000000, 0xFF880000 };
-s32 D_80090B98_91798[3] = { 0x00000000, 0x00000000, 0x00040000 };
-s32 D_80090BA4_917A4[3] = { 0x00000000, 0x00018000, 0x00030000 };
-s32 D_80090BB0_917B0[3] = { 0x00000000, 0x00000000, 0x00030000 };
-s32 D_80090BBC_917BC[3] = { 0x00000000, 0xFFFE8000, 0x00030000 };
-s32 D_80090BC8_917C8[3] = { 0xFFE20000, 0xFFB50000, 0xFF1E0000 };
+Vec3i gCourseSceneryOffset = { 0x00B90000, 0x00000000, 0xFF8D4000 };
+Vec3i gFlyingSceneryInitOffset = { 0x009A8000, 0x00000000, 0xFF880000 };
+Vec3i D_80090B98_91798 = { 0x00000000, 0x00000000, 0x00040000 };
+Vec3i D_80090BA4_917A4 = { 0x00000000, 0x00018000, 0x00030000 };
+Vec3i D_80090BB0_917B0 = { 0x00000000, 0x00000000, 0x00030000 };
+Vec3i D_80090BBC_917BC = { 0x00000000, 0xFFFE8000, 0x00030000 };
+Vec3i D_80090BC8_917C8 = { 0xFFE20000, 0xFFB50000, 0xFF1E0000 };
 CompressedAsset gGoldCoinDataAssets[] = {
 #include "generated/course_definitions/gold_coin_assets.inc"
 };
@@ -559,9 +559,9 @@ Gfx gItemBoxBurstEffectDisplayList[] = {
     gsSP2Triangles(18, 19, 20, 0, 21, 22, 23, 0),
     gsSPEndDisplayList(),
 };
-s32 itemHomingProjectileBaseVector[3] = { 0x00000000, 0x00080000, 0x00020000 };
+Vec3i itemHomingProjectileBaseVector = { 0x00000000, 0x00080000, 0x00020000 };
 s32 bossHomingProjectileBaseVector[5] = { 0x00000000, 0x00000000, 0x00100000, 0x00000000, 0x00000000 };
-s32 D_80090E40_91A40[3] = { 0x00080000, 0x00000000, 0x00000000 };
+Vec3i D_80090E40_91A40 = { 0x00080000, 0x00000000, 0x00000000 };
 s32 D_80090E4C_91A4C = 0x00100000;
 s32 D_80090E50_91A50[4] = { 0x00000000, 0x00060000, 0x00000000, 0x00000000 };
 
@@ -1406,7 +1406,7 @@ void updateFlyingSceneryHorizontalStep(FlyingSceneryState *state) {
     allocation = (Allocation_47D1C *)getCurrentAllocation();
 
     if (allocation->raceUpdatePaused == 0) {
-        transformVector2(D_80090B98_91798, state, &movement);
+        transformVector2(&D_80090B98_91798, state, &movement);
 
         state->displayListObject.transform.translation.x += movement.x;
         state->displayListObject.transform.translation.z += movement.z;
@@ -1432,7 +1432,7 @@ void updateFlyingSceneryVerticalStep(FlyingSceneryState *state) {
     allocation = (Allocation_47D1C *)getCurrentAllocation();
 
     if (allocation->raceUpdatePaused == 0) {
-        transformVector2(D_80090BA4_917A4, state, &movement);
+        transformVector2(&D_80090BA4_917A4, state, &movement);
 
         state->displayListObject.transform.translation.x += movement.x;
         state->displayListObject.transform.translation.y += movement.y;
@@ -1458,7 +1458,7 @@ void resetFlyingSceneryPosition(FlyingSceneryState *state) {
     alloc = (AllocationStruct *)getCurrentAllocation();
     createYRotationMatrix(&state->displayListObject.transform, 0x1000);
     matrix = getLevelConfig(alloc->unk5C);
-    transformVector2(D_80090BC8_917C8, &state->displayListObject.transform, &vec);
+    transformVector2(&D_80090BC8_917C8, &state->displayListObject.transform, &vec);
 
     state->displayListObject.transform.translation.x = matrix->courseStartPos.x + vec.x;
     state->displayListObject.transform.translation.y = matrix->courseStartPos.y + vec.y;
@@ -1474,7 +1474,7 @@ void updateFlyingSceneryAscendingStep(FlyingSceneryState *state) {
     Vec3i tempVec;
 
     if (allocation->raceUpdatePaused == 0) {
-        transformVector2(D_80090BA4_917A4, &state->displayListObject.transform, &tempVec);
+        transformVector2(&D_80090BA4_917A4, &state->displayListObject.transform, &tempVec);
         state->displayListObject.transform.translation.x += tempVec.x;
         state->displayListObject.transform.translation.y += tempVec.y;
         state->displayListObject.transform.translation.z += tempVec.z;
@@ -1501,7 +1501,7 @@ void updateFlyingSceneryGlidingStep(FlyingSceneryState *state) {
     i = 0;
 
     if (allocation->raceUpdatePaused == 0) {
-        transformVector2(D_80090B98_91798, state, &vec);
+        transformVector2(&D_80090B98_91798, state, &vec);
 
         state->displayListObject.transform.translation.x += vec.x;
         state->displayListObject.transform.translation.y += vec.y;
@@ -1562,7 +1562,7 @@ void updateFlyingSceneryReturnGlideStep(FlyingSceneryState *state) {
 
     if (allocation->raceUpdatePaused == 0) {
         createYRotationMatrix(&state->displayListObject.transform, 0);
-        transformVector2(D_80090B98_91798, state, &vec);
+        transformVector2(&D_80090B98_91798, state, &vec);
 
         state->displayListObject.transform.translation.x += vec.x;
         state->displayListObject.transform.translation.y += vec.y;
@@ -1589,7 +1589,7 @@ void updateFlyingSceneryDescendingStep(FlyingSceneryState *state) {
     alloc = (GameState *)getCurrentAllocation();
 
     if (alloc->gamePaused == 0) {
-        transformVector2(D_80090BBC_917BC, state, &stackBuffer);
+        transformVector2(&D_80090BBC_917BC, state, &stackBuffer);
 
         state->displayListObject.transform.translation.x += stackBuffer.x;
         state->displayListObject.transform.translation.y += stackBuffer.y;
@@ -3746,7 +3746,7 @@ void spawnBossHomingProjectileVariant1(BossProjectileState *arg0) {
     rotationAngle = ((randomValue & 0xFF) << 5) + arg0->boss->yRotation;
 
     randomValue3 = randA();
-    addr = D_80090E40_91A40;
+    addr = &D_80090E40_91A40.x;
     *addr = (randomValue3 & 0xFF) * 7 * 256;
     rotateVectorY(addr - 2, rotationAngle, &arg0->velocity);
 

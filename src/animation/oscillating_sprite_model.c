@@ -14,9 +14,7 @@ typedef struct {
     u8 _pad0E[0x2];
     OscillatingModelSpriteInfo *spriteInfo;
     u8 _pad14[0x18];
-    s32 positionX;
-    s32 positionY;
-    s32 positionZ;
+    Vec3i position;
     u8 _pad38[0x4];
     s8 isDestroyed;
     s8 actionMode;
@@ -126,9 +124,9 @@ void updateOscillatingSpriteTask(OscillatingSpriteTaskState *state) {
             break;
     }
 
-    posX = state->model->positionX;
-    posY = state->model->positionY;
-    posZ = state->model->positionZ;
+    posX = state->model->position.x;
+    posY = state->model->position.y;
+    posZ = state->model->position.z;
 
     updateSpriteAnimation(&state->spriteState, 0x10000);
 

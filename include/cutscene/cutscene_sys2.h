@@ -14,14 +14,8 @@ typedef struct {
 } cutsceneSys2Wipe_exec_arg0;
 
 typedef struct {
-    s32 x;
-    s32 y;
-    s32 z;
-} Vec3;
-
-typedef struct {
     s8 pad[0x70];
-    Vec3 position;
+    Vec3i position;
     s8 pad2[0xF4 - 0x7C];
 } cutsceneSys2Wipe_exec_arg1_slot;
 

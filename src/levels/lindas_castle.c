@@ -40,7 +40,7 @@ void renderFlyingEnemy(FlyingEnemyTask *task) {
 void pullPlayersInRange(FlyingEnemyTask *task) {
     GameState *gs;
     Vec3i pos;
-    s32 pullTarget[3];
+    Vec3i pullTarget;
     s32 i;
     Player *player;
 
@@ -51,10 +51,10 @@ void pullPlayersInRange(FlyingEnemyTask *task) {
     for (i = 0; i < gs->numPlayers; i++) {
         player = &gs->players[i];
         if (isPlayerInRangeAndPull(&pos, 0x1C0000, player) != 0) {
-            pullTarget[0] = ((player->worldPos.x + player->collisionOffset.x - pos.x) / 2) + pos.x;
-            pullTarget[1] = ((player->worldPos.y + player->collisionOffset.y - pos.x) / 2) + pos.y;
-            pullTarget[2] = ((player->worldPos.z + player->collisionOffset.z - pos.x) / 2) + pos.z;
-            setPlayerPullState(&gs->players[i], &pullTarget[0]);
+            pullTarget.x = ((player->worldPos.x + player->collisionOffset.x - pos.x) / 2) + pos.x;
+            pullTarget.y = ((player->worldPos.y + player->collisionOffset.y - pos.x) / 2) + pos.y;
+            pullTarget.z = ((player->worldPos.z + player->collisionOffset.z - pos.x) / 2) + pos.z;
+            setPlayerPullState(&gs->players[i], &pullTarget);
         }
     }
 }

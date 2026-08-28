@@ -29,9 +29,7 @@ typedef struct {
 } cutsceneChrTurn3_exec_arg;
 
 typedef struct {
-    s32 targetX;
-    s32 targetY;
-    s32 targetZ;
+    Vec3i targetPosition;
     s16 targetAngle;
     s16 duration;
     s16 animIndex;
@@ -53,9 +51,7 @@ typedef struct {
 } cutsceneChrModelDisp_exec_arg;
 
 typedef struct {
-    s32 x;
-    s32 y;
-    s32 z;
+    Vec3i position;
     s16 rotY;
     s16 animIndex;
     s8 actionMode;
@@ -65,9 +61,7 @@ typedef struct {
 } cutsceneChrPosition_exec_arg;
 
 typedef struct {
-    s32 targetX;
-    s32 targetY;
-    s32 targetZ;
+    Vec3i targetPosition;
     s16 fallbackRotY;
     s16 duration;
     s16 animIndex;
@@ -78,9 +72,7 @@ typedef struct {
 } cutsceneChrMove_exec_arg;
 
 typedef struct {
-    s32 targetX;
-    s32 targetY;
-    s32 targetZ;
+    Vec3i targetPosition;
     s16 fallbackRotY;
     s16 duration;
     s16 animIndex;
@@ -92,9 +84,7 @@ typedef struct {
 } cutsceneChrMove2_exec_arg;
 
 typedef struct {
-    s32 targetX;
-    s32 targetY;
-    s32 targetZ;
+    Vec3i targetPosition;
     s16 targetAngle;
     s16 duration;
     s16 animIndex;
@@ -125,9 +115,7 @@ typedef struct {
 } cutsceneChrZoom_exec_arg;
 
 typedef struct {
-    s32 scalePercentX;
-    s32 scalePercentY;
-    s32 scalePercentZ;
+    Vec3i scalePercent;
     s16 duration;
 } cutsceneChrZoom2_exec_arg;
 
@@ -148,9 +136,7 @@ typedef struct {
 } cutsceneChrRotate_exec_arg;
 
 typedef struct {
-    s32 targetX;
-    s32 targetY;
-    s32 targetZ;
+    Vec3i targetPosition;
     s16 fallbackRotY;
     s16 duration;
     s16 animationId;
@@ -160,9 +146,7 @@ typedef struct {
 } cutsceneChrMoveToFacing_exec_arg;
 
 typedef struct {
-    s32 targetX;
-    s32 targetY;
-    s32 targetZ;
+    Vec3i targetPosition;
     s16 facingAngle;
     s16 duration;
     s16 animIndex;
@@ -173,9 +157,7 @@ typedef struct {
 } cutsceneChrUpDown_exec_arg;
 
 typedef struct {
-    s32 x;
-    s32 y;
-    s32 z;
+    Vec3i position;
     s16 rotY;
     s16 animIndex;
     s8 actionMode;

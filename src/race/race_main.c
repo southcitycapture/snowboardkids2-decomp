@@ -286,9 +286,9 @@ StunnedBehaviorPhaseHandler stunnedBehaviorPhaseHandlers[] = {
     (StunnedBehaviorPhaseHandler)updateKnockbackHomingBouncePhase,
 };
 
-s32 recoverySlideBaseVelocity[3] = { 0x00000000, 0x00000000, 0x00020000 };
+Vec3i recoverySlideBaseVelocity = { 0x00000000, 0x00000000, 0x00020000 };
 
-s32 respawnTrackOffset[3] = { 0x00000000, 0x00000000, 0xFFE00000 };
+Vec3i respawnTrackOffset = { 0x00000000, 0x00000000, 0xFFE00000 };
 
 KnockbackHomingBounceEntry knockbackHomingBounceTable[] = {
     { 0x0028, 0x0200 },
@@ -3472,9 +3472,9 @@ s32 updateStunnedRecoveryGroundSlidePhase(Player *player) {
     velocityMagnitude = distance_3d(player->velocity.x, player->velocity.y, player->velocity.z);
     if (velocityMagnitude <= 0xFFFF) {
         if (player->animationFlags & 2) {
-            rotateVectorY(recoverySlideBaseVelocity, player->rotY + 0x1000, &player->velocity);
+            rotateVectorY(&recoverySlideBaseVelocity, player->rotY + 0x1000, &player->velocity);
         } else {
-            rotateVectorY(recoverySlideBaseVelocity, player->rotY, &player->velocity);
+            rotateVectorY(&recoverySlideBaseVelocity, player->rotY, &player->velocity);
         }
     }
 

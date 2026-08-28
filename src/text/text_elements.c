@@ -8,20 +8,14 @@
 #include "system/task_scheduler.h"
 
 typedef struct {
-    s16 duration; /* 0x00 */
-    s16 pad02;    /* 0x02 */
-    s32 x;        /* 0x04 */
-    s32 y;        /* 0x08 */
-    s32 z;        /* 0x0C */
+    s16 duration;   /* 0x00 */
+    s16 pad02;      /* 0x02 */
+    Vec3i position; /* 0x04 */
 } CameraKeyframe;
 
 typedef struct {
-    s32 posX;                     /* 0x00 */
-    s32 posY;                     /* 0x04 */
-    s32 posZ;                     /* 0x08 */
-    s32 targetX;                  /* 0x0C */
-    s32 targetY;                  /* 0x10 */
-    s32 targetZ;                  /* 0x14 */
+    Vec3i position;               /* 0x00 */
+    Vec3i targetPosition;         /* 0x0C */
     CameraKeyframe *posKeyframes; /* 0x18 */
     CameraKeyframe *tgtKeyframes; /* 0x1C */
     s16 posFramesLeft;            /* 0x20 */
@@ -36,9 +30,7 @@ typedef struct {
 } OrbitCameraState;
 
 typedef struct {
-    s32 x;                    /* 0x00 */
-    s32 y;                    /* 0x04 */
-    s32 z;                    /* 0x08 */
+    Vec3i position;           /* 0x00 */
     u8 playerIdx;             /* 0x0C */
     u8 viewportIdx;           /* 0x0D */
     u8 padE[0x2];             /* 0x0E */
@@ -198,13 +190,13 @@ void initChaseCameraPosition(ChaseCameraState *camera) {
     transformVector2(&behindOffset, &rotationMatrix, &worldOffset);
 
     playerIdx = camera->playerIdx;
-    camera->x = gameState->players[playerIdx].worldPos.x + worldOffset.x;
+    camera->position.x = gameState->players[playerIdx].worldPos.x + worldOffset.x;
 
     playerIdx = camera->playerIdx;
-    camera->y = gameState->players[playerIdx].worldPos.y + worldOffset.y;
+    camera->position.y = gameState->players[playerIdx].worldPos.y + worldOffset.y;
 
     playerIdx = camera->playerIdx;
-    camera->z = gameState->players[playerIdx].worldPos.z + worldOffset.z;
+    camera->position.z = gameState->players[playerIdx].worldPos.z + worldOffset.z;
 
     camera->distance = 0x600000;
     camera->minDistance = 0x20000;
@@ -249,20 +241,20 @@ void updateChaseCamera(ChaseCameraState *camera) {
         }
         transformVector2(&behindOffset, &rotationMatrix, &worldOffset);
 
-        camera->x = gs->players[camera->playerIdx].worldPos.x + worldOffset.x;
-        camera->y = gs->players[camera->playerIdx].worldPos.y + worldOffset.y;
-        camera->z = gs->players[camera->playerIdx].worldPos.z + worldOffset.z;
+        camera->position.x = gs->players[camera->playerIdx].worldPos.x + worldOffset.x;
+        camera->position.y = gs->players[camera->playerIdx].worldPos.y + worldOffset.y;
+        camera->position.z = gs->players[camera->playerIdx].worldPos.z + worldOffset.z;
         gs->players[camera->playerIdx].finishAnimationState = 0;
     }
 
-    diffY = gs->players[camera->playerIdx].worldPos.y - camera->y;
+    diffY = gs->players[camera->playerIdx].worldPos.y - camera->position.y;
     if (diffY >= 0x4001) {
         diffY = 0x4000;
     }
     if (diffY < -0x4000) {
         diffY = -0x4000;
     }
-    camera->y += diffY;
+    camera->position.y += diffY;
 
     if ((u8)gs->showGoldReward != 0) {
         if (camera->minDistance <= 0x1FFFF) {
@@ -274,8 +266,8 @@ void updateChaseCamera(ChaseCameraState *camera) {
 
         transformVector2(&camera->minDistance, &camera->lookAtMatrix, &behindOffset);
 
-        camera->x += behindOffset.x;
-        camera->z += behindOffset.z;
+        camera->position.x += behindOffset.x;
+        camera->position.z += behindOffset.z;
 
         if (camera->targetY != 0x400000) {
             camera->targetY += (0x400000 - camera->targetY) / 0x20;
@@ -304,8 +296,8 @@ void updateChaseCamera(ChaseCameraState *camera) {
         }
     }
 
-    diffX = camera->x - gs->players[camera->playerIdx].worldPos.x;
-    diffZ = camera->z - gs->players[camera->playerIdx].worldPos.z;
+    diffX = camera->position.x - gs->players[camera->playerIdx].worldPos.x;
+    diffZ = camera->position.z - gs->players[camera->playerIdx].worldPos.z;
 
     dist = isqrt64(MAGNITUDE_SQ_2D(diffX, diffZ));
 
@@ -318,13 +310,13 @@ void updateChaseCamera(ChaseCameraState *camera) {
         diffX = (s64)diffX * targetDist / dist;
         diffZ = (s64)diffZ * targetDist / dist;
 
-        camera->x = diffX + gs->players[camera->playerIdx].worldPos.x;
-        camera->z = diffZ + gs->players[camera->playerIdx].worldPos.z;
+        camera->position.x = diffX + gs->players[camera->playerIdx].worldPos.x;
+        camera->position.z = diffZ + gs->players[camera->playerIdx].worldPos.z;
     }
 
-    diffX = camera->x - gs->players[camera->playerIdx].worldPos.x;
-    diffY = camera->y - gs->players[camera->playerIdx].worldPos.y;
-    diffZ = camera->z - gs->players[camera->playerIdx].worldPos.z;
+    diffX = camera->position.x - gs->players[camera->playerIdx].worldPos.x;
+    diffY = camera->position.y - gs->players[camera->playerIdx].worldPos.y;
+    diffZ = camera->position.z - gs->players[camera->playerIdx].worldPos.z;
 
     dist = isqrt64(MAGNITUDE_SQ_3D(diffX, diffY, diffZ));
 
@@ -334,9 +326,9 @@ void updateChaseCamera(ChaseCameraState *camera) {
         diffY = (s64)diffY * maxDist / dist;
         diffZ = (s64)diffZ * maxDist / dist;
 
-        camera->x = diffX + gs->players[camera->playerIdx].worldPos.x;
-        camera->y = diffY + gs->players[camera->playerIdx].worldPos.y;
-        camera->z = diffZ + gs->players[camera->playerIdx].worldPos.z;
+        camera->position.x = diffX + gs->players[camera->playerIdx].worldPos.x;
+        camera->position.y = diffY + gs->players[camera->playerIdx].worldPos.y;
+        camera->position.z = diffZ + gs->players[camera->playerIdx].worldPos.z;
     }
 
     if (dist < camera->distance) {
@@ -344,12 +336,12 @@ void updateChaseCamera(ChaseCameraState *camera) {
         diffY = (s64)diffY * camera->distance / dist;
         diffZ = (s64)diffZ * camera->distance / dist;
 
-        camera->x = diffX + gs->players[camera->playerIdx].worldPos.x;
-        camera->y = diffY + gs->players[camera->playerIdx].worldPos.y;
-        camera->z = diffZ + gs->players[camera->playerIdx].worldPos.z;
+        camera->position.x = diffX + gs->players[camera->playerIdx].worldPos.x;
+        camera->position.y = diffY + gs->players[camera->playerIdx].worldPos.y;
+        camera->position.z = diffZ + gs->players[camera->playerIdx].worldPos.z;
     }
 
-    computeLookAtMatrix((Vec3i *)camera, &gs->players[camera->playerIdx].worldPos, &camera->lookAtMatrix);
+    computeLookAtMatrix(&camera->position, &gs->players[camera->playerIdx].worldPos, &camera->lookAtMatrix);
 
     diffX = (s64)camera->lookAtMatrix.m[1][0] * camera->targetY / 0x2000;
     diffY = (s64)camera->lookAtMatrix.m[1][1] * camera->targetY / 0x2000;
@@ -370,8 +362,8 @@ void updateChaseCamera(ChaseCameraState *camera) {
             getTrackHeightInSector(&gs->gameData, trackHeight & 0xFFFF, &camera->lookAtMatrix.translation, 0x100000) +
             0xA0000;
         if (camera->lookAtMatrix.translation.y < trackHeight) {
-            camera->y += trackHeight - camera->lookAtMatrix.translation.y;
-            computeLookAtMatrix((Vec3i *)camera, &gs->players[camera->playerIdx].worldPos, &camera->lookAtMatrix);
+            camera->position.y += trackHeight - camera->lookAtMatrix.translation.y;
+            computeLookAtMatrix(&camera->position, &gs->players[camera->playerIdx].worldPos, &camera->lookAtMatrix);
 
             diffX = (s64)camera->lookAtMatrix.m[1][0] * camera->targetY / 0x2000;
             diffY = (s64)camera->lookAtMatrix.m[1][1] * camera->targetY / 0x2000;
@@ -498,7 +490,7 @@ void initScriptedCamera(ScriptedCameraState *camera) {
     }
 
     if (camera->tgtKeyframes != NULL) {
-        memcpy(&camera->targetX, (u8 *)camera->tgtKeyframes + 4, sizeof(Vec3i));
+        memcpy(&camera->targetPosition, &camera->tgtKeyframes->position, sizeof(Vec3i));
         camera->tgtFramesLeft = *(u16 *)camera->tgtKeyframes;
         if (camera->tgtFramesLeft == 0) {
             camera->tgtKeyframes = (CameraKeyframe *)((u8 *)camera->tgtKeyframes + 0x10);
@@ -519,9 +511,9 @@ void updateScriptedCamera(ScriptedCameraState *camera) {
     gameState = getCurrentAllocation();
 
     if (camera->posMode == 0) {
-        camera->posX += ((camera->posKeyframes->x - camera->posX) / camera->posFramesLeft);
-        camera->posY += ((camera->posKeyframes->y - camera->posY) / camera->posFramesLeft);
-        camera->posZ += ((camera->posKeyframes->z - camera->posZ) / camera->posFramesLeft);
+        camera->position.x += ((camera->posKeyframes->position.x - camera->position.x) / camera->posFramesLeft);
+        camera->position.y += ((camera->posKeyframes->position.y - camera->position.y) / camera->posFramesLeft);
+        camera->position.z += ((camera->posKeyframes->position.z - camera->position.z) / camera->posFramesLeft);
         camera->posFramesLeft--;
         if (camera->posFramesLeft == 0) {
             camera->posKeyframes = (CameraKeyframe *)((u8 *)camera->posKeyframes + 0x10);
@@ -531,13 +523,16 @@ void updateScriptedCamera(ScriptedCameraState *camera) {
 
     switch (camera->tgtMode) {
         case 0:
-            memcpy(&camera->targetX, &gameState->players[0].worldPos, sizeof(Vec3i));
-            camera->targetY += 0x200000;
+            memcpy(&camera->targetPosition, &gameState->players[0].worldPos, sizeof(Vec3i));
+            camera->targetPosition.y += 0x200000;
             break;
         case 1:
-            camera->targetX += ((camera->tgtKeyframes->x - camera->targetX) / camera->tgtFramesLeft);
-            camera->targetY += ((camera->tgtKeyframes->y - camera->targetY) / camera->tgtFramesLeft);
-            camera->targetZ += ((camera->tgtKeyframes->z - camera->targetZ) / camera->tgtFramesLeft);
+            camera->targetPosition.x +=
+                ((camera->tgtKeyframes->position.x - camera->targetPosition.x) / camera->tgtFramesLeft);
+            camera->targetPosition.y +=
+                ((camera->tgtKeyframes->position.y - camera->targetPosition.y) / camera->tgtFramesLeft);
+            camera->targetPosition.z +=
+                ((camera->tgtKeyframes->position.z - camera->targetPosition.z) / camera->tgtFramesLeft);
             camera->tgtFramesLeft--;
             if (camera->tgtFramesLeft == 0) {
                 camera->tgtKeyframes = (CameraKeyframe *)((u8 *)camera->tgtKeyframes + 0x10);
@@ -545,16 +540,16 @@ void updateScriptedCamera(ScriptedCameraState *camera) {
             }
             break;
         case 2:
-            memcpy(&camera->targetX, &gameState->players[2].worldPos, sizeof(Vec3i));
-            camera->targetY += 0x200000;
+            memcpy(&camera->targetPosition, &gameState->players[2].worldPos, sizeof(Vec3i));
+            camera->targetPosition.y += 0x200000;
             break;
         case 3:
-            memcpy(&camera->targetX, &gameState->players[1].worldPos, sizeof(Vec3i));
-            camera->targetY += 0x200000;
+            memcpy(&camera->targetPosition, &gameState->players[1].worldPos, sizeof(Vec3i));
+            camera->targetPosition.y += 0x200000;
             break;
     }
 
-    computeLookAtMatrix((Vec3i *)camera, (Vec3i *)&camera->targetX, &cameraMatrix.transform);
+    computeLookAtMatrix(&camera->position, &camera->targetPosition, &cameraMatrix.transform);
     setViewportTransformById(0x64, &cameraMatrix.transform);
 
     if (gameState->players[0].trackFaceSubtype == 0) {

@@ -20,9 +20,7 @@ typedef struct {
     s16 m21;
     s16 m22;
     s16 pad132;
-    s32 camX;
-    s32 camY;
-    s32 camZ;
+    Vec3i cameraPosition;
 } CameraTransform;
 
 extern float __cosf(float);
@@ -53,9 +51,9 @@ void worldToScreenCoords(s32 *outX, s32 *outY, Vec3i *worldPos) {
 
     posY = worldPos->y;
     posZ = worldPos->z;
-    posZ = posZ - cam->camZ;
-    relX = worldPos->x - cam->camX;
-    relY = posY - cam->camY;
+    posZ = posZ - cam->cameraPosition.z;
+    relX = worldPos->x - cam->cameraPosition.x;
+    relY = posY - cam->cameraPosition.y;
     relZ = posZ;
 
     viewX = relX * m00 + relY * m01 + relZ * m02;

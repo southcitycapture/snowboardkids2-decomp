@@ -11,12 +11,8 @@
 #include "ui/level_preview_3d.h"
 
 typedef struct {
-    s32 posX;              // 0x00
-    s32 posY;              // 0x04
-    s32 posZ;              // 0x08
-    s32 targetX;           // 0x0C
-    s32 targetY;           // 0x10
-    s32 targetZ;           // 0x14
+    Vec3i position;        // 0x00
+    Vec3i targetPosition;  // 0x0C
     TrackData gameData;    // 0x18
     void *sceneModel;      // 0x2C
     Transform3D transform; // 0x30

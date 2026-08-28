@@ -42,9 +42,7 @@ typedef struct {
 
 typedef struct {
     /* 0x00  */ u8 _pad0[0x1F0];
-    /* 0x1F0 */ s32 pos1F0;
-    /* 0x1F4 */ s32 pos1F4;
-    /* 0x1F8 */ s32 pos1F8;
+    /* 0x1F0 */ Vec3i position;
     /* 0x1FC */ u8 _pad1FC[0x98C];
     /* 0xB88 */ s32 behaviorFlags;
 } FallingEffectPlayer;
@@ -263,7 +261,7 @@ typedef struct {
 
 typedef struct WarpEffectSource {
     /* 0x00 */ u8 pad0[0x434];
-    /* 0x434 */ s32 sourcePosition[3];
+    /* 0x434 */ Vec3i sourcePosition;
 } WarpEffectSource;
 
 struct WarpEffectState {
@@ -313,7 +311,7 @@ typedef struct {
 typedef struct {
     /* 0x00 */ s32 dataOffset;
     /* 0x04 */ s32 dataCount;
-    /* 0x08 */ s32 pos[3];
+    /* 0x08 */ Vec3i position;
     /* 0x14 */ u16 pitch;
     /* 0x16 */ u16 yaw;
     /* 0x18 */ s16 xMin;
@@ -490,9 +488,9 @@ void initFallingEffect(FallingEffectState *arg0) {
 void updateFallingEffect(FallingEffectState *arg0) {
     s32 i;
 
-    arg0->transform.translation.x = arg0->player->pos1F0;
-    arg0->transform.translation.y = arg0->player->pos1F4;
-    arg0->transform.translation.z = arg0->player->pos1F8;
+    arg0->transform.translation.x = arg0->player->position.x;
+    arg0->transform.translation.y = arg0->player->position.y;
+    arg0->transform.translation.z = arg0->player->position.z;
 
     if ((arg0->player->behaviorFlags & 0x20) == 0) {
         setCallback(animateFallingEffectDescent);
@@ -1045,7 +1043,7 @@ void updateWarpEffect(WarpEffectState *state) {
     createXRotationMatrix(state->transform.m, 0);
     scale = (s16)state->scale;
     scaleMatrix(&state->transform, scale, scale, scale);
-    memcpy(&state->transform.translation, state->source->sourcePosition, sizeof(Vec3i));
+    memcpy(&state->transform.translation, &state->source->sourcePosition, sizeof(Vec3i));
     state->transform.translation.y += state->height;
 
     for (i = 0; i < 4; i++) {
@@ -1887,7 +1885,7 @@ void initPushZone(PushZoneState *arg0) {
         gPushZoneData[arg0->zoneIndex].pitch,
         gPushZoneData[arg0->zoneIndex].yaw
     );
-    memcpy(&arg0->transform.translation, gPushZoneData[arg0->zoneIndex].pos, sizeof(Vec3i));
+    memcpy(&arg0->transform.translation, &gPushZoneData[arg0->zoneIndex].position, sizeof(Vec3i));
     arg0->displayData =
         (void *)(gPushZoneData[arg0->zoneIndex].dataOffset + (gPushZoneData[arg0->zoneIndex].dataCount << 4));
     arg0->asset1 = loadUncompressedAssetByIndex(allocation->unk5C);

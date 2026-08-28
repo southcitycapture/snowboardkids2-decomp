@@ -13,9 +13,7 @@ typedef struct {
     /* 0x0A */ u8 opacity;
     /* 0x0B */ s8 state;
     /* 0x0C */ s32 targetScale;
-    /* 0x10 */ s32 offsetX;
-    /* 0x14 */ s32 offsetY;
-    /* 0x18 */ s32 offsetZ;
+    /* 0x10 */ Vec3i offset;
     /* 0x1C */ u16 rotation;
     /* 0x1E */ u16 useParentPos;
     /* 0x20 */ SpriteAssetState spriteState;

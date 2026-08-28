@@ -158,7 +158,7 @@ void updateTiledTextureAssetDisplay(ScrollingTileGroupTaskData *taskData) {
         return;
     }
 
-    scrollOffset = ((CutsceneCameraState *)taskData->cutsceneManager->sceneContext)->posXCurrent;
+    scrollOffset = ((CutsceneCameraState *)taskData->cutsceneManager->sceneContext)->position.x;
     scrollOffset = (scrollOffset >> 8) * (taskData->parallaxScale >> 8);
     scrollOffset >>= 16;
     taskData->screenY = 0x44;

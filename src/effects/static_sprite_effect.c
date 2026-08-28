@@ -9,9 +9,7 @@
 typedef struct {
     s32 unk0;
     s32 unk4;
-    s32 posX;
-    s32 posY;
-    s32 posZ;
+    Vec3i position;
     s32 unk14;
     s32 unk18;
     s32 unk1C;
@@ -21,21 +19,17 @@ typedef struct {
     void *modelData;
     BillboardSprite sprite1;
     BillboardSprite sprite2;
-    s32 velocityX;
-    s32 velocityY;
-    s32 velocityZ;
+    Vec3i velocity;
     s16 frameCounter;
 } StaticSpriteEffectTaskData;
 
 typedef struct {
     u8 padding[0x8];
-    u8 startPos[0xC];
+    Vec3i startPosition;
     u8 padding2[0x14];
-    u8 endPos[0xC];
+    Vec3i endPosition;
     u8 padding3[0x10];
-    s32 velocityX;
-    s32 velocityY;
-    s32 velocityZ;
+    Vec3i velocity;
     u8 padding4[0x4];
     s16 frameCounter;
 } StaticSpriteEffectTaskMemory;
@@ -77,9 +71,9 @@ void updateStaticSpriteEffectTask(StaticSpriteEffectTaskData *arg0) {
     if (arg0->frameCounter != 0) {
         StaticSpriteEffectPositionNode *node = (StaticSpriteEffectPositionNode *)arg0;
         for (i = 0; i < 2; i++) {
-            node[i].posX += arg0->velocityX;
-            node[i].posY += arg0->velocityY;
-            node[i].posZ += arg0->velocityZ;
+            node[i].position.x += arg0->velocity.x;
+            node[i].position.y += arg0->velocity.y;
+            node[i].position.z += arg0->velocity.z;
         }
     }
 
@@ -93,15 +87,15 @@ void cleanupStaticSpriteEffectTask(void **arg0) {
     *arg0 = freeNodeMemory(*arg0);
 }
 
-void scheduleStaticSpriteEffectTask(void *startPos, void *endPos, Vec3i *velocity, s32 unused) {
+void scheduleStaticSpriteEffectTask(const Vec3i *startPosition, const Vec3i *endPosition, Vec3i *velocity, s32 unused) {
     StaticSpriteEffectTaskMemory *task =
         (StaticSpriteEffectTaskMemory *)scheduleTask(&initStaticSpriteEffectTask, 0, 0, 0);
     if (task != NULL) {
-        memcpy(&task->startPos, startPos, sizeof(Vec3i));
-        memcpy(&task->endPos, endPos, sizeof(Vec3i));
+        memcpy(&task->startPosition, startPosition, sizeof(Vec3i));
+        memcpy(&task->endPosition, endPosition, sizeof(Vec3i));
         task->frameCounter = 0;
-        task->velocityX = velocity->x / 2;
-        task->velocityY = velocity->y / 2;
-        task->velocityZ = velocity->z / 2;
+        task->velocity.x = velocity->x / 2;
+        task->velocity.y = velocity->y / 2;
+        task->velocity.z = velocity->z / 2;
     }
 }

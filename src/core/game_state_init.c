@@ -34,9 +34,9 @@ void initializeGameState(void) {
     temp_s0->discoveredLocationId = 0;
     temp_s0->locationDiscovered = 0;
     temp_s0->unk42E = 0;
-    temp_s0->unk3D0 = 0;
-    temp_s0->unk3D4 = 0;
-    temp_s0->unk3D8 = 0;
+    temp_s0->storyMapCharacterPosition.x = 0;
+    temp_s0->storyMapCharacterPosition.y = 0;
+    temp_s0->storyMapCharacterPosition.z = 0;
     temp_s0->unk42A = 0;
     var_s1 = 0;
     do {

@@ -2,4 +2,4 @@
 
 #include "math/geometry.h"
 
-void scheduleStaticSpriteEffectTask(void *startPos, void *endPos, Vec3i *velocity, s32 unused);
+void scheduleStaticSpriteEffectTask(const Vec3i *startPosition, const Vec3i *endPosition, Vec3i *velocity, s32 unused);

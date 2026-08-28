@@ -131,26 +131,26 @@ void initSlotData(CutsceneSlotData *slot) {
     memcpy(&slot->transform, &identityMatrix, sizeof(Transform3D));
 
     slot->unk0.bytes[0] = 0;
-    slot->unk20_u.unk20_s32 = 0;
-    slot->unk28 = 0;
-    slot->unk2C = 0;
-    slot->unk30 = 0;
-    slot->unk34 = 0;
-    slot->unk38 = 0;
-    slot->posVelX = 0;
-    slot->posVelY = 0;
-    slot->posVelZ = 0;
+    slot->position.x = 0;
+    slot->position.y = 0;
+    slot->position.z = 0;
+    slot->targetPosition.x = 0;
+    slot->targetPosition.y = 0;
+    slot->targetPosition.z = 0;
+    slot->velocity.x = 0;
+    slot->velocity.y = 0;
+    slot->velocity.z = 0;
 
-    slot->scaleCurrentX = 0x10000;
-    slot->scaleCurrentY = 0x10000;
-    slot->scaleCurrentZ = 0x10000;
-    slot->scaleTargetX = 0x10000;
-    slot->scaleTargetY = 0x10000;
-    slot->scaleTargetZ = 0x10000;
+    slot->scale.x = 0x10000;
+    slot->scale.y = 0x10000;
+    slot->scale.z = 0x10000;
+    slot->targetScale.x = 0x10000;
+    slot->targetScale.y = 0x10000;
+    slot->targetScale.z = 0x10000;
 
-    slot->scaleVelX = 0;
-    slot->scaleVelY = 0;
-    slot->scaleVelZ = 0;
+    slot->scaleVelocity.x = 0;
+    slot->scaleVelocity.y = 0;
+    slot->scaleVelocity.z = 0;
 
     slot->rotY = 0;
     slot->rotYTarget = 0;
@@ -209,21 +209,21 @@ s32 setupSlotTransform(CutsceneSlotData *slot) {
     composeTransform3D(&rotZ, &rotY, &tempXYZ);
     composeTransform3D(&rotX, &tempXYZ, &tempYZ);
 
-    scaleX = slot->scaleCurrentX;
+    scaleX = slot->scale.x;
     pScale = &scaleMat;
     if (scaleX >= 0) {
         goto skip1;
     }
     scaleX += 7;
 skip1:
-    scaleY = slot->scaleCurrentY;
+    scaleY = slot->scale.y;
     sx = (s16)((scaleX << 0xD) >> 0x10);
     if (scaleY >= 0) {
         goto skip2;
     }
     scaleY += 7;
 skip2:
-    scaleZ = slot->scaleCurrentZ;
+    scaleZ = slot->scale.z;
     sy = (s16)((scaleY << 0xD) >> 0x10);
     if (scaleZ >= 0) {
         goto skip3;
@@ -235,21 +235,21 @@ skip3:
     scaleMatrix(pScale, sx, sy, sz);
     composeTransform3D(pScale, &tempYZ, &slot->transform);
 
-    retval = slot->unk20_u.unk20_s32;
+    retval = slot->position.x;
     slot->transform.translation.x = retval;
-    slot->transform.translation.y = slot->unk28;
-    slot->transform.translation.z = slot->unk2C;
+    slot->transform.translation.y = slot->position.y;
+    slot->transform.translation.z = slot->position.z;
 
     return retval;
 }
 
 void setSlotScale(CutsceneSlotData *slot, s32 scaleX, s32 scaleY, s32 scaleZ) {
-    slot->scaleTargetX = scaleX;
-    slot->scaleCurrentX = scaleX;
-    slot->scaleTargetY = scaleY;
-    slot->scaleCurrentY = scaleY;
-    slot->scaleTargetZ = scaleZ;
-    slot->scaleCurrentZ = scaleZ;
+    slot->targetScale.x = scaleX;
+    slot->scale.x = scaleX;
+    slot->targetScale.y = scaleY;
+    slot->scale.y = scaleY;
+    slot->targetScale.z = scaleZ;
+    slot->scale.z = scaleZ;
 }
 
 void handleSlotDebugInput(CutsceneSlotData *slot, CutsceneCameraState *camera) {
@@ -270,7 +270,7 @@ void handleSlotDebugInput(CutsceneSlotData *slot, CutsceneCameraState *camera) {
     }
     // R+Z: Reset Y position and X/Z rotations
     if ((gButtonsPressed & (Z_TRIG + R_TRIG)) == (Z_TRIG + R_TRIG)) {
-        slot->unk28 = 0;
+        slot->position.y = 0;
         slot->rotX = 0;
         slot->rotZ = 0;
         return;
@@ -282,7 +282,7 @@ void handleSlotDebugInput(CutsceneSlotData *slot, CutsceneCameraState *camera) {
     }
     // R: Move Y position with analog stick
     if (gButtonsPressed & R_TRIG) {
-        slot->unk28 = slot->unk28 + (gAnalogStickY << 12);
+        slot->position.y = slot->position.y + (gAnalogStickY << 12);
         return;
     }
     // L: Rotate X/Z with analog stick
@@ -301,8 +301,8 @@ void handleSlotDebugInput(CutsceneSlotData *slot, CutsceneCameraState *camera) {
     moveZ = -gAnalogStickY * 16;
     cameraSin = cameraSin >> 8;
 
-    slot->unk20_u.unk20_s32 = slot->unk20_u.unk20_s32 + ((cameraCos * moveX) + (cameraSin * moveZ));
-    slot->unk2C = slot->unk2C + ((-cameraSin * moveX) + (cameraCos * moveZ));
+    slot->position.x = slot->position.x + ((cameraCos * moveX) + (cameraSin * moveZ));
+    slot->position.z = slot->position.z + ((-cameraSin * moveX) + (cameraCos * moveZ));
 }
 
 void updateSlotRotVelocity(CutsceneSlotData *slot, s16 speedMode) {
@@ -361,19 +361,19 @@ void initSlotPositionEx(CutsceneSlotData *slot, s32 x, s32 y, s32 z, s16 rotY, s
 
     maskedRotY = rotY & 0x1FFF;
 
-    slot->unk20_u.unk20_s32 = x;
-    slot->unk30 = x;
+    slot->position.x = x;
+    slot->targetPosition.x = x;
     slot->unk0.bytes[0] = 0;
-    slot->unk28 = y;
-    slot->unk2C = z;
-    slot->unk34 = y;
-    slot->unk38 = z;
-    slot->posVelX = 0;
-    slot->posVelY = 0;
-    slot->posVelZ = 0;
-    slot->scaleVelX = 0;
-    slot->scaleVelY = 0;
-    slot->scaleVelZ = 0;
+    slot->position.y = y;
+    slot->position.z = z;
+    slot->targetPosition.y = y;
+    slot->targetPosition.z = z;
+    slot->velocity.x = 0;
+    slot->velocity.y = 0;
+    slot->velocity.z = 0;
+    slot->scaleVelocity.x = 0;
+    slot->scaleVelocity.y = 0;
+    slot->scaleVelocity.z = 0;
     slot->rotYVel = 0;
     slot->animFramesRemaining = 0;
     slot->animFramesDuration = 0;
@@ -432,26 +432,26 @@ s32 setupSlotMoveToEx(
     if ((s32)(temp_v0 << 16) <= 0) {
         frames = 1;
     }
-    slot->unk30 = targetX;
-    slot->unk34 = targetY;
-    slot->unk38 = targetZ;
+    slot->targetPosition.x = targetX;
+    slot->targetPosition.y = targetY;
+    slot->targetPosition.z = targetZ;
     slot->animFramesRemaining = frames;
     slot->animFramesDuration = frames;
-    deltaX = slot->unk30 - slot->unk20_u.unk20_s32;
-    deltaY = slot->unk34 - slot->unk28;
-    deltaZ = slot->unk38 - slot->unk2C;
+    deltaX = slot->targetPosition.x - slot->position.x;
+    deltaY = slot->targetPosition.y - slot->position.y;
+    deltaZ = slot->targetPosition.z - slot->position.z;
     slot->angle = 0;
     if (moveModeS8 == 0) {
         slot->unk0.animMode = SLOT_ANIM_MODE_LINEAR_MOVE;
-        slot->posVelX = deltaX / frames;
-        slot->posVelY = deltaY / frames;
-        slot->posVelZ = deltaZ / frames;
+        slot->velocity.x = deltaX / frames;
+        slot->velocity.y = deltaY / frames;
+        slot->velocity.z = deltaZ / frames;
     } else if (moveModeS8 == 1) {
         slot->unk0.animMode = SLOT_ANIM_MODE_DECEL_MOVE;
         slot->unk0.bytes[3] = decelRateU8;
-        slot->unk48 = deltaX / frames;
-        slot->unk4C = deltaY / frames;
-        slot->unk50 = deltaZ / frames;
+        slot->targetVelocity.x = deltaX / frames;
+        slot->targetVelocity.y = deltaY / frames;
+        slot->targetVelocity.z = deltaZ / frames;
     }
     if ((deltaX == 0) && (deltaZ == 0)) {
         slot->rotYTarget = (s16)rotYParam;
@@ -495,9 +495,9 @@ s32 setupSlotMoveToWithRotation(
         frames = 1;
     }
 
-    slot->unk30 = targetX;
-    slot->unk34 = targetY;
-    slot->unk38 = targetZ;
+    slot->targetPosition.x = targetX;
+    slot->targetPosition.y = targetY;
+    slot->targetPosition.z = targetZ;
 
     slot->animFramesRemaining = frames;
     slot->animFramesDuration = frames;
@@ -505,9 +505,9 @@ s32 setupSlotMoveToWithRotation(
     slot->rotYTarget = targetRotY;
     slot->unk0.animMode = SLOT_ANIM_MODE_LINEAR_MOVE;
 
-    slot->posVelX = (slot->unk30 - slot->unk20_u.unk20_s32) / frames;
-    slot->posVelY = (slot->unk34 - slot->unk28) / frames;
-    slot->posVelZ = (slot->unk38 - slot->unk2C) / frames;
+    slot->velocity.x = (slot->targetPosition.x - slot->position.x) / frames;
+    slot->velocity.y = (slot->targetPosition.y - slot->position.y) / frames;
+    slot->velocity.z = (slot->targetPosition.z - slot->position.z) / frames;
 
     rotVel = calcAngleDiff(slot, 0, targetRotY, slot->rotY) / frames;
     slot->rotYVel = rotVel;
@@ -545,18 +545,18 @@ void setupSlotWalkTo(
         frames = 1;
     }
 
-    pTargetX = &slot->unk30;
+    pTargetX = &slot->targetPosition.x;
     *pTargetX = targetX;
-    deltaX = *pTargetX - slot->unk20_u.unk20_s32;
+    deltaX = *pTargetX - slot->position.x;
     velX = deltaX / frames;
 
-    pTargetY = &slot->unk34;
+    pTargetY = &slot->targetPosition.y;
     *pTargetY = targetY;
-    velY = (*pTargetY - slot->unk28) / frames;
+    velY = (*pTargetY - slot->position.y) / frames;
 
-    pTargetZ = &slot->unk38;
+    pTargetZ = &slot->targetPosition.z;
     *pTargetZ = targetZ;
-    deltaZ = *pTargetZ - slot->unk2C;
+    deltaZ = *pTargetZ - slot->position.z;
     velZ = deltaZ / frames;
 
     slot->unk0.bytes[1] = 0;
@@ -569,9 +569,9 @@ void setupSlotWalkTo(
     slot->unkA4.byte = decelMode;
     slot->unk0.animMode = SLOT_ANIM_MODE_WALK;
 
-    slot->posVelX = velX;
-    slot->posVelY = velY;
-    slot->posVelZ = velZ;
+    slot->velocity.x = velX;
+    slot->velocity.y = velY;
+    slot->velocity.z = velZ;
 
     if ((u32)deltaX < 1 && (u32)deltaZ < 1) {
     } else {
@@ -606,9 +606,9 @@ s32 setupSlotRotateTo(CutsceneSlotData *slot, SceneModel *unused, s16 targetRotY
     turnDir = 0;
     slot->rotYTarget = targetRotY;
     slot->unk0.animMode = SLOT_ANIM_MODE_ROTATE;
-    slot->posVelX = 0;
-    slot->posVelY = 0;
-    slot->posVelZ = 0;
+    slot->velocity.x = 0;
+    slot->velocity.y = 0;
+    slot->velocity.z = 0;
     angleDiff = calcAngleDiff(slot, 0, targetRotY, slot->rotY);
 
     if ((angleDiff >= 0 ? angleDiff : -angleDiff) >= ANGLE_TURN_THRESHOLD) {
@@ -639,9 +639,9 @@ s32 setupSlotRotateToWithDir(CutsceneSlotData *slot, SceneModel *unused, s16 tar
 
     turnDir = 0;
     slot->unk0.animMode = SLOT_ANIM_MODE_ROTATE;
-    slot->posVelX = 0;
-    slot->posVelY = 0;
-    slot->posVelZ = 0;
+    slot->velocity.x = 0;
+    slot->velocity.y = 0;
+    slot->velocity.z = 0;
     slot->rotYTarget = targetRotY;
     initialAngleDiff = calcAngleDiff(slot, direction, targetRotY, slot->rotY);
 
@@ -694,9 +694,9 @@ s32 setupSlotRotateWithSpeed(
     s16 durationS16 = duration;
 
     slot->unk0.animMode = SLOT_ANIM_MODE_ROTATE_WITH_SPEED;
-    slot->posVelX = 0;
-    slot->posVelY = 0;
-    slot->posVelZ = 0;
+    slot->velocity.x = 0;
+    slot->velocity.y = 0;
+    slot->velocity.z = 0;
     slot->rotYTarget = targetRotY;
     slot->animFramesRemaining = durationS16;
     slot->animFramesDuration = durationS16;
@@ -722,15 +722,15 @@ void setupSlotOrbit(CutsceneSlotData *slot, s32 orbitDir, s16 duration, s16 orbi
     slot->orbitSpeedParam = orbitSpeed;
     slot->animFramesRemaining = duration;
     slot->animFramesDuration = duration;
-    angle = (atan2Fixed(slot->unk20_u.unk20_s32, slot->unk2C) + ANGLE_HALF_CIRCLE) & ANGLE_13BIT_MASK;
+    angle = (atan2Fixed(slot->position.x, slot->position.z) + ANGLE_HALF_CIRCLE) & ANGLE_13BIT_MASK;
     slot->orbitAngle.orbitAngle_s32 = angle;
     cosVal = approximateCos(angle) << 2;
     if (cosVal == 0) {
-        radiusAlt = (slot->unk20_u.unk20_s32 << 8) / ((approximateSin(slot->orbitAngle.s.orbitAngle_high) << 2) >> 8);
+        radiusAlt = (slot->position.x << 8) / ((approximateSin(slot->orbitAngle.s.orbitAngle_high) << 2) >> 8);
         radiusAlt = (radiusAlt > 0) ? radiusAlt : -radiusAlt;
         slot->orbitRadius = radiusAlt;
     } else {
-        radius = (slot->unk2C << 8) / (cosVal >> 8);
+        radius = (slot->position.z << 8) / (cosVal >> 8);
         radius = (radius > 0) ? radius : -radius;
         slot->orbitRadius = radius;
     }
@@ -747,25 +747,25 @@ void interpolateSlotScaleX(CutsceneSlotData *slot, s32 targetScaleX, s16 duratio
     s32 vel;
 
     if (duration > 0) {
-        diff = targetScaleX - slot->scaleCurrentX;
+        diff = targetScaleX - slot->scale.x;
         vel = diff / duration;
-        slot->scaleTargetX = targetScaleX;
-        slot->scaleVelX = vel;
+        slot->targetScale.x = targetScaleX;
+        slot->scaleVelocity.x = vel;
     } else {
-        slot->scaleCurrentX = targetScaleX;
-        slot->scaleTargetX = targetScaleX;
-        slot->scaleVelX = 0;
+        slot->scale.x = targetScaleX;
+        slot->targetScale.x = targetScaleX;
+        slot->scaleVelocity.x = 0;
     }
 }
 
 void interpolateSlotScaleY(CutsceneSlotData *slot, s32 targetScaleY, s16 duration) {
     if (duration > 0) {
-        slot->scaleTargetY = targetScaleY;
-        slot->scaleVelY = (targetScaleY - slot->scaleCurrentY) / duration;
+        slot->targetScale.y = targetScaleY;
+        slot->scaleVelocity.y = (targetScaleY - slot->scale.y) / duration;
     } else {
-        slot->scaleCurrentY = targetScaleY;
-        slot->scaleTargetY = targetScaleY;
-        slot->scaleVelY = 0;
+        slot->scale.y = targetScaleY;
+        slot->targetScale.y = targetScaleY;
+        slot->scaleVelocity.y = 0;
     }
 }
 
@@ -773,13 +773,13 @@ void interpolateSlotScaleZ(CutsceneSlotData *slot, s32 targetScaleZ, s16 duratio
     s32 vel;
 
     if (duration > 0) {
-        vel = targetScaleZ - slot->scaleCurrentZ;
-        slot->scaleTargetZ = targetScaleZ;
-        slot->scaleVelZ = vel / duration;
+        vel = targetScaleZ - slot->scale.z;
+        slot->targetScale.z = targetScaleZ;
+        slot->scaleVelocity.z = vel / duration;
     } else {
-        slot->scaleCurrentZ = targetScaleZ;
-        slot->scaleTargetZ = targetScaleZ;
-        slot->scaleVelZ = 0;
+        slot->scale.z = targetScaleZ;
+        slot->targetScale.z = targetScaleZ;
+        slot->scaleVelocity.z = 0;
     }
 }
 
@@ -792,12 +792,12 @@ void setupSlotProjectile(CutsceneSlotData *slot, s32 speed, s32 velY, s32 gravit
 
     sinResult = approximateSin(slot->rotY);
     scaledSpeed = speed >> 8;
-    slot->posVelX = (scaledSpeed * (sinResult >> 4));
+    slot->velocity.x = (scaledSpeed * (sinResult >> 4));
 
-    slot->posVelY = velY;
+    slot->velocity.y = velY;
 
     cosResult = approximateCos(slot->rotY);
-    slot->posVelZ = (scaledSpeed * (cosResult >> 4));
+    slot->velocity.z = (scaledSpeed * (cosResult >> 4));
 
     slot->unkA0 = gravity;
 }
@@ -818,25 +818,25 @@ void setupSlotMoveToFacing(CutsceneSlotData *slot, s32 targetX, s32 targetY, s32
     if ((s32)(temp_v0 << 16) <= 0) {
         frames = 1;
     }
-    pTargetX = &slot->unk30;
+    pTargetX = &slot->targetPosition.x;
     *pTargetX = targetX;
-    deltaX = *pTargetX - slot->unk20_u.unk20_s32;
+    deltaX = *pTargetX - slot->position.x;
     velX = deltaX / frames;
-    pTargetY = &slot->unk34;
+    pTargetY = &slot->targetPosition.y;
     *pTargetY = targetY;
-    deltaY = *pTargetY - slot->unk28;
+    deltaY = *pTargetY - slot->position.y;
     velY = deltaY / frames;
-    pTargetZ = &slot->unk38;
+    pTargetZ = &slot->targetPosition.z;
     *pTargetZ = targetZ;
-    deltaZ = *pTargetZ - slot->unk2C;
+    deltaZ = *pTargetZ - slot->position.z;
     velZ = deltaZ / frames;
     slot->animFramesRemaining = frames;
     slot->animFramesDuration = frames;
     slot->angle = 0;
     slot->unk0.animMode = SLOT_ANIM_MODE_MOVE_TO_FACING;
-    slot->posVelX = velX;
-    slot->posVelY = velY;
-    slot->posVelZ = velZ;
+    slot->velocity.x = velX;
+    slot->velocity.y = velY;
+    slot->velocity.z = velZ;
     if ((u32)deltaX < 1 && (u32)deltaZ < 1) {
     } else {
         slot->rotYTarget = atan2Fixed(deltaX, deltaZ) & ANGLE_13BIT_MASK;
@@ -861,13 +861,13 @@ void setupSlotMoveToNoRotation(
         frames = 1;
     }
 
-    slot->unk30 = targetX;
-    slot->unk34 = targetY;
-    slot->unk38 = targetZ;
+    slot->targetPosition.x = targetX;
+    slot->targetPosition.y = targetY;
+    slot->targetPosition.z = targetZ;
 
-    slot->posVelX = (slot->unk30 - slot->unk20_u.unk20_s32) / frames;
-    slot->posVelY = (slot->unk34 - slot->unk28) / frames;
-    slot->posVelZ = (slot->unk38 - slot->unk2C) / frames;
+    slot->velocity.x = (slot->targetPosition.x - slot->position.x) / frames;
+    slot->velocity.y = (slot->targetPosition.y - slot->position.y) / frames;
+    slot->velocity.z = (slot->targetPosition.z - slot->position.z) / frames;
 
     slot->animFramesRemaining = frames;
     slot->animFramesDuration = frames;
@@ -892,20 +892,20 @@ void setupSlotMoveToWithBounce(CutsceneSlotData *slot, s32 *targetPos, s16 durat
     slot->animFramesRemaining = frames;
     slot->unk0.animMode = SLOT_ANIM_MODE_BOUNCE;
 
-    slot->unk30 = targetPos[0];
-    slot->unk34 = targetPos[1];
-    slot->unk38 = targetPos[2];
+    slot->targetPosition.x = targetPos[0];
+    slot->targetPosition.y = targetPos[1];
+    slot->targetPosition.z = targetPos[2];
 
-    deltaX = targetPos[0] - slot->unk20_u.unk20_s32;
-    slot->posVelX = deltaX / frames;
-    slot->unk48 = deltaX / frames;
+    deltaX = targetPos[0] - slot->position.x;
+    slot->velocity.x = deltaX / frames;
+    slot->targetVelocity.x = deltaX / frames;
 
-    slot->posVelY = bounceVelY;
-    slot->unk4C = bounceVelY;
+    slot->velocity.y = bounceVelY;
+    slot->targetVelocity.y = bounceVelY;
 
-    deltaZ = targetPos[2] - slot->unk2C;
-    slot->posVelZ = deltaZ / frames;
-    slot->unk50 = deltaZ / frames;
+    deltaZ = targetPos[2] - slot->position.z;
+    slot->velocity.z = deltaZ / frames;
+    slot->targetVelocity.z = deltaZ / frames;
 
     slot->unkA0 = gravity;
 }
@@ -961,8 +961,8 @@ s32 spawnCutsceneMovementEffects(CutsceneSlotData *arg0, SceneModel *arg1) {
         }
     }
 
-    sqSum =
-        (s64)arg0->posVelX * arg0->posVelX + (s64)arg0->posVelY * arg0->posVelY + (s64)arg0->posVelZ * arg0->posVelZ;
+    sqSum = (s64)arg0->velocity.x * arg0->velocity.x + (s64)arg0->velocity.y * arg0->velocity.y +
+            (s64)arg0->velocity.z * arg0->velocity.z;
     var_s4 = isqrt64(sqSum) >> 0xF;
 
     if (var_s4 != 0) {
@@ -973,7 +973,7 @@ s32 spawnCutsceneMovementEffects(CutsceneSlotData *arg0, SceneModel *arg1) {
         modelIndex = arg1->index;
         if (((modelIndex == 0xA) | (modelIndex == 0x3D)) || (modelIndex == 0x3C) ||
             ((modelIndex == 0x12) && (arg1->actionMode == 1))) {
-            if (arg0->unk28 > 0x19998) {
+            if (arg0->position.y > 0x19998) {
             } else {
                 goto block_31;
             }
@@ -1002,7 +1002,7 @@ s32 spawnCutsceneMovementEffects(CutsceneSlotData *arg0, SceneModel *arg1) {
                 point1.z =
                     transformedVecs[3].z + (s32)(((s64)(transformedVecs[2].z - transformedVecs[3].z) * randVal) / 0xFF);
                 goto second_rand;
-            } else if (arg0->unk28 <= 0x19998) {
+            } else if (arg0->position.y <= 0x19998) {
             block_31:
                 randVal = randA() & 0xFF;
                 point1.x =
@@ -1024,9 +1024,9 @@ s32 spawnCutsceneMovementEffects(CutsceneSlotData *arg0, SceneModel *arg1) {
             }
         }
         if (var_s6 && arg1->displayEnabled) {
-            velocity.x = arg0->posVelX;
-            velocity.y = arg0->posVelY;
-            velocity.z = arg0->posVelZ;
+            velocity.x = arg0->velocity.x;
+            velocity.y = arg0->velocity.y;
+            velocity.z = arg0->velocity.z;
             modelIndex = arg1->index;
             if (((modelIndex == 0xA) | (modelIndex == 0x3D)) || (modelIndex == 0x3C) ||
                 ((modelIndex == 0x12) && (arg1->actionMode == 1))) {
@@ -1047,9 +1047,9 @@ s16 updateSlotLinearMove(CutsceneSlotData *slot, SceneModel *model) {
 
     moving = 0;
     if (slot->animFramesRemaining > 0) {
-        slot->unk20_u.unk20_s32 += slot->posVelX;
-        slot->unk28 += slot->posVelY;
-        slot->unk2C += slot->posVelZ;
+        slot->position.x += slot->velocity.x;
+        slot->position.y += slot->velocity.y;
+        slot->position.z += slot->velocity.z;
         slot->rotY += slot->rotYVel;
 
         angleDiff = calcAngleDiff(slot, 0, slot->rotYTarget, slot->rotY);
@@ -1065,9 +1065,9 @@ s16 updateSlotLinearMove(CutsceneSlotData *slot, SceneModel *model) {
         moving = 1;
         slot->animFramesRemaining--;
     } else {
-        slot->posVelX = 0;
-        slot->posVelY = 0;
-        slot->posVelZ = 0;
+        slot->velocity.x = 0;
+        slot->velocity.y = 0;
+        slot->velocity.z = 0;
         slot->rotYVel = 0;
         slot->rotY = slot->rotYTarget;
 
@@ -1134,9 +1134,9 @@ s16 updateSlotWalk(CutsceneSlotData *arg0, SceneModel *arg1) {
     s16 unk8C_val;
 
     var_s2 = 0;
-    arg0->unk20_u.unk20_s32 += arg0->posVelX;
-    arg0->unk28 += arg0->posVelY;
-    arg0->unk2C += arg0->posVelZ;
+    arg0->position.x += arg0->velocity.x;
+    arg0->position.y += arg0->velocity.y;
+    arg0->position.z += arg0->velocity.z;
     temp_t0 = arg0->unk0.bytes[1];
 
     switch (temp_t0) {
@@ -1208,34 +1208,34 @@ s16 updateSlotWalk(CutsceneSlotData *arg0, SceneModel *arg1) {
     switch (switch_v1) {
         case 0:
             if (arg0->animFramesRemaining < 6) {
-                temp_v1_3 = arg0->posVelX;
+                temp_v1_3 = arg0->velocity.x;
                 var_v0 = -temp_v1_3;
                 if (var_v0 < 0) {
                     var_v0 += 0x1F;
                 }
-                arg0->posVelX = temp_v1_3 + (var_v0 >> 5);
-                temp_a0_2 = arg0->posVelY;
+                arg0->velocity.x = temp_v1_3 + (var_v0 >> 5);
+                temp_a0_2 = arg0->velocity.y;
                 var_v0_2 = -temp_a0_2;
                 if (var_v0_2 < 0) {
                     var_v0_2 += 0x1F;
                 }
-                arg0->posVelY = temp_a0_2 + (var_v0_2 >> 5);
-                temp_v1_4 = arg0->posVelZ;
+                arg0->velocity.y = temp_a0_2 + (var_v0_2 >> 5);
+                temp_v1_4 = arg0->velocity.z;
                 var_v0_3 = -temp_v1_4;
                 if (var_v0_3 < 0) {
                     var_v0_3 += 0x1F;
                 }
-                arg0->posVelZ = temp_v1_4 + (var_v0_3 >> 5);
+                arg0->velocity.z = temp_v1_4 + (var_v0_3 >> 5);
             }
             break;
         case 1:
             if (arg0->animFramesRemaining < 0x14) {
-                temp_a3 = arg0->posVelX;
-                temp_t0_2 = arg0->posVelY;
-                temp_t1 = arg0->posVelZ;
-                arg0->posVelX = temp_a3 + (-temp_a3 / 12);
-                arg0->posVelY = temp_t0_2 + (-temp_t0_2 / 12);
-                arg0->posVelZ = temp_t1 + (-temp_t1 / 12);
+                temp_a3 = arg0->velocity.x;
+                temp_t0_2 = arg0->velocity.y;
+                temp_t1 = arg0->velocity.z;
+                arg0->velocity.x = temp_a3 + (-temp_a3 / 12);
+                arg0->velocity.y = temp_t0_2 + (-temp_t0_2 / 12);
+                arg0->velocity.z = temp_t1 + (-temp_t1 / 12);
             }
             break;
     }
@@ -1309,18 +1309,18 @@ s32 updateSlotDecelMove(CutsceneSlotData *slot, SceneModel *model) {
         goto update_position;
     }
 
-    slot->unk50 = 0;
-    slot->unk4C = 0;
+    slot->targetVelocity.z = 0;
+    slot->targetVelocity.y = 0;
 
-    absX = ABS(slot->posVelX);
+    absX = ABS(slot->velocity.x);
 
-    slot->unk48 = 0;
+    slot->targetVelocity.x = 0;
 
     if (absX >= 0x2000) {
         goto update_position;
     }
 
-    absY = slot->posVelY;
+    absY = slot->velocity.y;
     if (absY < 0) {
         absY = -absY;
     }
@@ -1328,7 +1328,7 @@ s32 updateSlotDecelMove(CutsceneSlotData *slot, SceneModel *model) {
         goto update_position;
     }
 
-    absZ = slot->posVelZ;
+    absZ = slot->velocity.z;
     if (absZ < 0) {
         absZ = -absZ;
     }
@@ -1345,15 +1345,15 @@ s32 updateSlotDecelMove(CutsceneSlotData *slot, SceneModel *model) {
     return 0;
 
 update_position:
-    slot->posVelX += (slot->unk48 - slot->posVelX) / slot->unk0.bytes[3];
-    slot->posVelY += (slot->unk4C - slot->posVelY) / slot->unk0.bytes[3];
-    slot->posVelZ += (slot->unk50 - slot->posVelZ) / slot->unk0.bytes[3];
+    slot->velocity.x += (slot->targetVelocity.x - slot->velocity.x) / slot->unk0.bytes[3];
+    slot->velocity.y += (slot->targetVelocity.y - slot->velocity.y) / slot->unk0.bytes[3];
+    slot->velocity.z += (slot->targetVelocity.z - slot->velocity.z) / slot->unk0.bytes[3];
 
     slot->rotYVel += (slot->rotYVelTarget - slot->rotYVel) / 32;
 
-    slot->unk20_u.unk20_s32 += slot->posVelX;
-    slot->unk28 += slot->posVelY;
-    slot->unk2C += slot->posVelZ;
+    slot->position.x += slot->velocity.x;
+    slot->position.y += slot->velocity.y;
+    slot->position.z += slot->velocity.z;
     slot->rotY += slot->rotYVel;
 
     angleDiff = calcAngleDiff(slot, 0, slot->rotYTarget, slot->rotY);
@@ -1391,8 +1391,8 @@ s32 updateSlotOrbit(CutsceneSlotData *slot, SceneModel *model) {
         sinVal = approximateSin(slot->orbitAngle.s.orbitAngle_high);
         scaledSin = (sinVal << 2) >> 8;
 
-        slot->unk2C = scaledCos * (slot->orbitRadius >> 8);
-        slot->unk20_u.unk20_s32 = scaledSin * (slot->orbitRadius >> 8);
+        slot->position.z = scaledCos * (slot->orbitRadius >> 8);
+        slot->position.x = scaledSin * (slot->orbitRadius >> 8);
 
         if (slot->orbitAngularVelocity > 0) {
             newAngle = *anglePtr + 0x800;
@@ -1429,85 +1429,85 @@ s32 updateSlotOrbit(CutsceneSlotData *slot, SceneModel *model) {
 void updateSlotScale(CutsceneSlotData *slot, SceneModel *model) {
     s32 vel;
 
-    vel = slot->scaleVelX;
+    vel = slot->scaleVelocity.x;
     if (vel > 0) {
-        slot->scaleCurrentX += vel;
-        if (slot->scaleCurrentX > slot->scaleTargetX) {
-            slot->scaleCurrentX = slot->scaleTargetX;
-            slot->scaleVelX = 0;
+        slot->scale.x += vel;
+        if (slot->scale.x > slot->targetScale.x) {
+            slot->scale.x = slot->targetScale.x;
+            slot->scaleVelocity.x = 0;
         }
     } else if (vel < 0) {
-        slot->scaleCurrentX += vel;
-        if (slot->scaleCurrentX < slot->scaleTargetX) {
-            slot->scaleCurrentX = slot->scaleTargetX;
-            slot->scaleVelX = 0;
+        slot->scale.x += vel;
+        if (slot->scale.x < slot->targetScale.x) {
+            slot->scale.x = slot->targetScale.x;
+            slot->scaleVelocity.x = 0;
         }
     }
 
-    vel = slot->scaleVelY;
+    vel = slot->scaleVelocity.y;
     if (vel > 0) {
-        slot->scaleCurrentY += vel;
-        if (slot->scaleCurrentY > slot->scaleTargetY) {
-            slot->scaleCurrentY = slot->scaleTargetY;
-            slot->scaleVelY = 0;
+        slot->scale.y += vel;
+        if (slot->scale.y > slot->targetScale.y) {
+            slot->scale.y = slot->targetScale.y;
+            slot->scaleVelocity.y = 0;
         }
     } else if (vel < 0) {
-        slot->scaleCurrentY += vel;
-        if (slot->scaleCurrentY < slot->scaleTargetY) {
-            slot->scaleCurrentY = slot->scaleTargetY;
-            slot->scaleVelY = 0;
+        slot->scale.y += vel;
+        if (slot->scale.y < slot->targetScale.y) {
+            slot->scale.y = slot->targetScale.y;
+            slot->scaleVelocity.y = 0;
         }
     }
 
-    vel = slot->scaleVelZ;
+    vel = slot->scaleVelocity.z;
     if (vel > 0) {
-        slot->scaleCurrentZ += vel;
-        if (slot->scaleCurrentZ > slot->scaleTargetZ) {
-            slot->scaleCurrentZ = slot->scaleTargetZ;
-            slot->scaleVelZ = 0;
+        slot->scale.z += vel;
+        if (slot->scale.z > slot->targetScale.z) {
+            slot->scale.z = slot->targetScale.z;
+            slot->scaleVelocity.z = 0;
         }
     } else if (vel < 0) {
-        slot->scaleCurrentZ += vel;
-        if (slot->scaleCurrentZ < slot->scaleTargetZ) {
-            slot->scaleCurrentZ = slot->scaleTargetZ;
-            slot->scaleVelZ = 0;
+        slot->scale.z += vel;
+        if (slot->scale.z < slot->targetScale.z) {
+            slot->scale.z = slot->targetScale.z;
+            slot->scaleVelocity.z = 0;
         }
     }
 }
 
 s32 updateSlotProjectile(CutsceneSlotData *slot, SceneModel *model) {
-    slot->unk20_u.unk20_s32 += slot->posVelX;
-    slot->unk28 += slot->posVelY;
-    slot->unk2C += slot->posVelZ;
+    slot->position.x += slot->velocity.x;
+    slot->position.y += slot->velocity.y;
+    slot->position.z += slot->velocity.z;
 
-    if (slot->posVelY < 0) {
-        if (slot->unk28 < 0) {
-            slot->posVelX = 0;
-            slot->posVelY = 0;
-            slot->posVelZ = 0;
-            slot->unk28 = 0;
+    if (slot->velocity.y < 0) {
+        if (slot->position.y < 0) {
+            slot->velocity.x = 0;
+            slot->velocity.y = 0;
+            slot->velocity.z = 0;
+            slot->position.y = 0;
             slot->unkA0 = 0;
         }
     }
 
-    slot->posVelY += slot->unkA0;
+    slot->velocity.y += slot->unkA0;
     return 1;
 }
 
 s32 updateSlotProjectileTimed(CutsceneSlotData *slot, SceneModel *model) {
-    slot->unk20_u.unk20_s32 += slot->posVelX;
-    slot->unk28 += slot->posVelY;
-    slot->unk2C += slot->posVelZ;
+    slot->position.x += slot->velocity.x;
+    slot->position.y += slot->velocity.y;
+    slot->position.z += slot->velocity.z;
 
-    if (slot->posVelY < 0) {
-        if (slot->unk28 < 0) {
-            slot->posVelY = 0;
-            slot->unk28 = 0;
+    if (slot->velocity.y < 0) {
+        if (slot->position.y < 0) {
+            slot->velocity.y = 0;
+            slot->position.y = 0;
             slot->unkA0 = 0;
         }
     }
 
-    slot->posVelY += slot->unkA0;
+    slot->velocity.y += slot->unkA0;
 
     if (slot->animFramesRemaining == 0) {
         slot->unk0.bytes[0] = 0;
@@ -1542,9 +1542,9 @@ s32 syncModelFromSlot(CutsceneSlotData *slot, SceneModel *model) {
             result = updateSlotProjectile(slot, model);
             break;
         case 9:
-            slot->posVelX = 0;
-            slot->posVelY = 0;
-            slot->posVelZ = 0;
+            slot->velocity.x = 0;
+            slot->velocity.y = 0;
+            slot->velocity.z = 0;
             slot->rotYVel = 0;
             slot->rotY = slot->rotYTarget;
             slot->angle += -(slot->angle << 8) / 6 >> 8;
@@ -1566,9 +1566,9 @@ s32 syncModelFromSlot(CutsceneSlotData *slot, SceneModel *model) {
             goto do_scale;
         case 0:
         default:
-            slot->posVelX = 0;
-            slot->posVelY = 0;
-            slot->posVelZ = 0;
+            slot->velocity.x = 0;
+            slot->velocity.y = 0;
+            slot->velocity.z = 0;
             slot->rotYVel = 0;
             slot->rotY = slot->rotYTarget;
             slot->angle += -(slot->angle << 8) / 6 >> 8;

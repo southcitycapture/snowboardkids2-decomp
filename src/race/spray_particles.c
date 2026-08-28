@@ -26,9 +26,7 @@ typedef struct {
 typedef struct {
     s32 padding0;
     BillboardSprite particle;
-    s32 velX;
-    s32 velY;
-    s32 velZ;
+    Vec3i velocity;
     s32 padding3;
     s32 iteration;
 } SprayEffectUpdateTask;
@@ -40,9 +38,7 @@ typedef struct {
 typedef struct {
     MemoryAllocatorNode *assetTable;
     AssetWrapper assets[2];
-    s32 velX;
-    s32 velY;
-    s32 velZ;
+    Vec3i velocity;
     s16 frameCounter;
     s16 padding;
     s16 particleType;
@@ -60,9 +56,7 @@ typedef struct {
     u8 padding3[0xA];
     s8 alpha2;
     u8 padding4[0x5];
-    s32 velX;
-    s32 velY;
-    s32 velZ;
+    Vec3i velocity;
     s16 frameCounter;
     s16 slotIndex;
     s16 particleType;
@@ -134,9 +128,7 @@ typedef struct {
     /* 0x04 */ BillboardSprite particle;
     /* 0x24 */ s16 particleType;
     /* 0x26 */ u16 animFrame;
-    /* 0x28 */ s32 velX;
-    /* 0x2C */ s32 velY;
-    /* 0x30 */ s32 velZ;
+    /* 0x28 */ Vec3i velocity;
     /* 0x34 */ func_80050C00_51800_Task_unk34 *sourceObj;
     /* 0x38 */ s16 positionSelector;
 } CharacterTrailParticleTask;
@@ -266,9 +258,9 @@ void updateSprayEffect(SprayEffectUpdateTask *arg0) {
             return;
         }
         arg0->particle.alpha = arg0->particle.alpha - 0x30;
-        arg0->particle.position.x += arg0->velX;
-        arg0->particle.position.y += arg0->velY;
-        arg0->particle.position.z += arg0->velZ;
+        arg0->particle.position.x += arg0->velocity.x;
+        arg0->particle.position.y += arg0->velocity.y;
+        arg0->particle.position.z += arg0->velocity.z;
     }
 
     for (i = 0; i < 4; i++) {
@@ -323,9 +315,9 @@ void updateDualSnowSprayParticles(DualSnowSprayUpdateTask *arg0) {
     if (gs->gamePaused == 0) {
         if (arg0->frameCounter != 0) {
             for (i = 0; i < 2; i++) {
-                arg0->assets[i].lam.position.x += arg0->velX;
-                arg0->assets[i].lam.position.y += arg0->velY;
-                arg0->assets[i].lam.position.z += arg0->velZ;
+                arg0->assets[i].lam.position.x += arg0->velocity.x;
+                arg0->assets[i].lam.position.y += arg0->velocity.y;
+                arg0->assets[i].lam.position.z += arg0->velocity.z;
             }
         }
 
@@ -370,19 +362,19 @@ void spawnDualSnowSprayEffect(Vec3i *pos1, Vec3i *pos2, Vec3i *velocity, s32 slo
     signX = (u32)velX >> 31;
     velX += signX;
     velX >>= 1;
-    task->velX = velX;
+    task->velocity.x = velX;
 
     velY = velocity->y;
     signY = (u32)velY >> 31;
     velY += signY;
     velY >>= 1;
-    task->velY = velY;
+    task->velocity.y = velY;
 
     velZ = velocity->z;
     signZ = (u32)velZ >> 31;
     velZ += signZ;
     velZ >>= 1;
-    task->velZ = velZ;
+    task->velocity.z = velZ;
 }
 
 void initCharacterTrailParticleTask(MemoryAllocatorNode **node) {
@@ -434,9 +426,9 @@ void updateCharacterTrailParticle(CharacterTrailParticleTask *arg0) {
             terminateCurrentTask();
         }
 
-        arg0->particle.position.x += arg0->velX;
-        arg0->particle.position.y += arg0->velY;
-        arg0->particle.position.z += arg0->velZ;
+        arg0->particle.position.x += arg0->velocity.x;
+        arg0->particle.position.y += arg0->velocity.y;
+        arg0->particle.position.z += arg0->velocity.z;
     }
 
     i = 0;
@@ -467,9 +459,9 @@ void spawnCharacterTrailParticle(void *arg0) {
         task->particleType = 0x35;
         task->sourceObj = arg0;
         task->particle.alpha = 0xFF;
-        task->velX = 0;
-        task->velY = 0;
-        task->velZ = 0;
+        task->velocity.x = 0;
+        task->velocity.y = 0;
+        task->velocity.z = 0;
         task->positionSelector = 0;
         task->particle.vertices = (Vtx *)&allocation->unk44->unkFC0;
     }
@@ -499,9 +491,9 @@ void spawnPlayerCharacterTrailParticle(Player *arg0, s32 arg1) {
         temp2 = gCharacterParticleTypeMap[arg1];
         task->particle.alpha = 0x80;
         task->particleType = temp2;
-        task->velX = arg0->velocity.x / 2;
-        task->velY = arg0->velocity.y / 2;
-        task->velZ = arg0->velocity.z / 2;
+        task->velocity.x = arg0->velocity.x / 2;
+        task->velocity.y = arg0->velocity.y / 2;
+        task->velocity.z = arg0->velocity.z / 2;
         task->positionSelector = -1;
         task->particle.vertices = (void *)((u32)allocation->unk44 + 0x1440);
     }
@@ -648,9 +640,9 @@ void updateDualSnowSprayParticles_SingleSlot(DualSnowSprayUpdateTask *arg0) {
     if (gs->gamePaused == 0) {
         if (arg0->frameCounter != 0) {
             for (i = 0; i < 2; i++) {
-                arg0->assets[i].lam.position.x += arg0->velX;
-                arg0->assets[i].lam.position.y += arg0->velY;
-                arg0->assets[i].lam.position.z += arg0->velZ;
+                arg0->assets[i].lam.position.x += arg0->velocity.x;
+                arg0->assets[i].lam.position.y += arg0->velocity.y;
+                arg0->assets[i].lam.position.z += arg0->velocity.z;
             }
         }
 
@@ -671,9 +663,9 @@ void spawnDualSnowSprayEffect_SingleSlot(Vec3i *pos1, Vec3i *pos2, Vec3i *veloci
         memcpy(&task->pos1, pos1, sizeof(Vec3i));
         memcpy(&task->pos2, pos2, sizeof(Vec3i));
         task->particleType = particleType;
-        task->velX = (s32)(velocity->x / 2);
-        task->velY = (s32)(velocity->y / 2);
-        task->velZ = (s32)(velocity->z / 2);
+        task->velocity.x = (s32)(velocity->x / 2);
+        task->velocity.y = (s32)(velocity->y / 2);
+        task->velocity.z = (s32)(velocity->z / 2);
     }
 }
 

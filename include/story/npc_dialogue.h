@@ -19,9 +19,7 @@ typedef struct {
     /* 0x3A */ u8 unk3A;
     /* 0x3B */ u8 pad3B[0x1];
     /* 0x3C */ void *callback;
-    /* 0x40 */ s32 unk40;
-    /* 0x44 */ s32 unk44;
-    /* 0x48 */ s32 unk48;
+    /* 0x40 */ Vec3i effectOffset;
     /* 0x4C */ u16 *animSequencePtr;
     /* 0x50 */ s16 animState;
     /* 0x52 */ s16 unk52;

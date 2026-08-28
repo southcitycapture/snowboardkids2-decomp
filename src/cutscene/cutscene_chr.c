@@ -17,7 +17,7 @@ void cutsceneChrPosition_exec(cutsceneChrPosition_exec_arg *arg, CutsceneManager
     slot = &manager->slots[slotIndex];
     slotData = &slot->slotData;
 
-    initSlotPosition(slotData, arg->x, arg->y, arg->z, arg->rotY);
+    initSlotPosition(slotData, arg->position.x, arg->position.y, arg->position.z, arg->rotY);
     setupSlotTransform(slotData);
     applyTransformToModel(slot->model, &slot->slotData.transform);
     setModelAnimationEx(slot->model, arg->animIndex, arg->transitionAnimIndex, arg->loopCount, -1, arg->animQueued);
@@ -53,9 +53,9 @@ void cutsceneChrMove_exec(cutsceneChrMove_exec_arg *arg, CutsceneManager *manage
     moveResult = setupSlotMoveToEx(
         &slot->slotData,
         slot->model,
-        arg->targetX,
-        arg->targetY,
-        arg->targetZ,
+        arg->targetPosition.x,
+        arg->targetPosition.y,
+        arg->targetPosition.z,
         arg->duration,
         arg->fallbackRotY,
         0,
@@ -181,9 +181,9 @@ void cutsceneChrMove2_exec(cutsceneChrMove2_exec_arg *arg, CutsceneManager *cuts
     result = setupSlotMoveToEx(
         &slot->slotData,
         slot->model,
-        arg->targetX,
-        arg->targetY,
-        arg->targetZ,
+        arg->targetPosition.x,
+        arg->targetPosition.y,
+        arg->targetPosition.z,
         arg->duration,
         arg->fallbackRotY,
         decelRate,
@@ -246,9 +246,9 @@ void cutsceneChrBoardMove_exec(cutsceneChrMove2_exec_arg *arg, CutsceneManager *
     setupSlotWalkTo(
         &slot->slotData,
         slot->model,
-        arg->targetX,
-        arg->targetY,
-        arg->targetZ,
+        arg->targetPosition.x,
+        arg->targetPosition.y,
+        arg->targetPosition.z,
         arg->duration,
         arg->fallbackRotY,
         arg->animIndex,
@@ -342,7 +342,13 @@ s32 cutsceneChrMoveToFacing_validate(void) {
 void cutsceneChrMoveToFacing_exec(cutsceneChrMoveToFacing_exec_arg *arg, CutsceneManager *manager, s8 slotIndex) {
     CutsceneSlot *slot = &manager->slots[slotIndex];
 
-    setupSlotMoveToFacing(&slot->slotData, arg->targetX, arg->targetY, arg->targetZ, arg->duration);
+    setupSlotMoveToFacing(
+        &slot->slotData,
+        arg->targetPosition.x,
+        arg->targetPosition.y,
+        arg->targetPosition.z,
+        arg->duration
+    );
     setModelAnimationQueued(slot->model, arg->animationId, arg->transitionAnimId, arg->animationLoopCount, -1);
     setModelActionMode(slot->model, arg->actionMode);
 }
@@ -365,9 +371,9 @@ void cutsceneChrZoom2_exec(cutsceneChrZoom2_exec_arg *arg0, CutsceneManager *arg
     s32 scaleFixedZ;
 
     slotData = &arg1->slots[arg2].slotData;
-    scaleFixedX = (arg0->scalePercentX << 16) / 100;
-    scaleFixedY = (arg0->scalePercentY << 16) / 100;
-    scaleFixedZ = (arg0->scalePercentZ << 16) / 100;
+    scaleFixedX = (arg0->scalePercent.x << 16) / 100;
+    scaleFixedY = (arg0->scalePercent.y << 16) / 100;
+    scaleFixedZ = (arg0->scalePercent.z << 16) / 100;
 
     interpolateSlotScaleX(slotData, scaleFixedX, arg0->duration);
     interpolateSlotScaleY(slotData, scaleFixedY, arg0->duration);
@@ -395,9 +401,9 @@ void cutsceneChrUpDown_exec(cutsceneChrUpDown_exec_arg *arg0, CutsceneManager *a
     setupSlotMoveToNoRotation(
         &slot->slotData,
         slot->model,
-        arg0->targetX,
-        arg0->targetY,
-        arg0->targetZ,
+        arg0->targetPosition.x,
+        arg0->targetPosition.y,
+        arg0->targetPosition.z,
         arg0->duration
     );
 
@@ -457,9 +463,9 @@ void cutsceneChrMove3_exec(cutsceneChrMove3_exec_arg *arg, CutsceneManager *cuts
     setupSlotMoveToWithRotation(
         &slot->slotData,
         slot->model,
-        arg->targetX,
-        arg->targetY,
-        arg->targetZ,
+        arg->targetPosition.x,
+        arg->targetPosition.y,
+        arg->targetPosition.z,
         arg->duration,
         arg->targetAngle
     );
@@ -498,12 +504,12 @@ s32 cutsceneChrMoveSight_validate(void) {
 }
 
 void cutsceneChrMoveSight_exec(cutsceneChrMoveSight_exec_arg *arg0, CutsceneManager *cutsceneManager, s8 slotIndex) {
-    s32 targetPosition[3];
+    Vec3i targetPosition;
     CutsceneSlot *slot;
 
-    targetPosition[0] = arg0->targetX;
-    targetPosition[1] = arg0->targetY;
-    targetPosition[2] = arg0->targetZ;
+    targetPosition.x = arg0->targetPosition.x;
+    targetPosition.y = arg0->targetPosition.y;
+    targetPosition.z = arg0->targetPosition.z;
 
     slot = &cutsceneManager->slots[slotIndex];
 
@@ -608,7 +614,7 @@ void cutsceneChrPosition2_exec(cutsceneChrPosition2_exec_arg *arg, CutsceneManag
     slot = &manager->slots[slotIndex];
     slotData = &slot->slotData;
 
-    initSlotPositionEx(slotData, arg->x, arg->y, arg->z, arg->rotY, arg->rotX, arg->rotZ);
+    initSlotPositionEx(slotData, arg->position.x, arg->position.y, arg->position.z, arg->rotY, arg->rotX, arg->rotZ);
     setupSlotTransform(slotData);
     applyTransformToModel(slot->model, &slot->slotData.transform);
     setModelAnimationEx(slot->model, arg->animIndex, arg->transitionAnimIndex, arg->loopCount, -1, arg->animQueued);

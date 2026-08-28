@@ -669,8 +669,8 @@ s32 checkStoryMapLocationSelection(StoryMapPlayerState *player) {
     data.maxDistance = 0x01000000;
     if (allocation->dialogueTurnState == 0) {
         for (i = 0; i < allocation->numEntries; i++) {
-            deltaX = allocation->npcPosX[i] - player->positionX;
-            deltaZ = allocation->npcPosZ[i] - player->positionZ;
+            deltaX = allocation->npcPosX[i] - player->position.x;
+            deltaZ = allocation->npcPosZ[i] - player->position.z;
             deltaX = distance_2d(deltaX, deltaZ);
             data.distances[i] = deltaX;
 

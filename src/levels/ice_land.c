@@ -11,9 +11,7 @@
 typedef struct {
     u8 isLastWaypoint;
     u8 pad1[3];
-    s32 x;
-    s32 y;
-    s32 z;
+    Vec3i position;
 } WaypointEntry;
 
 typedef struct {
@@ -46,45 +44,45 @@ typedef struct {
 } Allocation;
 
 WaypointEntry iceLandWaypoints1[] = {
-    { 0, { 0 }, 0xF0B2C5A7, 0x299EB9C0, 0x2CA726AB },
-    { 0, { 0 }, 0xEE729266, 0x2913033D, 0x2E4BB956 },
-    { 0, { 0 }, 0xEB2DD542, 0x28CC433D, 0x3039DEC8 },
-    { 0, { 0 }, 0xE7EB68A2, 0x283D833D, 0x2F348172 },
-    { 0, { 0 }, 0xE9125C02, 0x281FC33D, 0x2CBBBE24 },
-    { 0, { 0 }, 0xE7CE6DA4, 0x2792833D, 0x2A5485CA },
-    { 0, { 0 }, 0xE6B2762E, 0x26D4C33D, 0x28DA8968 },
-    { 0, { 0 }, 0xE534B0DC, 0x2650C33D, 0x27E2307A },
-    { 0, { 0 }, 0xE3E7EA22, 0x2521028F, 0x27C8BD88 },
-    { 0, { 0 }, 0xE1AEF454, 0x24C9E116, 0x288EC920 },
-    { 1, { 0 }, 0xDFC825C4, 0x23168E64, 0x29C722E4 },
+    { 0, { 0 }, { 0xF0B2C5A7, 0x299EB9C0, 0x2CA726AB } },
+    { 0, { 0 }, { 0xEE729266, 0x2913033D, 0x2E4BB956 } },
+    { 0, { 0 }, { 0xEB2DD542, 0x28CC433D, 0x3039DEC8 } },
+    { 0, { 0 }, { 0xE7EB68A2, 0x283D833D, 0x2F348172 } },
+    { 0, { 0 }, { 0xE9125C02, 0x281FC33D, 0x2CBBBE24 } },
+    { 0, { 0 }, { 0xE7CE6DA4, 0x2792833D, 0x2A5485CA } },
+    { 0, { 0 }, { 0xE6B2762E, 0x26D4C33D, 0x28DA8968 } },
+    { 0, { 0 }, { 0xE534B0DC, 0x2650C33D, 0x27E2307A } },
+    { 0, { 0 }, { 0xE3E7EA22, 0x2521028F, 0x27C8BD88 } },
+    { 0, { 0 }, { 0xE1AEF454, 0x24C9E116, 0x288EC920 } },
+    { 1, { 0 }, { 0xDFC825C4, 0x23168E64, 0x29C722E4 } },
 };
 
 WaypointEntry iceLandWaypoints2[] = {
-    { 0, { 0 }, 0xF0B2C5A7, 0x299EB9C0, 0x2CA726AB },
-    { 0, { 0 }, 0xEE729266, 0x2913033D, 0x2E4BB956 },
-    { 0, { 0 }, 0xEB2DD542, 0x28CC433D, 0x3039DEC8 },
-    { 0, { 0 }, 0xE7EB68A2, 0x283D833D, 0x2F348172 },
-    { 0, { 0 }, 0xE9125C02, 0x281FC33D, 0x2CBBBE24 },
-    { 0, { 0 }, 0xE7CE6DA4, 0x2792833D, 0x2A5485CA },
-    { 0, { 0 }, 0xE6B2762E, 0x26D4C33D, 0x28DA8968 },
-    { 0, { 0 }, 0xE43D4A70, 0x25FA52E9, 0x26DC1F5C },
-    { 0, { 0 }, 0xE321F9C4, 0x24E212E9, 0x26F4C3A8 },
-    { 0, { 0 }, 0xE0C26AE2, 0x24839F8B, 0x2771F2D6 },
-    { 1, { 0 }, 0xDDEFF7E2, 0x2272EF9C, 0x27C802AE },
+    { 0, { 0 }, { 0xF0B2C5A7, 0x299EB9C0, 0x2CA726AB } },
+    { 0, { 0 }, { 0xEE729266, 0x2913033D, 0x2E4BB956 } },
+    { 0, { 0 }, { 0xEB2DD542, 0x28CC433D, 0x3039DEC8 } },
+    { 0, { 0 }, { 0xE7EB68A2, 0x283D833D, 0x2F348172 } },
+    { 0, { 0 }, { 0xE9125C02, 0x281FC33D, 0x2CBBBE24 } },
+    { 0, { 0 }, { 0xE7CE6DA4, 0x2792833D, 0x2A5485CA } },
+    { 0, { 0 }, { 0xE6B2762E, 0x26D4C33D, 0x28DA8968 } },
+    { 0, { 0 }, { 0xE43D4A70, 0x25FA52E9, 0x26DC1F5C } },
+    { 0, { 0 }, { 0xE321F9C4, 0x24E212E9, 0x26F4C3A8 } },
+    { 0, { 0 }, { 0xE0C26AE2, 0x24839F8B, 0x2771F2D6 } },
+    { 1, { 0 }, { 0xDDEFF7E2, 0x2272EF9C, 0x27C802AE } },
 };
 
 WaypointEntry iceLandWaypoints3[] = {
-    { 0, { 0 }, 0xF0B2C5A7, 0x299EB9C0, 0x2CA726AB },
-    { 0, { 0 }, 0xEE729266, 0x2913033D, 0x2E4BB956 },
-    { 0, { 0 }, 0xEB2DD542, 0x28CC433D, 0x3039DEC8 },
-    { 0, { 0 }, 0xE7EB68A2, 0x283D833D, 0x2F348172 },
-    { 0, { 0 }, 0xE9125C02, 0x281FC33D, 0x2CBBBE24 },
-    { 0, { 0 }, 0xE7CE6DA4, 0x2792833D, 0x2A5485CA },
-    { 0, { 0 }, 0xE6B2762E, 0x26D4C33D, 0x28DA8968 },
-    { 0, { 0 }, 0xE309661A, 0x259483F2, 0x2567DD9C },
-    { 0, { 0 }, 0xE1FA575A, 0x2482C3F2, 0x25B2FAAC },
-    { 0, { 0 }, 0xDFC1B0D2, 0x2434FF30, 0x2633E7C4 },
-    { 1, { 0 }, 0xDD8A659C, 0x2217FF28, 0x278AD968 },
+    { 0, { 0 }, { 0xF0B2C5A7, 0x299EB9C0, 0x2CA726AB } },
+    { 0, { 0 }, { 0xEE729266, 0x2913033D, 0x2E4BB956 } },
+    { 0, { 0 }, { 0xEB2DD542, 0x28CC433D, 0x3039DEC8 } },
+    { 0, { 0 }, { 0xE7EB68A2, 0x283D833D, 0x2F348172 } },
+    { 0, { 0 }, { 0xE9125C02, 0x281FC33D, 0x2CBBBE24 } },
+    { 0, { 0 }, { 0xE7CE6DA4, 0x2792833D, 0x2A5485CA } },
+    { 0, { 0 }, { 0xE6B2762E, 0x26D4C33D, 0x28DA8968 } },
+    { 0, { 0 }, { 0xE309661A, 0x259483F2, 0x2567DD9C } },
+    { 0, { 0 }, { 0xE1FA575A, 0x2482C3F2, 0x25B2FAAC } },
+    { 0, { 0 }, { 0xDFC1B0D2, 0x2434FF30, 0x2633E7C4 } },
+    { 1, { 0 }, { 0xDD8A659C, 0x2217FF28, 0x278AD968 } },
 };
 
 s32 gIceLandPlatformForwardVec[] = { 0, 0, 0x00080000, 0 };
@@ -105,13 +103,13 @@ void initIceLandMovingPlatform(IceLandMovingPlatformTask *platform) {
     platform->currentWaypointIndex = 0;
     platform->unk2C = 0;
     platform->pad6C = 0;
-    memcpy(&platform->position, &(platform->waypoints - (-platform->currentWaypointIndex))->x, sizeof(Vec3i));
+    memcpy(&platform->position, &(platform->waypoints - (-platform->currentWaypointIndex))->position, sizeof(Vec3i));
     platform->currentWaypointIndex++;
     waypoints = platform->waypoints;
     platform->angleX = 0;
     angle = computeAngleToPosition(
-        waypoints[platform->currentWaypointIndex].x,
-        waypoints[platform->currentWaypointIndex].z,
+        waypoints[platform->currentWaypointIndex].position.x,
+        waypoints[platform->currentWaypointIndex].position.z,
         platform->position.x,
         platform->position.z
     );
@@ -144,7 +142,7 @@ void updateIceLandMovingPlatform(IceLandMovingPlatformTask *platform) {
     if (gameState->gamePaused == 0) {
         matrix = platform->matrix3C;
         transformVectorRelative(
-            (Vec3i *)&platform->waypoints[platform->currentWaypointIndex].x,
+            &platform->waypoints[platform->currentWaypointIndex].position,
             (Transform3D *)matrix,
             &sp.relativePos
         );
@@ -187,9 +185,9 @@ void updateIceLandMovingPlatform(IceLandMovingPlatformTask *platform) {
         platform->position.z += sp.movement.z;
 
         distanceToWaypoint = distance_3d(
-            platform->position.x - platform->waypoints[platform->currentWaypointIndex].x,
-            platform->position.y - platform->waypoints[platform->currentWaypointIndex].y,
-            platform->position.z - platform->waypoints[platform->currentWaypointIndex].z
+            platform->position.x - platform->waypoints[platform->currentWaypointIndex].position.x,
+            platform->position.y - platform->waypoints[platform->currentWaypointIndex].position.y,
+            platform->position.z - platform->waypoints[platform->currentWaypointIndex].position.z
         );
 
         if (distanceToWaypoint <= 0x60000) {
