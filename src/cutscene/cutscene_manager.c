@@ -910,10 +910,10 @@ StateEntry *getStateEntry(u16 arg0) {
 /**
  * Renders a vertical menu of cutscene slots with one item highlighted.
  *
- * @param arg0 UI resource identifier
+ * @param grid Cutscene editor text grid
  * @param arg1 Index of the slot to highlight (0-15)
  */
-void renderCutsceneSlotMenu(s32 arg0, s16 arg1) {
+void renderCutsceneSlotMenu(CutsceneEditorTextGrid *grid, s16 arg1) {
     s32 count;
     s32 i;
     s32 yPos;
@@ -927,9 +927,9 @@ void renderCutsceneSlotMenu(s32 arg0, s16 arg1) {
         yPos = 0x30000;
     loop:
         if (i == target) {
-            renderCutsceneSlotMenuItem(arg0, yPos >> 16, 7);
+            renderCutsceneSlotMenuItem(grid, yPos >> 16, 7);
         } else {
-            renderCutsceneSlotMenuItem(arg0, yPos >> 16, 3);
+            renderCutsceneSlotMenuItem(grid, yPos >> 16, 3);
         }
         yPos += 0x10000;
         i++;

@@ -9,7 +9,7 @@ typedef struct {
     /* 0x08 */ u8 *text;
 } CutsceneEditorTextEntry;
 
-typedef struct {
+typedef struct CutsceneEditorTextGrid {
     /* 0x00 */ void *context;
     /* 0x04 */ CutsceneEditorTextEntry *entries;
     /* 0x08 */ s16 x;
@@ -76,7 +76,11 @@ void func_800BB2E8_1E8338(CutsceneEditorTextGrid *grid) {
     grid->stopRequested = TRUE;
 }
 
-INCLUDE_ASM("asm/nonmatchings/1E8240", renderCutsceneSlotMenuItem);
+void renderCutsceneSlotMenuItem(CutsceneEditorTextGrid *grid, s16 row, s16 colorIndex) {
+    if (grid->entries != NULL) {
+        grid->entries[row].unk4 = colorIndex;
+    }
+}
 
 INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB320_1E8370);
 
