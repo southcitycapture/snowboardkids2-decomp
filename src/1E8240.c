@@ -3,6 +3,7 @@
 typedef struct {
     u8 padding[0x28];
     u8 enabled;
+    u8 stopRequested;
 } CutsceneEditorTextGrid;
 
 u8 func_800BB1F0_1E8240(CutsceneEditorTextGrid *grid) {
@@ -11,7 +12,9 @@ u8 func_800BB1F0_1E8240(CutsceneEditorTextGrid *grid) {
 
 INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB1F8_1E8248);
 
-INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB2E8_1E8338);
+void func_800BB2E8_1E8338(CutsceneEditorTextGrid *grid) {
+    grid->stopRequested = TRUE;
+}
 
 INCLUDE_ASM("asm/nonmatchings/1E8240", renderCutsceneSlotMenuItem);
 
