@@ -35,6 +35,7 @@ typedef struct {
 } CutsceneEditorTextGridTask;
 
 void func_800BB5D4_1E8624(CutsceneEditorTextGridTask *task);
+void func_800BB388_1E83D8(CutsceneEditorTextGrid *grid, s16 column, s16 row, char *text);
 
 u8 func_800BB1F0_1E8240(CutsceneEditorTextGrid *grid) {
     return grid->enabled;
@@ -76,7 +77,7 @@ void func_800BB2E8_1E8338(CutsceneEditorTextGrid *grid) {
     grid->stopRequested = TRUE;
 }
 
-void renderCutsceneSlotMenuItem(CutsceneEditorTextGrid *grid, s16 row, s16 colorIndex) {
+void renderCutsceneSlotMenuItem(CutsceneEditorTextGrid *grid, s16 row, u16 colorIndex) {
     if (grid->entries != NULL) {
         grid->entries[row].unk4 = colorIndex;
     }
@@ -86,7 +87,15 @@ INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB320_1E8370);
 
 INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB388_1E83D8);
 
-INCLUDE_ASM("asm/nonmatchings/1E8240", renderCutsceneEditorText);
+void renderCutsceneEditorText(s32 uiResourceId, s32 x, s32 y, char *text, u16 colorIndex) {
+    CutsceneEditorTextGrid *grid;
+
+    grid = (CutsceneEditorTextGrid *)uiResourceId;
+    if (grid->entries != NULL) {
+        renderCutsceneSlotMenuItem(grid, y, colorIndex);
+        func_800BB388_1E83D8(grid, x, y, text);
+    }
+}
 
 INCLUDE_ASM("asm/nonmatchings/1E8240", setupCutsceneCommandLayout);
 
