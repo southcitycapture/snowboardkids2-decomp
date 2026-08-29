@@ -98,7 +98,20 @@ void renderCutsceneSlotMenuItem(CutsceneEditorTextGrid *grid, s16 row, u16 color
     }
 }
 
-INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB320_1E8370);
+void func_800BB320_1E8370(CutsceneEditorTextGrid *grid, s16 column, s16 row, s8 value) {
+    CutsceneEditorTextEntry *entries;
+
+    entries = grid->entries;
+    if (entries != NULL) {
+        if (column >= 0) {
+            if ((column < grid->columnCount) & (row >= 0)) {
+                if (row < grid->rowCount) {
+                    entries[row].text[column] = value;
+                }
+            }
+        }
+    }
+}
 
 INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB388_1E83D8);
 
