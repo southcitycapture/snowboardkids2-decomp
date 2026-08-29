@@ -1,10 +1,31 @@
 #include "common.h"
+#include "system/task_scheduler.h"
 
 typedef struct {
-    u8 padding[0x28];
-    u8 enabled;
-    u8 stopRequested;
+    /* 0x00 */ s16 x;
+    /* 0x02 */ s16 y;
+    /* 0x04 */ s16 unk4;
+    /* 0x06 */ u8 padding6[2];
+    /* 0x08 */ u8 *text;
+} CutsceneEditorTextEntry;
+
+typedef struct {
+    /* 0x00 */ void *context;
+    /* 0x04 */ CutsceneEditorTextEntry *entries;
+    /* 0x08 */ s16 x;
+    /* 0x0A */ s16 y;
+    /* 0x0C */ u16 columnCount;
+    /* 0x0E */ u16 rowCount;
+    /* 0x10 */ u8 padding10[0x18];
+    /* 0x28 */ u8 enabled;
+    /* 0x29 */ u8 stopRequested;
 } CutsceneEditorTextGrid;
+
+typedef struct {
+    /* 0x00 */ u8 initialized;
+    /* 0x01 */ u8 padding1[3];
+    /* 0x04 */ CutsceneEditorTextGrid *grid;
+} CutsceneEditorTextGridTask;
 
 u8 func_800BB1F0_1E8240(CutsceneEditorTextGrid *grid) {
     return grid->enabled;
@@ -38,4 +59,13 @@ INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB5D4_1E8624);
 
 INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB720_1E8770);
 
-INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB82C_1E887C);
+void func_800BB82C_1E887C(CutsceneEditorTextGridTask *task) {
+    CutsceneEditorTextGrid *grid;
+    s32 i;
+
+    grid = task->grid;
+    for (i = 0; i < grid->rowCount; i++) {
+        grid->entries[i].text = freeNodeMemory(grid->entries[i].text);
+    }
+    grid->entries = freeNodeMemory(grid->entries);
+}
