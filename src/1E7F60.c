@@ -24,7 +24,12 @@ void func_800BAFF0_1E8040(ColorRectState *arg0, s16 arg1, s16 arg2, u16 arg3, u1
     arg0->height = arg4;
 }
 
-INCLUDE_ASM("asm/nonmatchings/1E7F60", func_800BB008_1E8058);
+void func_800BB008_1E8058(ColorRectState *arg0, s16 arg1, s16 arg2, s32 arg3, s32 arg4) {
+    arg0->x = arg1;
+    arg0->y = arg2;
+    arg0->width = arg3 - arg1;
+    arg0->height = arg4 - arg2;
+}
 
 void func_800BB028_1E8078(ColorRectState *arg0, u8 arg1, u8 arg2, u8 arg3) {
     arg0->red = arg1;
