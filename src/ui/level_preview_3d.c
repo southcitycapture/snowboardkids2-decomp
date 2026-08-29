@@ -698,7 +698,7 @@ AssetGroup gameAssets[] = {
     {
      .name = " KEY L ",
      .displayListStart = (void *)&KEYL_DISPLAY_LIST_ROM_START,
-     .displayListEnd = (void *)0x001FD6B0,
+     .displayListEnd = (void *)&KEYL_DISPLAY_LIST_ROM_END,
      .compressedDataStart = (void *)&KEYL_COMPRESSED_DATA_ROM_START,
      .compressedDataEnd = (void *)&KEYL_COMPRESSED_DATA_ROM_END,
      .decompressedSize = 0x4A0,
