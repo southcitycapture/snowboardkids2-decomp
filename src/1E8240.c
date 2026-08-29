@@ -113,7 +113,33 @@ void func_800BB320_1E8370(CutsceneEditorTextGrid *grid, s16 column, s16 row, s8 
     }
 }
 
-INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB388_1E83D8);
+void func_800BB388_1E83D8(CutsceneEditorTextGrid *grid, s16 column, s16 row, char *text) {
+    CutsceneEditorTextEntry *entries;
+    s32 columnIndex;
+    s32 rowIndex;
+    u8 *rowText;
+    u8 *destination;
+
+    entries = grid->entries;
+    columnIndex = column;
+    if (entries != NULL) {
+        if (columnIndex < grid->columnCount) {
+            rowIndex = row;
+            if (rowIndex < grid->rowCount) {
+                rowText = entries[rowIndex].text;
+                if (*text != '\0') {
+                    destination = (u8 *)(columnIndex + (s32)rowText);
+                    do {
+                        if (*destination == '\0') {
+                            return;
+                        }
+                        *destination++ = *text++;
+                    } while (*text != '\0');
+                }
+            }
+        }
+    }
+}
 
 void renderCutsceneEditorText(s32 uiResourceId, s32 x, s32 y, char *text, u16 colorIndex) {
     CutsceneEditorTextGrid *grid;
