@@ -99,7 +99,12 @@ void renderCutsceneEditorText(s32 uiResourceId, s32 x, s32 y, char *text, u16 co
 
 INCLUDE_ASM("asm/nonmatchings/1E8240", setupCutsceneCommandLayout);
 
-INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB550_1E85A0);
+void func_800BB550_1E85A0(CutsceneEditorTextGrid *grid, s16 scrollX, s16 scrollY) {
+    if (grid->entries != NULL) {
+        grid->scrollX = scrollX;
+        grid->scrollY = scrollY;
+    }
+}
 
 INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB56C_1E85BC);
 
