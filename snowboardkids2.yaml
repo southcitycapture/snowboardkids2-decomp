@@ -1237,16 +1237,15 @@ segments:
       - { start: 0x1E7F60, type: .bss, vram: 0x800BAEB0, name: cutscene/cutscene_manager }
       - { type: .bss, vram: 0x800BAF08, name: effects/fan_sound_3d }
 
-  - name: cutscene_editor_helpers
+  - name: cutscene_editor_ui
     type: code
     vram: 0x800BAF10
     start: 0x1E7F60
     overlay: true
     exclusive_ram_id: 800BAF10
     subsegments:
-      - [0x1E7F60, c]
-      - [0x1E8230, c]
-      - [0x1E8240, c]
+      - [0x1E7F60, c, ui/rect_outline]
+      - [0x1E8240, c, ui/text_grid]
 
   - name: TABLE3_DISPLAY_LIST
     type: gfxbundle

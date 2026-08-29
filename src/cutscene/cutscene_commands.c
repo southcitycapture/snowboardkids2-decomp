@@ -4,12 +4,12 @@
 #include "cutscene/cutscene_bgm.h"
 #include "cutscene/cutscene_camera.h"
 #include "cutscene/cutscene_chr.h"
-#include "cutscene/cutscene_editor_helpers.h"
 #include "cutscene/cutscene_manager.h"
 #include "cutscene/cutscene_sound.h"
 #include "cutscene/cutscene_sys.h"
 #include "cutscene/cutscene_sys2.h"
 #include "cutscene/sys_effect.h"
+#include "ui/text_grid.h"
 
 #define COMMAND_INIT_TRACK 0
 #define COMMAND_SYS_DISP 1
@@ -408,8 +408,8 @@ s16 executeIsDoneCommand(CurrentCommand *currentCommand, CommandData *commandDat
     return 0;
 }
 
-void cutsceneCmdHelper(s32 commandIndex) {
-    setupCutsceneCommandLayout(commandIndex, 2, 0x14, 0x11, 8, 0x20);
+void clearCutsceneCommandGridRegion(TextGrid *grid) {
+    fillTextGridRect(grid, 2, 0x14, 0x11, 8, ' ');
 }
 
 s32 getCategorySkipValue(u8 categoryIndex) {

@@ -4,7 +4,6 @@
 #include "core/main.h"
 #include "core/stubs.h"
 #include "cutscene/cutscene_commands.h"
-#include "cutscene/cutscene_editor_helpers.h"
 #include "effects/transparent_render.h"
 #include "graphics/graphics.h"
 #include "graphics/model_loader.h"
@@ -15,6 +14,7 @@
 #include "system/task_scheduler.h"
 #include "text/font_assets.h"
 #include "ui/level_preview_3d.h"
+#include "ui/text_grid.h"
 
 typedef struct {
     u8 _pad0[0x4];
@@ -42,7 +42,6 @@ extern char gTimelineSlotRowFormat[];
 extern CutsceneAssetTable gCutsceneAssetTable[];
 
 AssetGroup *getAssetGroupOrDefault(s32 assetIndex);
-void initAnimatedGhost(s32, s16, s16, void *);
 void *getCommandEntryMasked(s32 categoryIndex, s32 commandIndex);
 void cleanupCutsceneFadeTask(FadeTaskData *task);
 void updateCutsceneFadeTask(FadeTaskData *task);
@@ -913,7 +912,7 @@ StateEntry *getStateEntry(u16 arg0) {
  * @param grid Cutscene editor text grid
  * @param arg1 Index of the slot to highlight (0-15)
  */
-void renderCutsceneSlotMenu(CutsceneEditorTextGrid *grid, s16 arg1) {
+void renderCutsceneSlotMenu(TextGrid *grid, s16 arg1) {
     s32 count;
     s32 i;
     s32 yPos;
@@ -927,9 +926,9 @@ void renderCutsceneSlotMenu(CutsceneEditorTextGrid *grid, s16 arg1) {
         yPos = 0x30000;
     loop:
         if (i == target) {
-            renderCutsceneSlotMenuItem(grid, yPos >> 16, 7);
+            setTextGridRowPalette(grid, yPos >> 16, 7);
         } else {
-            renderCutsceneSlotMenuItem(grid, yPos >> 16, 3);
+            setTextGridRowPalette(grid, yPos >> 16, 3);
         }
         yPos += 0x10000;
         i++;
@@ -947,7 +946,7 @@ void renderCutsceneSlotMenu(CutsceneEditorTextGrid *grid, s16 arg1) {
  * the slot's asset group, and each visible event is rendered at the column for
  * its frame delta from baseFrame.
  */
-void renderCutsceneTimelineView(s32 uiResourceId, s32 baseFrameArg) {
+void renderCutsceneTimelineView(TextGrid *grid, s32 baseFrameArg) {
     char buffer[0x3C];
     s32 windowEndFrame;
     s32 rowEndFrame;
@@ -976,7 +975,7 @@ void renderCutsceneTimelineView(s32 uiResourceId, s32 baseFrameArg) {
 
     baseFrame = baseFrameArg & 0xFFFF;
     sprintf(buffer, gTimelineRulerFormat, baseFrame, baseFrame + 1, baseFrame + 2, baseFrame + 3, baseFrame + 4);
-    renderCutsceneEditorText(uiResourceId, 0, 2, buffer, 2);
+    writeTextGridTextWithPalette(grid, 0, 2, buffer, 2);
 
     slotIndex = 0;
     if (gCutsceneStateTable->slotCount != 0) {
@@ -993,7 +992,7 @@ void renderCutsceneTimelineView(s32 uiResourceId, s32 baseFrameArg) {
                 slotIndex,
                 getAssetGroupOrDefault(getCurrentStateEntryItem(slotIndex)->characterId)
             );
-            initAnimatedGhost(uiResourceId, 0, rowIndex, buffer);
+            writeTextGridText(grid, 0, rowIndex, buffer);
 
             /* The slot item head points at the first event in this slot's sorted linked list. */
             entry = getStateEntry(*(u16 *)((u8 *)gCutsceneStateTable + slotItemOffset));
@@ -1016,7 +1015,7 @@ void renderCutsceneTimelineView(s32 uiResourceId, s32 baseFrameArg) {
                                          : "0"(eventColumn), "1"(commandCategory), "2"(commandType));
                         commandEntry = getCommandEntryMasked(commandCategory, commandType);
                         eventColumn += 4;
-                        initAnimatedGhost(uiResourceId, (s16)eventColumn, rowIndex, commandEntry);
+                        writeTextGridText(grid, (s16)eventColumn, rowIndex, commandEntry);
                     }
                     if (entry->next_index == invalidIndex) {
                         break;
