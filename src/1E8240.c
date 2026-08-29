@@ -106,7 +106,11 @@ void func_800BB550_1E85A0(CutsceneEditorTextGrid *grid, s16 scrollX, s16 scrollY
     }
 }
 
-INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB56C_1E85BC);
+void func_800BB56C_1E85BC(CutsceneEditorTextGrid *grid, s32 arg1) {
+    if (grid->entries != NULL) {
+        grid->unk14 = (s16)(arg1 & 0xFF);
+    }
+}
 
 INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB584_1E85D4);
 
