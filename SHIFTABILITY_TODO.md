@@ -34,7 +34,7 @@ between those regions must still be symbolic.
     views are now relative to `playerNumberPositions` and
     `D_8008F0B0_8FCB0`, respectively.
 
-- [ ] Replace the absolute cutscene function definitions in
+- [x] Replace the absolute cutscene function definitions in
       `linker_scripts/game_syms.ld`:
   - `renderCutsceneEditorText = 0x800BB404`
   - `renderCutsceneSlotMenuItem = 0x800BB2F4`
@@ -45,6 +45,9 @@ between those regions must still be symbolic.
     and let the linker resolve normal function symbols. If the addresses refer
     into an intentionally opaque binary, define them relative to that binary's
     load symbol instead of as absolute VRAM values.
+  - The former `UNUSED_CODE_BLOCK` is now the `cutscene_editor_helpers` code
+    overlay at `cutscene_BSS_END`. Its generated assembly owns all three
+    function labels, so internal layout changes move their symbols normally.
 
 ## Layout constraints to document or enforce
 

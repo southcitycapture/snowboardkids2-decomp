@@ -1237,11 +1237,16 @@ segments:
       - { start: 0x1E7F60, type: .bss, vram: 0x800BAEB0, name: cutscene/cutscene_manager }
       - { type: .bss, vram: 0x800BAF08, name: effects/fan_sound_3d }
 
-  # This appears to be dead code. Possibly an overlay
-  - name: UNUSED_CODE_BLOCK
-    type: bin
-    vram: 0
+  - name: cutscene_editor_helpers
+    type: code
+    vram: 0x800BAF10
     start: 0x1E7F60
+    overlay: true
+    exclusive_ram_id: 800BAF10
+    subsegments:
+      - [0x1E7F60, c]
+      - [0x1E8230, c]
+      - [0x1E8240, c]
 
   - name: TABLE3_DISPLAY_LIST
     type: gfxbundle

@@ -4,6 +4,7 @@
 #include "cutscene/cutscene_bgm.h"
 #include "cutscene/cutscene_camera.h"
 #include "cutscene/cutscene_chr.h"
+#include "cutscene/cutscene_editor_helpers.h"
 #include "cutscene/cutscene_manager.h"
 #include "cutscene/cutscene_sound.h"
 #include "cutscene/cutscene_sys.h"
@@ -90,8 +91,6 @@ typedef struct {
     s16 count;
     s16 requiresModel;
 } CommandCategory;
-
-void setupCutsceneCommandLayout(s32, s32, s32, s32, s32, s32);
 
 // clang-format off
 struct {

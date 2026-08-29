@@ -4,6 +4,7 @@
 #include "core/main.h"
 #include "core/stubs.h"
 #include "cutscene/cutscene_commands.h"
+#include "cutscene/cutscene_editor_helpers.h"
 #include "effects/transparent_render.h"
 #include "graphics/graphics.h"
 #include "graphics/model_loader.h"
@@ -40,10 +41,7 @@ extern char gTimelineRulerFormat[];
 extern char gTimelineSlotRowFormat[];
 extern CutsceneAssetTable gCutsceneAssetTable[];
 
-extern void renderCutsceneSlotMenuItem(s32, s32, s32);
-
 AssetGroup *getAssetGroupOrDefault(s32 assetIndex);
-void renderCutsceneEditorText(s32, s32, s32, char *, s32);
 void initAnimatedGhost(s32, s16, s16, void *);
 void *getCommandEntryMasked(s32 categoryIndex, s32 commandIndex);
 void cleanupCutsceneFadeTask(FadeTaskData *task);

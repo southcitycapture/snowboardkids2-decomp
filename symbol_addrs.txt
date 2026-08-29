@@ -4358,6 +4358,10 @@ spawnTrickSpriteEffect = 0x800B523C; // rom:0x1E22EC
 updateStoryMapNpcBehavior = 0x8002A7CC; // rom:0x2B3CC
 convertPackedBoneTransformToN64Matrix = 0x8006C2A8; // rom:0x6CEA8
 
+renderCutsceneSlotMenuItem = 0x800BB2F4; // type:func rom:0x1E8344 segment:cutscene_editor_helpers
+renderCutsceneEditorText = 0x800BB404; // type:func rom:0x1E8454 segment:cutscene_editor_helpers
+setupCutsceneCommandLayout = 0x800BB47C; // type:func rom:0x1E84CC segment:cutscene_editor_helpers
+
 creditsCommands = 0x800B0EE0; // rom:0x1DD080
 creditsCommandCount = 0x800B0F8C; // rom:0x1DD12C
 paletteFadeSpeeds = 0x800B0F90; // size:0x8 rom:0x1DD130
