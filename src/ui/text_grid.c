@@ -126,7 +126,28 @@ void writeTextGridTextWithPalette(TextGrid *grid, s16 column, s16 row, char *tex
     }
 }
 
-INCLUDE_ASM("asm/nonmatchings/ui/text_grid", fillTextGridRect);
+void fillTextGridRect(TextGrid *grid, s16 column, s16 row, u16 width, u16 height, u8 value) {
+    s32 columnIndex;
+    s32 rowIndex;
+
+    if (grid->rows != NULL) {
+        if (column < grid->columnCount) {
+            if (row < grid->rowCount) {
+                for (rowIndex = row; rowIndex < row + height; rowIndex++) {
+                    if (rowIndex >= grid->rowCount) {
+                        return;
+                    }
+                    for (columnIndex = column; columnIndex < column + width; columnIndex++) {
+                        if (columnIndex >= grid->columnCount) {
+                            return;
+                        }
+                        grid->rows[rowIndex].string[columnIndex] = value;
+                    }
+                }
+            }
+        }
+    }
+}
 
 void setTextGridCursorPosition(TextGrid *grid, s16 column, s16 row) {
     if (grid->rows != NULL) {
