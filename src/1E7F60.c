@@ -25,4 +25,5 @@ void func_800BB058_1E80A8(void) {
 
 INCLUDE_ASM("asm/nonmatchings/1E7F60", func_800BB084_1E80D4);
 
-INCLUDE_ASM("asm/nonmatchings/1E7F60", func_800BB1CC_1E821C);
+void func_800BB1CC_1E821C(void) {
+}
