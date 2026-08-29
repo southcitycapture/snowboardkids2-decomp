@@ -2,6 +2,12 @@
 #include "system/task_scheduler.h"
 
 typedef struct {
+    /* 0x00 */ u8 padding[0xA4];
+    /* 0xA4 */ u16 unkA4;
+    /* 0xA6 */ u16 unkA6;
+} CutsceneEditorContext;
+
+typedef struct {
     /* 0x00 */ s16 x;
     /* 0x02 */ s16 y;
     /* 0x04 */ s16 unk4;
@@ -10,7 +16,7 @@ typedef struct {
 } CutsceneEditorTextEntry;
 
 typedef struct CutsceneEditorTextGrid {
-    /* 0x00 */ void *context;
+    /* 0x00 */ CutsceneEditorContext *context;
     /* 0x04 */ CutsceneEditorTextEntry *entries;
     /* 0x08 */ s16 x;
     /* 0x0A */ s16 y;
@@ -35,13 +41,22 @@ typedef struct {
 } CutsceneEditorTextGridTask;
 
 void func_800BB5D4_1E8624(CutsceneEditorTextGridTask *task);
+void func_800BB720_1E8770(CutsceneEditorTextGridTask *task);
+void func_800BB82C_1E887C(CutsceneEditorTextGridTask *task);
 void func_800BB388_1E83D8(CutsceneEditorTextGrid *grid, s16 column, s16 row, char *text);
 
 u8 func_800BB1F0_1E8240(CutsceneEditorTextGrid *grid) {
     return grid->enabled;
 }
 
-void func_800BB1F8_1E8248(CutsceneEditorTextGrid *grid, void *context, s16 x, s16 y, u16 columnCount, u16 rowCount) {
+void func_800BB1F8_1E8248(
+    CutsceneEditorTextGrid *grid,
+    CutsceneEditorContext *context,
+    s16 x,
+    s16 y,
+    u16 columnCount,
+    u16 rowCount
+) {
     CutsceneEditorTextGridTask *task;
 
     task = (CutsceneEditorTextGridTask *)scheduleTask(&func_800BB5D4_1E8624, 0, 0, 0x65);
@@ -120,7 +135,40 @@ void func_800BB5C0_1E8610(CutsceneEditorTextGrid *grid, s8 enabled) {
     }
 }
 
-INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB5D4_1E8624);
+void func_800BB5D4_1E8624(CutsceneEditorTextGridTask *task) {
+    CutsceneEditorTextGrid *grid;
+    s32 row;
+    s32 column;
+    s32 count;
+    s32 pad[4];
+
+    (void)pad;
+
+    grid = task->grid;
+    grid->entries = allocateNodeMemory(grid->rowCount * sizeof(CutsceneEditorTextEntry));
+    column = grid->rowCount;
+    row = 0;
+    if (column > 0) {
+        do {
+            grid->entries[row].x = grid->context->unkA4 + (grid->x * 8);
+            grid->entries[row].y = grid->context->unkA6 + (grid->y * 8) + (row * 8);
+            grid->entries[row].unk4 = 0;
+            grid->entries[row].text = allocateNodeMemory(grid->columnCount + 1);
+            column = 0;
+            count = grid->columnCount;
+            if (count > 0) {
+                do {
+                    grid->entries[row].text[column] = ' ';
+                    column++;
+                } while (column < (s32)grid->columnCount);
+            }
+            grid->entries[row].text[grid->columnCount] = '\0';
+            row++;
+        } while (row < (s32)grid->rowCount);
+    }
+    setCleanupCallback(func_800BB82C_1E887C);
+    setCallback(func_800BB720_1E8770);
+}
 
 INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB720_1E8770);
 
