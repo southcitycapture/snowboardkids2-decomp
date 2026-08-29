@@ -220,7 +220,32 @@ void initTextGridTask(TextGridTask *task) {
     setCallback(updateTextGridTask);
 }
 
-INCLUDE_ASM("asm/nonmatchings/ui/text_grid", updateTextGridTask);
+void updateTextGridTask(TextGridTask *task) {
+    TextGrid *grid;
+    s32 i;
+    s32 cursorX;
+    s32 cursorY;
+    s32 pad[1];
+
+    (void)pad;
+    grid = task->grid;
+    if ((s8)grid->stopRequested == 1) {
+        terminateCurrentTask();
+        return;
+    }
+    if (grid->visible != 0) {
+        if (!(gFrameCounter & 8)) {
+            cursorX = grid->x + grid->cursorColumn;
+            grid->cursorText.x = (u16)grid->viewport->viewportLeft + (cursorX * 8);
+            cursorY = grid->y + grid->cursorRow;
+            grid->cursorText.y = (u16)grid->viewport->viewportTop + (cursorY * 8);
+            pushViewportCallbackBySlot(grid->viewport->callbackSlotIndex, 7, renderTextPalette, &grid->cursorText);
+        }
+        for (i = 0; i < grid->rowCount; i++) {
+            pushViewportCallbackBySlot(grid->viewport->callbackSlotIndex, 7, renderTextPalette, &grid->rows[i]);
+        }
+    }
+}
 
 void cleanupTextGridTask(TextGridTask *task) {
     TextGrid *grid;
