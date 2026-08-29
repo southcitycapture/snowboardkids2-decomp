@@ -166,7 +166,22 @@ void func_800BB56C_1E85BC(CutsceneEditorTextGrid *grid, s32 arg1) {
     }
 }
 
-INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB584_1E85D4);
+void func_800BB584_1E85D4(CutsceneEditorTextGrid *grid, u8 *text) {
+    s32 character;
+    s32 i;
+
+    if (grid->entries != NULL) {
+        for (i = 0; i < 7; i++) {
+            character = *text;
+            if (character == 0) {
+                return;
+            }
+            grid->textBuffer[i] = character;
+            text++;
+        }
+        grid->textBuffer[7] = 0;
+    }
+}
 
 void func_800BB5C0_1E8610(CutsceneEditorTextGrid *grid, s8 enabled) {
     if (grid->entries != NULL) {
