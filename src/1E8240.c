@@ -105,7 +105,11 @@ INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB56C_1E85BC);
 
 INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB584_1E85D4);
 
-INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB5C0_1E8610);
+void func_800BB5C0_1E8610(CutsceneEditorTextGrid *grid, s8 enabled) {
+    if (grid->entries != NULL) {
+        grid->enabled = enabled;
+    }
+}
 
 INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB5D4_1E8624);
 
