@@ -20,7 +20,7 @@ between those regions must still be symbolic.
   - Verify that the replacement still produces a matching ROM before testing
     a shifted layout.
 
-- [ ] Eliminate the game-data addresses hardcoded in
+- [x] Eliminate the game-data addresses hardcoded in
       `linker_scripts/data_field_syms.ld`.
   - Express each sub-symbol as a base symbol plus a field or array offset, or
     expose the containing C object/structure and reference its fields directly.
@@ -30,6 +30,9 @@ between those regions must still be symbolic.
     they should not silently become dependencies later.
   - Preserve proper structure types rather than replacing these references
     with pointer arithmetic or `void *` casts.
+  - Unreferenced absolute aliases were removed. The two live overlapping
+    views are now relative to `playerNumberPositions` and
+    `D_8008F0B0_8FCB0`, respectively.
 
 - [ ] Replace the absolute cutscene function definitions in
       `linker_scripts/game_syms.ld`:

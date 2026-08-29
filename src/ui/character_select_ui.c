@@ -104,6 +104,9 @@ PlayerNumberPositions playerNumberPositions = {
     { (s16)0xFFD4, (s16)0xFFC0, (s16)0xFFD4 },
 };
 
+__asm__(".globl D_8008DDE6_8E9E6\n"
+        "D_8008DDE6_8E9E6 = playerNumberPositions + 0xE");
+
 CharSelectStatsPositions charSelectStatsPositions = {
     {
      (s16)0xFFA0,
