@@ -29,7 +29,9 @@ void func_800BB040_1E8090(ColorRectState *arg0) {
     arg0->state = 1;
 }
 
-INCLUDE_ASM("asm/nonmatchings/1E7F60", func_800BB04C_1E809C);
+void func_800BB04C_1E809C(ColorRectState *arg0) {
+    arg0->state = 2;
+}
 
 void func_800BB058_1E80A8(void) {
     setCleanupCallback(&func_800BB1CC_1E821C);
