@@ -23,7 +23,9 @@ INCLUDE_ASM("asm/nonmatchings/1E7F60", func_800BB008_1E8058);
 
 INCLUDE_ASM("asm/nonmatchings/1E7F60", func_800BB028_1E8078);
 
-INCLUDE_ASM("asm/nonmatchings/1E7F60", func_800BB038_1E8088);
+void func_800BB038_1E8088(ColorRectState *arg0) {
+    arg0->state = 0;
+}
 
 void func_800BB040_1E8090(ColorRectState *arg0) {
     arg0->state = 1;
