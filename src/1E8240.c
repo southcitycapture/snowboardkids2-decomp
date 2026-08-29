@@ -1,6 +1,13 @@
 #include "common.h"
 
-INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB1F0_1E8240);
+typedef struct {
+    u8 padding[0x28];
+    u8 enabled;
+} CutsceneEditorTextGrid;
+
+u8 func_800BB1F0_1E8240(CutsceneEditorTextGrid *grid) {
+    return grid->enabled;
+}
 
 INCLUDE_ASM("asm/nonmatchings/1E8240", func_800BB1F8_1E8248);
 
