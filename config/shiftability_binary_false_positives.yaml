@@ -1,0 +1,11 @@
+# Coincidental aligned words in opaque compressed/image/audio streams that equal
+# a current ROM boundary. The audit fails on any match not explicitly listed.
+- { path: assets/BOSS_HUD_ASSET_12.bin, offset: 0x144, value: 0x001FB040, kind: compressed graphics }
+- { path: assets/CUTSCENE_JINGLE_TOWN_INTRO_FRAME_0.bin, offset: 0x100, value: 0x005DF040, kind: compressed cutscene state }
+- { path: assets/CUTSCENE_JINGLE_TOWN_WIN_FRAME_0.bin, offset: 0x2248, value: 0x005DF040, kind: compressed cutscene state }
+- { path: assets/CUTSCENE_ICE_LAND_INTRO_FRAME_0.bin, offset: 0x1464, value: 0x005DF040, kind: compressed cutscene state }
+- { path: assets/CUTSCENE_CRAZY_JUNGLE_INTRO_FRAME_0.bin, offset: 0x248, value: 0x002A1080, kind: compressed cutscene state }
+- { path: assets/CUTSCENE_CRAZY_JUNGLE_INTRO_FRAME_3.bin, offset: 0x169C, value: 0x00215280, kind: compressed cutscene state }
+- { path: assets/galleryOverlayTexture.bin, offset: 0x168, value: 0x003FF010, kind: compressed texture }
+- { path: assets/MUSIC_BANK_STORY_MAP.bin, offset: 0x12D0, value: 0x0027A020, kind: compressed music bank }
+- { path: assets/MUSIC_PTR_BANK_B.bin, offset: 0x19B364, value: 0x004023D0, kind: audio pointer-bank payload }

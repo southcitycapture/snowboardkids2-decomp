@@ -1,0 +1,11 @@
+# Fixed platform/ABI words that intentionally have no project relocation.
+- path: build/asm/header.o
+  section: .data
+  offset: 0x8
+  value: 0x80000400
+  kind: N64 ROM header entry point
+- path: build/src/rsp/s2dex.o
+  section: .rodata
+  offset: 0x290
+  value: 0x80000400
+  kind: S2DEX microcode ABI constant

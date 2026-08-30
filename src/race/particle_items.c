@@ -309,20 +309,6 @@ typedef struct {
 } SpeedFanBoostEffectState;
 
 typedef struct {
-    /* 0x00 */ s32 dataOffset;
-    /* 0x04 */ s32 dataCount;
-    /* 0x08 */ Vec3i position;
-    /* 0x14 */ u16 pitch;
-    /* 0x16 */ u16 yaw;
-    /* 0x18 */ s16 xMin;
-    /* 0x1A */ s16 xMax;
-    /* 0x1C */ s16 unk1C;
-    /* 0x1E */ s16 yOffset;
-    /* 0x20 */ s16 zMin;
-    /* 0x22 */ s16 zMax;
-} PushZoneDataEntry;
-
-typedef struct {
     u8 _pad0[0x5C];
     u8 unk5C;
 } Func44CB4Allocation;
@@ -1886,8 +1872,7 @@ void initPushZone(PushZoneState *arg0) {
         gPushZoneData[arg0->zoneIndex].yaw
     );
     memcpy(&arg0->transform.translation, &gPushZoneData[arg0->zoneIndex].position, sizeof(Vec3i));
-    arg0->displayData =
-        (void *)(gPushZoneData[arg0->zoneIndex].dataOffset + (gPushZoneData[arg0->zoneIndex].dataCount << 4));
+    arg0->displayData = gPushZoneData[arg0->zoneIndex].data + gPushZoneData[arg0->zoneIndex].dataCount;
     arg0->asset1 = loadUncompressedAssetByIndex(allocation->unk5C);
     arg0->asset2 = loadCompressedSegment2AssetByIndex(allocation->unk5C);
     arg0->unk2C = 0;

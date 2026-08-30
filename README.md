@@ -71,6 +71,9 @@ If everything works correctly you should see:
 build/snowboardkids2.z64: OK
 ```
 
+The project's supported ROM and internal-VRAM relocation guarantees and their
+automated checks are documented in [SHIFTABILITY.md](SHIFTABILITY.md).
+
 Articles
 ========
 

@@ -1,2 +1,12 @@
 /* Project-local data sub-symbols are defined relative to their owning data. */
 D_8008F0C6_8FCC6 = D_8008F0B0_8FCB0 + 0x16;
+
+/* SpriteAnimationSet views embedded at the ends of packed animation arrays. */
+D_8008C7F0_8D3F0 = D_8008C7D8_8D3D8 + 0x18;
+D_8008C830_8D430 = D_8008C810_8D410 + 0x20;
+D_8008C858_8D458 = D_8008C840_8D440 + 0x18;
+D_8008C888_8D488 = D_8008C860_8D460 + 0x28;
+D_8008C8B0_8D4B0 = D_8008C890_8D490 + 0x20;
+D_8008C8E0_8D4E0 = D_8008C8B8_8D4B8 + 0x28;
+D_8008C8F0_8D4F0 = D_8008C8E8_8D4E8 + 0x8;
+D_8008C910_8D510 = D_8008C908_8D508 + 0x8;

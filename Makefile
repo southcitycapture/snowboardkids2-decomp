@@ -126,7 +126,7 @@ LIBMUS = lib/libmus/build/libmus.a
 # go away.
 UNDEFINED_SYMS := osPfsIsPlug
 LD_SCRIPT = $(BASENAME).ld
-LINKER_SCRIPTS := linker_scripts/hardware_regs.ld linker_scripts/libultra_syms.ld linker_scripts/data_field_syms.ld
+LINKER_SCRIPTS := linker_scripts/hardware_regs.ld linker_scripts/libultra_syms.ld linker_scripts/data_field_syms.ld linker_scripts/memory_layout_assertions.ld
 LD_FLAGS := -T $(LD_SCRIPT) -Map snowboardkids2.map --no-check-sections -u osPfsIsPlug -Lbuild/lib -lmus -lgultra_rom
 
 ifeq ($(NON_MATCHING),1)
@@ -152,6 +152,18 @@ dirs:
 
 verify: $(TARGET).z64
 	$(V)shasum --check $(BASENAME).sha1
+
+shiftability-audit: $(TARGET).elf
+	$(V)$(PYTHON) tools/shiftability.py audit
+
+test-rom-shift: $(TARGET).elf
+	$(V)$(PYTHON) tools/shiftability.py rom-shift
+
+test-vram-shift:
+	$(V)$(PYTHON) tools/shiftability.py vram-shift
+
+test-shiftability: $(TARGET).z64
+	$(V)$(PYTHON) tools/shiftability.py all
 
 no_verify: $(TARGET).z64
 	@echo "Skipping SHA1SUM check (DEBUG=$(DEBUG) or NON_MATCHING=$(NON_MATCHING)), updating CRC"
@@ -360,7 +372,7 @@ setup: install-hooks
 
 ### Settings
 .SECONDARY:
-.PHONY: all clean default updatediff install-hooks
+.PHONY: all clean default updatediff install-hooks shiftability-audit test-rom-shift test-vram-shift test-shiftability
 SHELL = /bin/bash -e -o pipefail
 
 # Print target for debugging

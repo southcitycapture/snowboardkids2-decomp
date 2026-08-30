@@ -9,6 +9,11 @@
 #include "mbi.h"
 #include "system/task_scheduler.h"
 
+USE_ASSET(_6448D0);
+USE_ASSET(_647930);
+USE_ASSET(_648C60);
+USE_ASSET(_64EFD0);
+
 typedef struct {
     /* 0x00 */ u32 vertexData;
     /* 0x04 */ Vec3i position;
@@ -28,6 +33,28 @@ typedef struct {
 } SpriteRenderState;
 
 typedef void (*SetupAndEnqueueSprite_t)(SpriteAssetState *, s32, s32, s32, s32, s32, s32, s16, u8, u8, s32);
+
+/*
+ * This object starts with the final word of the preceding sprite DMA entry.
+ * Each row then contains the ROM fields for the following entry.
+ */
+typedef struct {
+    /* 0x00 */ s16 previousAssetId;
+    /* 0x02 */ s16 unused;
+    /* 0x04 */ void *nextRomStart;
+    /* 0x08 */ void *nextRomEnd;
+    /* 0x0C */ s32 nextDecompressedSize;
+    /* 0x10 */ SpriteAnimationSet *nextAnimationSets;
+} SpriteAssetTableLink;
+
+extern SpriteAnimationSet D_8008C7F0_8D3F0;
+extern SpriteAnimationSet D_8008C830_8D430;
+extern SpriteAnimationSet D_8008C858_8D458;
+extern SpriteAnimationSet D_8008C888_8D488;
+extern SpriteAnimationSet D_8008C8B0_8D4B0;
+extern SpriteAnimationSet D_8008C8E0_8D4E0;
+extern SpriteAnimationSet D_8008C8F0_8D4F0;
+extern SpriteAnimationSet D_8008C910_8D510;
 
 extern s32 D_8008C920_8D520[];
 extern s32 gLookAtPtr;
@@ -49,16 +76,16 @@ void setupAndEnqueueSprite(
     s16 arg10
 );
 
-s16 gSpriteAssetTable[][10] = {
-    { 0x0043, 0x0000, 0x0064, (s16)0xEFD0, 0x0064, (s16)0xF190, 0x0000, 0x01F8, (s16)0x8008, (s16)0xC7F0 },
-    { 0x0001, 0x0000, 0x0064, (s16)0x8C60, 0x0064, (s16)0x8EB0, 0x0000, 0x0358, (s16)0x8008, (s16)0xC830 },
-    { 0x0002, 0x0000, 0x0064, (s16)0x89F0, 0x0064, (s16)0x8B50, 0x0000, 0x0358, (s16)0x8008, (s16)0xC858 },
-    { 0x0001, 0x0000, 0x0064, 0x7930,      0x0064, 0x7F90,      0x0000, 0x0638, (s16)0x8008, (s16)0xC888 },
-    { 0x0001, 0x0000, 0x0064, 0x7740,      0x0064, 0x7930,      0x0000, 0x0468, (s16)0x8008, (s16)0xC8B0 },
-    { 0x0001, 0x0000, 0x0064, (s16)0x8B50, 0x0064, (s16)0x8C60, 0x0000, 0x0358, (s16)0x8008, (s16)0xC858 },
-    { 0x0001, 0x0000, 0x0064, 0x62A0,      0x0064, 0x6850,      0x0000, 0x0A78, (s16)0x8008, (s16)0xC8E0 },
-    { 0x0001, 0x0000, 0x0064, 0x48D0,      0x0064, 0x62A0,      0x0000, 0x35D8, (s16)0x8008, (s16)0xC8F0 },
-    { 0x0002, 0x0000, 0x0066, 0x3010,      0x0066, 0x3330,      0x0000, 0x0848, (s16)0x8008, (s16)0xC910 },
+SpriteAssetTableLink gSpriteAssetTable[] = {
+    { 0x43, 0, &_64EFD0_ROM_START,                   &_64EFD0_ROM_END,                   0x1F8,  &D_8008C7F0_8D3F0 },
+    { 1,    0, &_648C60_ROM_START,                   &_648C60_ROM_END,                   0x358,  &D_8008C830_8D430 },
+    { 2,    0, &BOMB_SOUND_SEQUENCE_DATA_ROM_START,  &BOMB_SOUND_SEQUENCE_DATA_ROM_END,  0x358,  &D_8008C858_8D458 },
+    { 1,    0, &_647930_ROM_START,                   &_647930_ROM_END,                   0x638,  &D_8008C888_8D488 },
+    { 1,    0, &CAKE_SOUND_SEQUENCE_DATA_ROM_START,  &CAKE_SOUND_SEQUENCE_DATA_ROM_END,  0x468,  &D_8008C8B0_8D4B0 },
+    { 1,    0, &BOMB2_SOUND_SEQUENCE_DATA_ROM_START, &BOMB2_SOUND_SEQUENCE_DATA_ROM_END, 0x358,  &D_8008C858_8D458 },
+    { 1,    0, &GHOST_SOUND_SEQUENCE_DATA_ROM_START, &GHOST_SOUND_SEQUENCE_DATA_ROM_END, 0xA78,  &D_8008C8E0_8D4E0 },
+    { 1,    0, &_6448D0_ROM_START,                   &_6448D0_ROM_END,                   0x35D8, &D_8008C8F0_8D4F0 },
+    { 2,    0, &POST2_SOUND_SEQUENCE_DATA_ROM_START, &POST2_SOUND_SEQUENCE_DATA_ROM_END, 0x848,  &D_8008C910_8D510 },
 };
 
 s16 gSpriteAssetTablePadding[] = { 0x0002, 0x0000 };
@@ -163,7 +190,7 @@ s32 getSpriteAssetCount(void) {
 }
 
 s16 getSpriteAssetId(s32 index) {
-    return gSpriteAssetTable[index][0];
+    return gSpriteAssetTable[index].previousAssetId;
 }
 
 void renderOpaqueSpriteCallback(SpriteRenderState *sprite) {

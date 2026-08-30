@@ -105,14 +105,25 @@ u16 sDialogueSequenceEmpty[] = {
     0xFFFF,
 };
 
-u16 sNpcDialoguePointerTable[] = {
-    0x001B, 0x001B, 0xFFFF, 0x0000, 0x0000, 0x0000, 0x8008, 0xE73C, 0x8008, 0xE73C, 0x8008, 0xE754, 0x8008,
-    0xE73C, 0x8008, 0xE73C, 0x8008, 0xE744, 0x8008, 0xE73C, 0x0000, 0x0000, 0x8008, 0xE73C, 0x8008, 0xE73C,
-    0x8008, 0xE73C, 0x8008, 0xE73C, 0x8008, 0xE744, 0x8008, 0xE73C, 0x8008, 0xE73C, 0x0000, 0x0000, 0x8008,
-    0xE73C, 0x8008, 0xE73C, 0x8008, 0xE73C, 0x8008, 0xE744, 0x8008, 0xE75C, 0x8008, 0xE73C, 0x8008, 0xE75C,
-    0x0000, 0x0000, 0x8008, 0xE73C, 0x8008, 0xE73C, 0x8008, 0xE744, 0x8008, 0xE73C, 0x8008, 0xE73C, 0x8008,
-    0xE73C, 0x8008, 0xE73C, 0x0000, 0x0000, 0x8008, 0xE73C, 0x8008, 0xE744, 0x8008, 0xE73C, 0x8008, 0xE73C,
-    0x8008, 0xE73C, 0x8008, 0xE73C, 0x8008, 0xE73C, 0x0000, 0x0000, 0x8008, 0xE744,
+typedef struct {
+    u16 initialSequence[6];
+    u16 *dialogueSequences[41];
+} NpcDialogueSequenceTable;
+
+NpcDialogueSequenceTable sNpcDialoguePointerTable = {
+    { 0x001B, 0x001B, 0xFFFF, 0, 0, 0 },
+    {
+     sDialogueSequence13_15, sDialogueSequence13_15, sDialogueSequence22_24, sDialogueSequence13_15,
+     sDialogueSequence13_15, sDialogueSequence10_12, sDialogueSequence13_15, NULL,
+     sDialogueSequence13_15, sDialogueSequence13_15, sDialogueSequence13_15, sDialogueSequence13_15,
+     sDialogueSequence10_12, sDialogueSequence13_15, sDialogueSequence13_15, NULL,
+     sDialogueSequence13_15, sDialogueSequence13_15, sDialogueSequence13_15, sDialogueSequence10_12,
+     sDialogueSequence17_19, sDialogueSequence13_15, sDialogueSequence17_19, NULL,
+     sDialogueSequence13_15, sDialogueSequence13_15, sDialogueSequence10_12, sDialogueSequence13_15,
+     sDialogueSequence13_15, sDialogueSequence13_15, sDialogueSequence13_15, NULL,
+     sDialogueSequence13_15, sDialogueSequence10_12, sDialogueSequence13_15, sDialogueSequence13_15,
+     sDialogueSequence13_15, sDialogueSequence13_15, sDialogueSequence13_15, NULL,
+     sDialogueSequence10_12, }
 };
 
 // Story map NPC configuration table
@@ -910,7 +921,7 @@ void initStoryMapNpcSpecialDialogue(Func8002A390Arg *arg0) {
 
     if (arg0->npcIndex == 4) {
         if (arg0->itemType == 5) {
-            arg0->animSequencePtr = sNpcDialoguePointerTable;
+            arg0->animSequencePtr = sNpcDialoguePointerTable.initialSequence;
             dialogueIndex = arg0->animSequencePtr[0];
             arg0->animFrameComplete = 0;
             arg0->animFrame = dialogueIndex;

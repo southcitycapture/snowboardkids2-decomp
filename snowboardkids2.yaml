@@ -1237,7 +1237,7 @@ segments:
       - { start: 0x1E7F60, type: .bss, vram: 0x800BAEB0, name: cutscene/cutscene_manager }
       - { type: .bss, vram: 0x800BAF08, name: effects/fan_sound_3d }
 
-  - name: cutscene_editor_ui
+  - name: cutscene_editor_widgets
     type: code
     vram: 0x800BAF10
     start: 0x1E7F60

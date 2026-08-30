@@ -43,14 +43,14 @@ u8 boardShopChooseBoardToPaintPromptText[] = { _("Which board do you want to pai
 
 u8 boardShopChooseDesignPromptText[48] = { _NT("Which design do you want") };
 
-struct {
-    s32 unk0[2];
-    u16 unk8;
-    u16 unkA[1];
+union {
+    s32 unk0[3];
+    struct {
+        u8 padding[0xA];
+        u16 unkA[1];
+    } widthView;
 } D_8008F200_8FE00 = {
-    { 0x8054FFFF, (s32)boardShopChooseBoardToPaintPromptText },
-    0x8008,
-    { 0xF1D0 }
+    { 0x8054FFFF, (s32)boardShopChooseBoardToPaintPromptText, (s32)boardShopChooseDesignPromptText }
 };
 
 u16 D_8008F20C_8FE0C = 0xFF88;
@@ -1267,7 +1267,7 @@ void updateBoardShopTitleText(BoardShopTitleTextState *arg0) {
     u16 *new_var;
 
     if (allocation->viewMode != 0) {
-        new_var = D_8008F200_8FE00.unkA;
+        new_var = D_8008F200_8FE00.widthView.unkA;
         arg0->textWidth = new_var[allocation->viewMode];
         // this makes no sense but it matches
         new_var = (void *)&renderTextLayout;

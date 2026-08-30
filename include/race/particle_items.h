@@ -32,6 +32,20 @@ typedef struct {
 typedef struct WarpEffectState WarpEffectState;
 typedef struct GoldStealEffectState GoldStealEffectState;
 
+typedef struct {
+    /* 0x00 */ u8 (*data)[0x10];
+    /* 0x04 */ s32 dataCount;
+    /* 0x08 */ Vec3i position;
+    /* 0x14 */ u16 pitch;
+    /* 0x16 */ u16 yaw;
+    /* 0x18 */ s16 xMin;
+    /* 0x1A */ s16 xMax;
+    /* 0x1C */ s16 unk1C;
+    /* 0x1E */ s16 yOffset;
+    /* 0x20 */ s16 zMin;
+    /* 0x22 */ s16 zMax;
+} PushZoneDataEntry;
+
 SparkleEffectState *spawnSparkleEffect(void *arg0);
 SparkleEffectState *spawnSparkleEffectWithPlayer(void *arg0, s32 arg1);
 StarEffectTask *spawnStarEffectImmediate(void *arg0);
