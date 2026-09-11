@@ -170,13 +170,27 @@ static void menutrace(unsigned long retraces) {
 enum { NAV_RACE = 0, NAV_SAVE = 1 };
 static int nav_want = NAV_RACE;
 static int nav_races, nav_saves;
-/* How many times the town has been asked to hand over to the course list. It is
- * reset by every race that actually starts, so it doubles as the detector for
- * the loop this navigator used to run: a screen chain that keeps *changing*
- * never trips the "stuck on one screen" timer below, and 177 laps went by
- * unnoticed before the exit was understood. */
+/* How many times the town has been asked to hand over to the course list since
+ * a race last actually *started*. It is the detector for the loop this
+ * navigator used to run: a screen chain that keeps *changing* never trips the
+ * "stuck on one screen" timer below, and 177 laps went by unnoticed before the
+ * exit was understood.
+ *
+ * It used to be cleared on every tick that saw `handleRaceStateUpdate`, which
+ * made it useless twice over: the attract demo on the title screen runs that
+ * handler too, so a fresh boot zeroed the count before the campaign had even
+ * begun, and there was no edge -- the counter could only ever hold exits from
+ * the current menu walk, never accumulate across the town/rider-picker circle
+ * the guard exists to catch. It is now cleared once, on the rising edge of a
+ * *story* race (the demo is excluded by sbk_race_is_demo), and the warning
+ * re-arms with it so a second loop is reported as loudly as the first. */
 static int nav_town_exits;
+static int nav_loop_warned;
 static unsigned long nav_last_action;
+/* The credits: the campaign's finish line. awaitCreditsSequence is reached only
+ * from awaitPostRaceCutscene when currentLevel == 0xB (src/core/session_manager.c),
+ * i.e. after the last story course has been won. */
+static int nav_credits_seen;
 
 static void nav_press(const char *line) { sbk_input_play_add(line); }
 
@@ -196,10 +210,53 @@ static int nav_next_story_level(void) {
     for (i = 0; i < 12; i++) {
         if (EepromSaveData->levelUnlockStatus[i] == 5) return i;
     }
+    /* No 5 anywhere does not mean the campaign is over: it means a course was
+     * *played and lost*. awaitRaceResult (src/core/session_manager.c) writes
+     *
+     *     (result == 3) | (result == 5)   -> levelUnlockStatus[level] = 1
+     *     result 4 or 6                   -> levelUnlockStatus[level] = 4
+     *
+     * -- 3 is "finishPosition == 0" out of handleSpeedCrossGameResult /
+     * handleBossRaceResult, so 1 is won and **4 is raced and not won** -- and
+     * updateStorySlotUnlockStatus only writes the 5 that marks the next course
+     * once every slot below the next gate is a 1 (slot 4 needs 0..3, slot 8
+     * needs 0..7, slot 10 needs 0..9 and all three Cross games). A 4 therefore
+     * *blocks* the campaign, and it is the state the user's own save was in:
+     * [1,4,1,4,0,...], courses 1 and 3 attempted and lost.
+     *
+     * The navigator used to return -1 here, which left the course list opening
+     * on gGameSessionContext->currentLevel -- course 0, already won -- so the
+     * campaign re-raced Sunny Mountain for ever and could never reach the gate.
+     * The course that has to be played is the first one that is not a 1: a 5 if
+     * the game has marked one, otherwise the earliest 4. */
+    for (i = 0; i < 12; i++) {
+        if (EepromSaveData->levelUnlockStatus[i] == 4) return i;
+    }
     return -1;
 }
 
 static int nav_saves_pending(void) { return nav_want == NAV_SAVE; }
+
+/* The campaign's own progress bar. levelUnlockStatus is the one place the game
+ * records how far the story has got -- 1 for a course already won, 5 for the
+ * one it means to offer next, 0 for the ones still locked -- so printing it
+ * whenever it changes turns "which course is the campaign on" from a guess into
+ * a line in the log, and dates every EEPROM write beside it. */
+static void nav_progress(const char *why) {
+    static char last[80];
+    char now[80];
+    int i, n = 0, won = 0;
+    if (EepromSaveData == NULL) return;
+    for (i = 0; i < 12; i++) {
+        n += snprintf(now + n, sizeof(now) - n, "%d", (int)EepromSaveData->levelUnlockStatus[i]);
+        if (EepromSaveData->levelUnlockStatus[i] == 1) won++;
+    }
+    if (strcmp(now, last) == 0) return;
+    snprintf(last, sizeof(last), "%s", now);
+    printf("sbk-nav: progress [%s] won=%d next=%d gold=%d (%s)\n", now, won, nav_next_story_level(),
+           (int)EepromSaveData->gold, why);
+    fflush(stdout);
+}
 
 /* A race has ended when a result handler comes up. The purse is in
  * gGameSessionContext->gold; it only reaches the EEPROM through the map's save
@@ -208,10 +265,19 @@ static void nav_watch(void) {
     static int in_results;
     int results = menu_has("GameResult") || menu_has("ContinuePress") || menu_has("AwardGold");
     if (results && !in_results) {
+        /* The place the rider finished in decides everything downstream:
+         * handleSpeedCrossGameResult / handleBossRaceResult return 3 only for
+         * finishPosition 0, and only a 3 (or a 5) turns the course's
+         * levelUnlockStatus into the 1 that lets the next gate open. A campaign
+         * that never prints the place cannot tell a stall from a loss. */
+        GameState *gs = sbk_race_state();
+        int place = gs != NULL ? (int)gs->players[0].finishPosition : -1;
         nav_races++;
         if (sbk_autonav_every > 0 && nav_races % sbk_autonav_every == 0) nav_want = NAV_SAVE;
-        printf("sbk-nav: race %d finished, gold=%d, want=%s\n", nav_races,
-               gGameSessionContext ? (int)gGameSessionContext->gold : -1, nav_want == NAV_SAVE ? "SAVE" : "RACE");
+        printf("sbk-nav: race %d finished on level %d, place=%d (%s), gold=%d, want=%s\n", nav_races,
+               gGameSessionContext ? gGameSessionContext->currentLevel : -1, place + 1,
+               place == 0 ? "WON" : "lost", gGameSessionContext ? (int)gGameSessionContext->gold : -1,
+               nav_want == NAV_SAVE ? "SAVE" : "RACE");
         fflush(stdout);
     }
     in_results = results;
@@ -274,6 +340,30 @@ static void nav_act(unsigned long retraces) {
         fflush(stdout);
         screen_since = retraces;
         nav_press("press B 3");
+        return;
+    }
+
+    /* The credits -- the end of the campaign, and the one screen the navigator
+     * must not touch. It is reached from awaitPostRaceCutscene once the last
+     * story course (currentLevel 0xB) has been won, and every name in the chain
+     * carries "redits": loadCreditsSequence / initCreditsController /
+     * updateCreditsSequence / fadeOutCreditsSequence / awaitCreditsSequence, and
+     * then loadPostCreditsSaveScreen, which puts the file select back up.
+     *
+     * The generic A below would skip them, so this branch takes its hands off
+     * and instead arms a save, so the run that reached the credits also records
+     * that it did (awaitCreditsSequence sets postCreditsCutscenePending, and
+     * loadPostCreditsSaveScreen exists precisely so the player can keep it).
+     * The save select's own branch, above, still drives that screen. */
+    if (menu_has("redits") && !sbk_menu_on("updateSaveSlotSelectionScreen")) {
+        if (!nav_credits_seen) {
+            nav_credits_seen = 1;
+            nav_want = NAV_SAVE;
+            nav_progress("credits");
+            printf("sbk-nav: ***** CREDITS ***** the campaign is finished after %d races, gold=%d\n", nav_races,
+                   gGameSessionContext ? (int)gGameSessionContext->gold : -1);
+            fflush(stdout);
+        }
         return;
     }
 
@@ -434,23 +524,33 @@ void sbk_menu_nav_tick(unsigned long retraces) {
     if (sbk_menutrace) menutrace(retraces);
     if (!sbk_autonav) return;
     nav_watch();
+    nav_progress("tick");
     /* Hands off the pad only while a race is actually being played. */
     if (sbk_menu_on("handleRaceStateUpdate")) {
-        nav_town_exits = 0;
+        /* Clear the loop guard on the rising edge of a *story* race only. The
+         * attract demo runs this same handler, and clearing on every tick of it
+         * meant the counter could never hold anything. */
+        static int was_racing;
+        GameState *gs = sbk_race_state();
+        int real = gs != NULL && !sbk_race_is_demo(gs);
+        if (real && !was_racing) {
+            nav_town_exits = 0;
+            nav_loop_warned = 0;
+        }
+        was_racing = real;
         return;
     }
     /* A race should follow the very next town exit. More than a handful without
      * one means the campaign is going round in a circle again, and an
-     * unattended run should say so rather than fill the log with menu names. */
-    if (nav_town_exits > 6) {
-        static int said;
-        if (!said) {
-            said = 1;
-            printf("sbk-nav: WARNING -- %d town exits since race %d and no race started; "
-                   "the campaign is looping\n",
-                   nav_town_exits, nav_races);
-            fflush(stdout);
-        }
+     * unattended run should say so -- with the save's own progress table, which
+     * is what a diagnosis needs -- rather than fill the log with menu names. */
+    if (nav_town_exits > 6 && !nav_loop_warned) {
+        nav_loop_warned = 1;
+        printf("sbk-nav: WARNING -- %d town exits since race %d and no race started; "
+               "the campaign is looping\n",
+               nav_town_exits, nav_races);
+        nav_progress("loop");
+        fflush(stdout);
     }
     nav_act(retraces);
 }
