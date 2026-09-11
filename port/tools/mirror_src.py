@@ -20,11 +20,41 @@ SKIP_PREFIX = ("extern", "static", "typedef", "#", "/", "*", " ", "\t", "}", "{"
 IDENT_RE = re.compile(r"[A-Za-z_]\w*")
 
 
+ANON_RE = re.compile(r"^(struct|union)\s*\{(.*?)^\}\s*([A-Za-z_]\w*)\s*(=|;)", re.S | re.M)
+
+
+def split_anonymous_aggregates(text, pinned, suffix):
+    """`struct { ... } gFoo = { ... };` at column 0 defines a pinned global whose
+    type has no name, so no `extern` for it can be written. Give the aggregate a
+    tag and split the declaration in three: the type, the extern for the pinned
+    symbol, and the twin's definition."""
+    renamed = []
+
+    def repl(m):
+        kind, body, name, tail = m.group(1), m.group(2), m.group(3), m.group(4)
+        if name not in pinned:
+            return m.group(0)
+        renamed.append(name)
+        tag = "%s__sbk_tag" % name
+        return ("%s %s {%s};\nextern %s %s %s;\n%s %s %s%s%s"
+                % (kind, tag, body, kind, tag, name, kind, tag, name, suffix, tail))
+
+    return ANON_RE.sub(repl, text), renamed
+
+
 def find_definition(stripped, pinned):
     """If this column-0 line defines a pinned global, return (name, span) of
     the declarator name; handles `T name[N] = {`, `T name;` and
     `T (*name[N])(args) = {`. Function definitions/prototypes never match
     because function names are not pinned."""
+    # a leading `/* 0x89240 */` ROM-offset comment is not a reason to skip
+    lead = re.match(r"/\*.*?\*/[ \t]*", stripped)
+    if lead:
+        found = find_definition(stripped[lead.end():], pinned)
+        if found is None:
+            return None
+        name, (a, b) = found
+        return name, (a + lead.end(), b + lead.end())
     if stripped.startswith(SKIP_PREFIX):
         return None
     eq = stripped.find("=")
@@ -47,6 +77,7 @@ def main():
     ap.add_argument("dst")
     ap.add_argument("--pins", help="pins.txt from gen_pins.py")
     ap.add_argument("--suffix", default="__sbk_unpinned")
+    ap.add_argument("--twins-static", action="store_true", help="make the twins file-local (library sources whose tentative definitions duplicate the game's own)")
     args = ap.parse_args()
 
     pinned = set()
@@ -57,10 +88,12 @@ def main():
                 if parts:
                     pinned.add(parts[0])
 
-    out = []
-    renamed = []
     with open(args.src) as f:
-        for line in f:
+        src_text = f.read()
+    src_text, renamed = split_anonymous_aggregates(src_text, pinned, args.suffix)
+    out = []
+    if True:
+        for line in src_text.splitlines(True):
             stripped = line.rstrip("\n")
             if stripped.startswith("#pragma weak "):
                 line = "#pragma sbk_weak " + stripped[len("#pragma weak "):] + "\n"
@@ -74,15 +107,16 @@ def main():
                     # The declared bounds are kept: game code takes sizeof() of
                     # pinned arrays (thread stacks), which an open [] would break.
                     decl_open = decl
+                    lead = "static " if args.twins_static else ""
                     line = ("extern %s;\n" % decl_open
-                            + stripped[:a] + name + args.suffix + stripped[b:] + "\n")
+                            + lead + stripped[:a] + name + args.suffix + stripped[b:] + "\n")
                     renamed.append(name)
             out.append(line)
     # The N64 ELF's symbol sizes are unreliable for IDO data (textconv'd string
     # tables report only their initialised prefix); publish the real size of
     # every twin so the startup copy (gen_pins.py) can use it.
     for name in dict.fromkeys(renamed):  # a tentative declaration and its definition both match
-        out.append("const unsigned long %s__sbk_size = sizeof(%s%s);\n" % (name, name, args.suffix))
+        out.append("%sconst unsigned long %s__sbk_size = sizeof(%s%s);\n" % ("static " if args.twins_static else "", name, name, args.suffix))
     # Mach-O has no ".bss" section: the N64 build forces zero-initialised globals
     # there with __attribute__((section(".bss"))) and the BSS / BSS_ALIGN macros,
     # and Darwin's assembler rejects `.section .bss`. The attribute buys the port

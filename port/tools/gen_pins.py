@@ -38,6 +38,7 @@ def main():
     ap.add_argument("--suffix", default="__sbk_unpinned")
     ap.add_argument("--pins-s", required=True)
     ap.add_argument("--pins-txt", required=True)
+    ap.add_argument("--native-txt", help="write every symbol owned by a compiled object here (gen_rom_syms --skip-file)")
     ap.add_argument("--table-c", required=True)
     args = ap.parse_args()
 
@@ -107,6 +108,17 @@ def main():
     with open(args.pins_txt, "w") as out:
         for addr, name, sec, sec_end, obj in pins:
             out.write("%s 0x%08X %s\n" % (name, addr, obj))
+
+    if args.native_txt:
+        # Symbols the port compiles itself (including overlay globals that are
+        # never pinned): gen_rom_syms must not turn any of them into an
+        # absolute, or the native definition and the absolute collide.
+        with open(args.native_txt, "w") as out:
+            seen = set()
+            for addr, name, sec, sec_end, obj in entries:
+                if obj in twins_available and name not in seen:
+                    seen.add(name)
+                    out.write("%s\n" % name)
 
     copied = 0
     with open(args.table_c, "w") as out:

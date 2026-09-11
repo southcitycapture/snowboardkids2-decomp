@@ -28,6 +28,7 @@ def main():
     ap.add_argument("--fixed", action="append", default=[], help="plain symbol to pin at its N64 address (emulated RDRAM)")
     ap.add_argument("--extra-abs", action="append", default=[], help="file of \"NAME 0xADDR\" lines to treat as absolute")
     ap.add_argument("--skip", action="append", default=[], help="names never to emit (defined by the port)")
+    ap.add_argument("--skip-file", action="append", default=[], help="file of names never to emit (one per line)")
     ap.add_argument("--prefix", default="")
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
@@ -89,6 +90,10 @@ def main():
         if name not in absolute:
             skipped.append(name)
 
+    for path in args.skip_file:
+        with open(path) as f:
+            for line in f:
+                absolute.pop(line.strip(), None)
     for name in list(args.skip) + list(seed_only):
         absolute.pop(name, None)
     with open(args.out, "w") as out:

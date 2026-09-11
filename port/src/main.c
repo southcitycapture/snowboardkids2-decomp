@@ -1,7 +1,7 @@
 /* Host entry point and the "hardware" loop.
  *
- * The game's own main() (src/engine/system_runtime.c, renamed to
- * sbk_game_main by the build) sets up libultra threads exactly as on the N64;
+ * The game's own boot entry (mainproc, src/core/boot.c, which the N64's
+ * entrypoint.s jumps to) sets up libultra threads exactly as on the N64;
  * from then on this loop plays the part of the interrupt controller: it runs
  * the cooperative threads, delivers a vertical retrace 60 times a second,
  * presents frames the game swapped in, and feeds controller input. */
@@ -21,7 +21,7 @@
 #include "settings.h"
 #include "ui/ui.h"
 
-extern void sbk_game_main(void *arg);
+extern void mainproc(void); /* src/core/boot.c: the game's own boot entry */
 extern int sbk_rom_load(const char *path);
 extern int sbk_trace;
 extern int sbk_dump_task;
@@ -30,6 +30,8 @@ extern int sbk_dump_tris;
 extern int sbk_audio_disabled;
 extern int sbk_race_debug_enabled;
 int sbk_pak_open(const char *path);
+int sbk_eeprom_open(const char *path);
+void sbk_eeprom_close(void);
 extern float sbk_far_scale;
 #include "debug/perf.h"
 int sbk_peek_add(const char *spec);
@@ -66,7 +68,7 @@ static double now_usec(void) {
 static const char *find_rom(int argc, char **argv) {
     static char path[1024];
     int i;
-    const char *candidates[] = { "snowboardkids.z64", "../Resources/snowboardkids.z64", NULL };
+    const char *candidates[] = { "snowboardkids2.z64", "../Resources/snowboardkids2.z64", NULL };
     for (i = 1; i < argc; i++) {
         if (argv[i][0] != '-') {
             return argv[i];
@@ -89,12 +91,12 @@ static const char *find_rom(int argc, char **argv) {
             size_t n = (size_t)(slash - argv[0]);
             if (n < sizeof(path) - 64) {
                 memcpy(path, argv[0], n);
-                strcpy(path + n, "/../Resources/snowboardkids.z64");
+                strcpy(path + n, "/../Resources/snowboardkids2.z64");
                 return path;
             }
         }
     }
-    return "snowboardkids.z64";
+    return "snowboardkids2.z64";
 }
 
 /* --play / --headless / --nolauncher: a scripted run. It must not read the
@@ -277,7 +279,7 @@ int main(int argc, char **argv) {
     }
 
     if (sbk_rom_load(rom) != 0) {
-        fprintf(stderr, "usage: %s [--fullscreen[=WxH]|--fullscreen-desktop|--windowed] [--wide] [--novsync] [--trace] [--play SCRIPT|MOVIE.m64] [--record MOVIE.m64] [--frames N] [--hashframe] [--perf] [--autoplay] [--soak] [--nightmare] [--trial SPEC] [--plan C:CH:B:BO,..] [--pak FILE|--nopak] [--nopad] [--status] [--coursetrace] [--turbo] [--headless] [--mute] [--wav OUT.wav] [snowboardkids.z64]\n", argv[0]);
+        fprintf(stderr, "usage: %s [--fullscreen[=WxH]|--fullscreen-desktop|--windowed] [--wide] [--novsync] [--trace] [--play SCRIPT|MOVIE.m64] [--record MOVIE.m64] [--frames N] [--hashframe] [--perf] [--autoplay] [--soak] [--nightmare] [--trial SPEC] [--plan C:CH:B:BO,..] [--pak FILE|--nopak] [--nopad] [--status] [--coursetrace] [--turbo] [--headless] [--mute] [--wav OUT.wav] [snowboardkids2.z64]\n", argv[0]);
         return 1;
     }
     printf("sbk: ROM %s (%lu bytes)\n", rom, (unsigned long)sbk_rom_size);
@@ -291,14 +293,16 @@ int main(int argc, char **argv) {
         return 1;
     }
     if (fullscreen == 0 && getenv("SBK_FULLSCREEN") != NULL && getenv("SBK_FULLSCREEN")[0] == '1') fullscreen = 1;
-    gfx_init(&gfx_sdl_gl13_wapi, &gfx_gl13_rapi, "Snowboard Kids", fullscreen > 0);
+    gfx_init(&gfx_sdl_gl13_wapi, &gfx_gl13_rapi, "Snowboard Kids 2", fullscreen > 0);
     sbk_settings.fullscreen = fullscreen > 0;
     sbk_settings_apply();
     sbk_input_init();
     if (!nopak) {
         sbk_pak_open(pak_path);
+        sbk_eeprom_open(NULL);   /* the sequel's own save device */
     } else {
-        printf("sbk: no Controller Pak (--nopak)\n");
+        sbk_eeprom_close();
+        printf("sbk: no Controller Pak and no EEPROM (--nopak)\n");
     }
     if (play != NULL && sbk_input_play_load(play) != 0) {
         return 1;
@@ -317,7 +321,7 @@ int main(int argc, char **argv) {
 
     /* Boot: the game creates its boot thread and starts it. */
     printf("sbk: booting game (image at %p, RDRAM at 0x%08x)\n", (void *)main, SBK_RDRAM_BASE);
-    sbk_game_main(NULL);
+    mainproc();
 
     /* Determinism: a retrace is delivered only once the game has gone idle
      * for the frame (nothing runnable but the polling game thread, which has

@@ -57,6 +57,8 @@ ULTRA_SRC  := lib/ultralib/src
 ULTRA_MEMBERS := $(sort $(patsubst %.o,%,$(shell grep -oE 'build/lib/libgultra_rom\.a:[A-Za-z0-9_]+\.o' $(LD_SCRIPT) | sed 's/.*://' | sort -u)))
 ULTRA_C    := $(patsubst $(ROOT)/%,%,$(wildcard $(foreach m,$(ULTRA_MEMBERS), \
                   $(ROOT)/$(ULTRA_SRC)/audio/$(m).c $(ROOT)/$(ULTRA_SRC)/gu/$(m).c)))
+# osViSetMode indexes osViModeTable, so the whole VI mode table comes along.
+ULTRA_C    += $(patsubst $(ROOT)/%,%,$(wildcard $(ROOT)/$(ULTRA_SRC)/vimodes/*.c)) $(ULTRA_SRC)/io/vitbl.c
 # ...plus the Controller Pak file system, which the port drives over a 32 KB
 # image (pfsisplug/pfsgetstatus talk to the PIF; port/src/ultra/os_pfs.c has them).
 ULTRA_C    += $(patsubst $(ROOT)/%,%,$(wildcard $(ROOT)/$(ULTRA_SRC)/io/pfs*.c)) $(ULTRA_SRC)/io/contpfs.c
@@ -69,6 +71,16 @@ LIBMUS_C   := lib/libmus/src/player_fx.c
 ABS_LD := $(wildcard $(ROOT)/linker_scripts/*.ld) $(ROOT)/undefined_syms_auto.txt
 ABS_LD := $(filter-out %/hardware_regs.ld %/memory_layout_assertions.ld,$(ABS_LD))
 # libultra globals the port defines itself (os_misc.c) must not become absolutes.
+# The RSP microcode blobs (src/rsp/*.s) are not compiled: the port interprets
+# the display and audio command lists instead. Only the symbols' values matter
+# -- the game subtracts them to size the boot ucode and picks a ucode by
+# address -- so they are emitted as absolutes at their N64 addresses.
+RSP_SYMS := rspbootTextStart rspbootTextEnd aspMainTextStart aspMainTextEnd \
+            aspMainDataStart aspMainDataEnd \
+            gspF3DEX2_fifoTextStart gspF3DEX2_fifoTextEnd \
+            gspF3DEX2_fifoDataStart gspF3DEX2_fifoDataEnd \
+            gspS2DEX_fifoTextStart gspS2DEX_fifoTextEnd \
+            gspS2DEX_fifoDataStart gspS2DEX_fifoDataEnd
 PORT_DEFINED := osTvType osRomBase osResetType osAppNMIBuffer osMemSize osRomType osClockRate
 # The port's own platform layer.
 PORT_C     := $(wildcard src/*.c src/ultra/*.c src/gfx/*.c src/audio/*.c src/platform/*.c src/debug/*.c src/ui/*.c)
@@ -85,7 +97,12 @@ GAME_DEFS  := -DPORT -DLANGUAGE_C -D_LANGUAGE_C -D_MIPS_SZLONG=32 -D__USE_ISOC99
               -DF3DEX_GBI_2 -DBUILD_VERSION=VERSION_J -DMIPSEB -D_MIPS_SZINT=32 -D_MIPS_SZPTR=32 \
               -D_MIPS_ISA_MIPS2=2 -D_MIPS_ISA=_MIPS_ISA_MIPS2 -D_ABIO32=1 -D_MIPS_SIM=_ABIO32 \
               -D_MIPS_FPSET=16 -DCOMPILING_LIBULTRA -DCC_CHECK=1
-GAME_INC   := -I$(ROOT) -I$(ROOT)/include -I$(ROOT)/lib/ultralib/include -I$(ROOT)/lib/ultralib/include/PR \
+# lib/ultralib/include/PR/gbi.h and lib/f3dex2/PR/gbi.h are byte-identical and
+# both honour F3DEX_GBI_2, so gfx_pc.c's <PR/gbi.h> and the game's own "gbi.h"
+# agree; lib/f3dex2/PR is NOT put on the <PR/...> path, because its rcp.h and
+# ultratypes.h are older than ultralib's and would shadow them.
+GAME_INC   := -I$(GEN)/src -I$(GEN) -I$(ROOT) -I$(ROOT)/include \
+              -I$(ROOT)/lib/ultralib/include -I$(ROOT)/lib/ultralib/include/PR \
               -I$(ROOT)/lib/libmus/include/PR -I$(ROOT)/lib/libmus/src -I$(ROOT)/lib/f3dex2/PR \
               -I$(ROOT)/src -I$(ROOT)/assets/courses -I$(ROOT)/assets/modelpayload -I$(ROOT)/build/include
 GAME_CFLAGS := -std=gnu89 -O2 -fno-builtin -fno-strict-aliasing -fwrapv -fno-common -funsigned-char \
@@ -136,7 +153,7 @@ $(OBJ_LIST): Makefile
 	@printf '%s\n' $(patsubst %.c,build/%.o,$(GAME_C)) > $@
 
 $(PINS_STAMP): $(N64_MAP) $(OBJ_LIST) tools/gen_pins.py
-	$(PYTHON) tools/gen_pins.py $< --objs $(OBJ_LIST) $(if $(wildcard $(N64_NM)),--nm $(N64_NM)) $(foreach r,$(PIN_SKIP),--pin-skip $(r)) --prefix '$(SYM_PREFIX)' --pins-s $(PINS_S) --pins-txt $(PINS_TXT) --table-c $(PIN_TABLE)
+	$(PYTHON) tools/gen_pins.py $< --objs $(OBJ_LIST) --native-txt $(BUILD)/native_syms.txt $(if $(wildcard $(N64_NM)),--nm $(N64_NM)) $(foreach r,$(PIN_SKIP),--pin-skip $(r)) --prefix '$(SYM_PREFIX)' --pins-s $(PINS_S) --pins-txt $(PINS_TXT) --table-c $(PIN_TABLE)
 	@touch $@
 
 $(PINS_S) $(PINS_TXT) $(PIN_TABLE): $(PINS_STAMP)
@@ -154,12 +171,18 @@ $(BUILD)/pin_table.o: $(PIN_TABLE) src/ultra/sbk_pins.h
 $(GEN)/%.c: $(ROOT)/%.c tools/mirror_src.py patches.txt $(PINS_TXT) $(ROOT)/tools/textconv.py $(ROOT)/tools/charmap.txt
 	@mkdir -p $(dir $@)
 	@$(PYTHON) $(ROOT)/tools/textconv.py $(ROOT)/tools/charmap.txt $< $@.tc
-	@$(PYTHON) tools/mirror_src.py --pins $(PINS_TXT) $@.tc $@
+	@$(PYTHON) tools/mirror_src.py --pins $(PINS_TXT) $(MIRROR_FLAGS) $@.tc $@
 	@rm -f $@.tc
 
 # Included fragments (.inc / .inc.c under src/) are pulled in by the main file's
 # #include; mirror them too so the include finds the filtered copy.
-GEN_FRAGMENTS := $(patsubst $(ROOT)/%,$(GEN)/%,$(shell find $(ROOT)/src -name '*.inc.c' 2>/dev/null))
+# src/core/main.c #includes src/data/shared_model_part_display_lists.c, so the
+# mirror has to shadow the whole src tree (-I$(GEN)/src comes first in GAME_INC)
+# or the include would pull in the unfiltered original and define the pinned
+# globals a second time.
+GEN_FRAGMENTS := $(patsubst $(ROOT)/%,$(GEN)/%,$(shell find $(ROOT)/src -name '*.c' 2>/dev/null))
+
+$(GEN)/lib/%.c: MIRROR_FLAGS = --twins-static
 
 $(BUILD)/game/%.o: $(GEN)/%.c $(GEN_FRAGMENTS) src/port_override.h
 	@mkdir -p $(dir $@)
@@ -178,9 +201,9 @@ $(BUILD)/port/%.o: %.s
 	@mkdir -p $(dir $@)
 	$(AS) -o $@ $<
 
-$(BUILD)/rom_syms.s: $(N64_MAP) tools/gen_rom_syms.py $(PINS_TXT)
+$(BUILD)/rom_syms.s: $(N64_MAP) tools/gen_rom_syms.py $(PINS_TXT) $(PINS_STAMP)
 	@mkdir -p $(dir $@)
-	$(PYTHON) tools/gen_rom_syms.py $< $(foreach l,$(ABS_LD),--ld $(l)) --extra-abs $(PINS_TXT) $(foreach s,$(PORT_DEFINED),--skip $(s)) --prefix '$(SYM_PREFIX)' --out $@
+	$(PYTHON) tools/gen_rom_syms.py $< $(foreach l,$(ABS_LD),--ld $(l)) --extra-abs $(PINS_TXT) --skip-file $(BUILD)/native_syms.txt $(foreach s,$(RSP_SYMS),--fixed $(s)) $(foreach s,$(PORT_DEFINED),--skip $(s)) --prefix '$(SYM_PREFIX)' --out $@
 
 $(ROM_SYMS): $(BUILD)/rom_syms.s
 	$(AS) -o $@ $<

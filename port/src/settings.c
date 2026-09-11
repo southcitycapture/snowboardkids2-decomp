@@ -13,8 +13,7 @@ int sbk_settings_loaded;
 /* --- the game list ------------------------------------------------------ */
 
 static struct SbkGameEntry games[] = {
-    { "sbk1", "Snowboard Kids",   "snowboardkids.z64",  1 },
-    { "sbk2", "Snowboard Kids 2", "snowboardkids2.z64", 0 },
+    { "sbk2", "Snowboard Kids 2", "snowboardkids2.z64", 1 },
 };
 
 int sbk_game_count(void) { return (int)(sizeof(games) / sizeof(games[0])); }
@@ -72,7 +71,7 @@ static void ensure_dir(void) {
 
 void sbk_settings_defaults(void) {
     memset(&sbk_settings, 0, sizeof(sbk_settings));
-    strcpy(sbk_settings.game, "sbk1");
+    strcpy(sbk_settings.game, "sbk2");
     sbk_settings.mode = SBK_MODE_ORIGINAL;
     sbk_settings.draw_distance = 1;
     sbk_settings.resolution = SBK_RES_NATIVE;

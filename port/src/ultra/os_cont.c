@@ -99,16 +99,11 @@ s32 osMotorInit(OSMesgQueue *mq, OSPfs *pfs, int channel) {
     return 0;
 }
 
-s32 osMotorStart(OSPfs *pfs) {
+/* libultra 2.0J exposes Start/Stop as macros over one entry point. */
+s32 __osMotorAccess(OSPfs *pfs, s32 flag) {
     if (pfs->channel != 0 || !sbk_input_rumble_supported()) return PFS_ERR_NOPACK;
-    if (motor_log++ < 4) printf("sbk: rumble on\n");
-    sbk_input_rumble(1);
-    return 0;
-}
-
-s32 osMotorStop(OSPfs *pfs) {
-    if (pfs->channel != 0 || !sbk_input_rumble_supported()) return PFS_ERR_NOPACK;
-    sbk_input_rumble(0);
+    if (flag == MOTOR_START && motor_log++ < 4) printf("sbk: rumble on\n");
+    sbk_input_rumble(flag == MOTOR_START);
     return 0;
 }
 
