@@ -62,8 +62,21 @@ int sbk_nav_target_level = -1;
 /* The story map's save point: location handler 7 = initSaveSlotScreen, and the
  * map's own id for it is one less. */
 #define STORY_SAVE_LOCATION 6
-/* ...and the ski-area map, handler 4, which leads to the course list. */
-#define STORY_RACE_LOCATION 3
+/* The town's *other* exit. gameStateCleanupHandler (src/core/game_state_init.c)
+ * reads one byte, unk427, and splits on it:
+ *
+ *   unk427 == id + 1   storyMapLocationIndex = id + 1, return 1
+ *                      -> handleStoryMapLocationComplete runs
+ *                         storyMapLocationHandlers[id + 1]: a building
+ *   unk427 == 0xFF     return 0xFF -> handleGameStateComplete ->
+ *                      onStoryMapExitToMenu -> awaitStoryMapSelection, which
+ *                      maps BOTH 0x44 and 0xFF to loadLevelSelectScreen
+ *
+ * so 0xFF -- despite the name of the callback -- is "leave the town", which is
+ * the campaign's route to the next course. In the game the rider walks off the
+ * map and finalizeStoryMapExit (src/story/map_character_anim.c) writes the same
+ * byte once the fade lands. */
+#define STORY_LEAVE_TOWN 0xFF
 
 /* ------------------------------------------------------------- screen naming */
 
@@ -156,6 +169,12 @@ static void menutrace(unsigned long retraces) {
 enum { NAV_RACE = 0, NAV_SAVE = 1 };
 static int nav_want = NAV_RACE;
 static int nav_races, nav_saves;
+/* How many times the town has been asked to hand over to the course list. It is
+ * reset by every race that actually starts, so it doubles as the detector for
+ * the loop this navigator used to run: a screen chain that keeps *changing*
+ * never trips the "stuck on one screen" timer below, and 177 laps went by
+ * unnoticed before the exit was understood. */
+static int nav_town_exits;
 static unsigned long nav_last_action;
 
 static void nav_press(const char *line) { sbk_input_play_add(line); }
@@ -309,42 +328,54 @@ static void nav_act(unsigned long retraces) {
      * storyMapLocationHandlers[] off it). A bot cannot be asked to walk across
      * a town, so the navigator parks the pair the trigger would have written:
      *
-     *   id 3 -> handler 4  loadOverlay_1BBA0, the ski-area map, whose A press
-     *                      leads to the course list and a story race
      *   id 6 -> handler 7  initSaveSlotScreen, the save point -- the game's
      *                      ONLY writer of the EEPROM
+     *   id 3 -> handler 4  loadOverlay_1BBA0, which is NOT the ski-area map: it
+     *                      is the rider picker on a map of Jingle Town, and its
+     *                      onStoryMapNormalExit returns the "go to the course
+     *                      list" code 0x44 only while
+     *                      EepromSaveData->levelUnlockStatus[0] == 5, i.e. only
+     *                      until the first course has been won. After that it
+     *                      returns 1, handleStoryMapLocationComplete puts the
+     *                      rider back in the town, and a navigator that keeps
+     *                      asking for it loops for ever. That was this file's
+     *                      second bug, and 177 laps of it are in the log.
      *   id 2/5/8 -> the Speed / X / Shot Cross minigames (handleGameStateComplete
      *                      intercepts handlers 3, 6 and 9 and sets currentLevel
      *                      0xD / 0xE / 0xC itself)
+     *
+     * A story *course* is not a location at all: it is reached by leaving the
+     * town (STORY_LEAVE_TOWN above), which is what the navigator asks for.
      */
     if (sbk_menu_on("gameStateCleanupHandler")) {
         GameState *m = (GameState *)sbk_menu_alloc("gameStateCleanupHandler");
         if (m != NULL && m->unk427 == 0) {
-            u8 id = (u8)(nav_want == NAV_SAVE ? STORY_SAVE_LOCATION : STORY_RACE_LOCATION);
-            m->discoveredLocationId = id;
-            m->locationDiscovered = 1;
-            m->unk427 = (u8)(id + 1);
-            printf("sbk-nav: town -> location %d (handler %d, want=%s)\n", id, id + 1,
-                   nav_want == NAV_SAVE ? "SAVE" : "RACE");
+            if (nav_want == NAV_SAVE) {
+                m->discoveredLocationId = STORY_SAVE_LOCATION;
+                m->locationDiscovered = 1;
+                m->unk427 = (u8)(STORY_SAVE_LOCATION + 1);
+                printf("sbk-nav: town -> save point (location %d, handler %d)\n", STORY_SAVE_LOCATION,
+                       STORY_SAVE_LOCATION + 1);
+            } else {
+                m->unk427 = STORY_LEAVE_TOWN;
+                nav_town_exits++;
+                printf("sbk-nav: town -> leave for the course list (exit #%d, since race %d)\n", nav_town_exits,
+                       nav_races);
+            }
             fflush(stdout);
         }
         return;
     }
 
-    /* The ski-area map. A location is entered by *walking into* it: a
-     * trigger sets locationDiscovered + discoveredLocationId on the map's own
-     * GameState and the map then runs storyMapLocationHandlers[id + 1]. So a
-     * save is asked for by parking those two -- the game's normal flow, just
-     * aimed, the same move as the first game's course cursor. */
+    /* The rider picker on the town map (overlay 1BBA0). Nine riders laid out as
+     * a 3x3, and the sequence its state machine wants is A (take the rider
+     * under the cursor, selectionState 0 -> 10), seventeen frames of animation
+     * (10 -> 1), everyone ready (1 -> 3), then A again to confirm (3 ->
+     * allConfirmed). Two A presses a second apart is exactly that, so the
+     * navigator just presses -- and the screen is only ever seen once, on the
+     * way into a new game, because after the first course is won its exit stops
+     * leading to the course list. */
     if (sbk_menu_on("storyMapHandlePlayerInput")) {
-        GameState *m = (GameState *)sbk_menu_alloc("storyMapHandlePlayerInput");
-        if (nav_want == NAV_SAVE && m != NULL && !m->locationDiscovered) {
-            m->discoveredLocationId = STORY_SAVE_LOCATION;
-            m->locationDiscovered = 1;
-            printf("sbk-nav: story map -> save point (location %d)\n", STORY_SAVE_LOCATION);
-            fflush(stdout);
-            return;
-        }
         nav_press("press A 3");
         return;
     }
@@ -358,6 +389,22 @@ void sbk_menu_nav_tick(unsigned long retraces) {
     if (!sbk_autonav) return;
     nav_watch();
     /* Hands off the pad only while a race is actually being played. */
-    if (sbk_menu_on("handleRaceStateUpdate")) return;
+    if (sbk_menu_on("handleRaceStateUpdate")) {
+        nav_town_exits = 0;
+        return;
+    }
+    /* A race should follow the very next town exit. More than a handful without
+     * one means the campaign is going round in a circle again, and an
+     * unattended run should say so rather than fill the log with menu names. */
+    if (nav_town_exits > 6) {
+        static int said;
+        if (!said) {
+            said = 1;
+            printf("sbk-nav: WARNING -- %d town exits since race %d and no race started; "
+                   "the campaign is looping\n",
+                   nav_town_exits, nav_races);
+            fflush(stdout);
+        }
+    }
     nav_act(retraces);
 }
