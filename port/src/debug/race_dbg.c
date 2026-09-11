@@ -146,6 +146,11 @@ static struct {
     int on, chr, board, boost, quit, level, nm, gold;
 } trial = { 0, -1, -1, 0, 0, -1, -1, -1 };
 
+/* --trial pathslot=N: which slot of the borrowed path table to lend player 1.
+ * -1 (the default) means "the lender's own", which is the only kind the game
+ * itself ever drives. See path_table_attach() below for why that matters. */
+static int trial_pathslot = -1;
+
 static unsigned long trial_start, trial_frames;
 static int trial_gold0, trial_done;
 
@@ -171,6 +176,7 @@ int sbk_trial_parse(const char *spec) {
             else if (!strcmp(key, "nmdelay")) nm_delay = val;
             else if (!strcmp(key, "nmuse")) nm_use = val;
             else if (!strcmp(key, "nmalt")) nm_alt = val;
+            else if (!strcmp(key, "pathslot")) trial_pathslot = val;
         }
         while (*p && *p != ' ' && *p != ',') p++;
         while (*p == ' ' || *p == ',') p++;
@@ -233,18 +239,68 @@ static void trial_retune(Player *p, int boost) {
 
 /* ------------------------------------------------------------------ autoplay */
 
+/* ------------------------------------------------- the borrowed path table
+ *
+ * The CPU steering wants the course's path-preference table. Despite the
+ * decomp name, `bossRaceData` is not a boss thing: loadPlayerCharacterAssets
+ * (race_main.c ~6079) hands every rider the game itself made a CPU
+ * `gBossHudAssetTable[memoryPoolId]` -- the *course's* AI data -- and
+ * race_session.c ~436 makes every racer above `activePlayerCount` a CPU on
+ * every course, boss or not. So in a one-human story race riders 2..4 have it
+ * and player 1 does not.
+ *
+ * The asset begins with one s32 byte-offset per playerIndex and race_main.c
+ * ~1105 reads `bossRaceData + offsets[playerIndex]`. The offsets are read back
+ * and logged at the attach (`sbk: autoplay: path slot N:`), and on Turtle
+ * Island they are 16,16,504,992 -- **slot 0 and slot 1 are the same table**.
+ * Three authored sets for four indices, with the human's index aliased onto
+ * rider 2's. So "slot 0 is an empty set" was the wrong guess: lending slot 0
+ * and lending slot 1 hand over the identical bytes, and neither is the wedge.
+ * The slot is still taken from the lender rather than hard-coded, because a
+ * course whose header does differ should follow the rider that demonstrably
+ * gets round; `--trial pathslot=N` overrides for experiments. Do NOT set
+ * players[0].bossRaceData -- that pointer is freed per rider. */
+static void path_table_attach(GameState *gs, Player *p, int verbose) {
+    const s32 *off;
+    void *d;
+    int slot;
+
+    if (p->aiPathData != NULL || gs->numPlayers < 2) return;
+    d = gs->players[1].bossRaceData;
+    if (d == NULL) return;
+
+    slot = trial_pathslot >= 0 ? trial_pathslot : (int)gs->players[1].playerIndex;
+    if (slot < 0 || slot > 3) slot = 1;
+    off = (const s32 *)d;
+    /* An empty slot is still possible (a course whose table is shorter than
+     * four sets): an offset of 0 would alias the header itself. Fall back. */
+    if (off[slot] <= 0) slot = 1;
+    if (off[slot] <= 0) return;
+
+    p->aiPathData = (void *)((s32)d + off[slot]);
+    if (verbose) {
+        int i, k;
+        printf("sbk: autoplay: path table attached (%p) asset=%p slot=%d offsets=%ld,%ld,%ld,%ld\n", p->aiPathData, d, slot,
+               (long)off[0], (long)off[1], (long)off[2], (long)off[3]);
+        /* The evidence for the slot choice, so a log can be read back: the
+         * first sectors of every slot. An all-zero row is an unauthored set. */
+        for (i = 0; i < 4; i++) {
+            const unsigned char *t;
+            if (off[i] <= 0) continue;
+            t = (const unsigned char *)d + off[i];
+            printf("sbk: autoplay: path slot %d:", i);
+            for (k = 0; k < 24; k++) printf("%s%02x", (k % 4) ? "" : " ", t[k]);
+            printf("\n");
+        }
+        fflush(stdout);
+    }
+}
+
 static void autoplay_arm(GameState *gs, unsigned long retraces) {
     Player *p = &gs->players[0];
 
     p->isCpuControlled = 1;
-    /* The CPU steering wants the level's path-preference table. Only the
-     * riders the game made CPUs get a bossRaceData asset, and the table inside
-     * it is indexed by playerIndex -- so borrow rider 1's copy and read slot 0
-     * out of it. Do NOT set players[0].bossRaceData: that pointer is freed. */
-    if (p->aiPathData == NULL && gs->numPlayers > 1 && gs->players[1].bossRaceData != NULL) {
-        void *d = gs->players[1].bossRaceData;
-        p->aiPathData = (void *)((s32)d + ((s32 *)d)[0]);
-    }
+    path_table_attach(gs, p, 0);
     p->aiDifficultyIndex = (u8)(sbk_nightmare ? NIGHTMARE_ROW : 0);
 
     if (trial.on) {
@@ -338,12 +394,7 @@ void sbk_autoplay_tick(unsigned long retraces) {
         }
         /* The path table only exists once the level's assets have landed, which
          * is after the handoff; keep trying until it does. */
-        if (sbk_autoplay && p1->aiPathData == NULL && gs->numPlayers > 1 && gs->players[1].bossRaceData != NULL) {
-            void *d = gs->players[1].bossRaceData;
-            p1->aiPathData = (void *)((s32)d + ((s32 *)d)[0]);
-            printf("sbk: autoplay: path table attached (%p)\n", p1->aiPathData);
-            fflush(stdout);
-        }
+        if (sbk_autoplay) path_table_attach(gs, p1, 1);
         trial_tick(gs, retraces);
         was_racing = 1;
         /* The results screens run on the race's own scheduler, so "a race
