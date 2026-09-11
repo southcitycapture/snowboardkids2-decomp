@@ -547,7 +547,16 @@ static void import_texture(int tile) {
         if (tlut != NULL) {
             chash = content_hash(chash, tlut, siz == G_IM_SIZ_4b ? 32 : 512);
         }
-        if (gfx_texture_cache_lookup(tile, &rendering_state.textures[tile], key, fmt, siz, tlut, rdp.loaded_texture[tile].size_bytes, chash)) {
+        bool hit = gfx_texture_cache_lookup(tile, &rendering_state.textures[tile], key, fmt, siz, tlut, rdp.loaded_texture[tile].size_bytes, chash);
+        if (sbk_tri_dump_all) {
+            const uint8_t *t = rdp.loaded_texture[tile].addr;
+            printf("sbk-texin: %s key=%p chash=%08x fmt=%u siz=%u bytes=%u line=%u tlut=%p texels=%02x%02x%02x%02x%02x%02x%02x%02x tlut0=%02x%02x%02x%02x\n",
+                   hit ? "hit " : "miss", (const void *)key, (unsigned)chash, fmt, siz,
+                   rdp.loaded_texture[tile].size_bytes, rdp.texture_tile.line_size_bytes, (const void *)tlut,
+                   t[0], t[1], t[2], t[3], t[4], t[5], t[6], t[7],
+                   tlut ? tlut[0] : 0, tlut ? tlut[1] : 0, tlut ? tlut[2] : 0, tlut ? tlut[3] : 0);
+        }
+        if (hit) {
             return;
         }
     }
@@ -1492,11 +1501,33 @@ static uint8_t color_comb_component(uint32_t v) {
     }
 }
 
+/* The shader computes (a - b) * c + d, and its inputs are the ones
+ * color_comb_component knows -- a constant 1 is not among them, so
+ * G_CCMUX_1 / G_ACMUX_1 used to arrive as 0.  That matters here: the sequel's
+ * sprite setup list (gSpriteRDPSetupDL in src/graphics/sprite_rdp.c) is
+ * gsDPSetCombineLERP(1, 0, TEXEL0, 0, ...) -- plain "the texel" -- and with
+ * the 1 read as 0 the product collapsed and every sprite drawn under it came
+ * out transparent black: the title logo, the legal notices, the Rumble Pak
+ * badge, the tile-map backgrounds.  (1 - 0) * c + d is c + d, so fold it into
+ * the addend instead. */
+#define CCMUX_ONE 6  /* G_CCMUX_1 and G_ACMUX_1 are both 6 */
+
 static inline uint32_t color_comb(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
-    return color_comb_component(a) |
-           (color_comb_component(b) << 3) |
-           (color_comb_component(c) << 6) |
-           (color_comb_component(d) << 9);
+    uint8_t A = color_comb_component(a);
+    uint8_t B = color_comb_component(b);
+    uint8_t C = color_comb_component(c);
+    uint8_t D = color_comb_component(d);
+
+    if (a == CCMUX_ONE && B == CC_0) {
+        if (D != CC_0) {
+            gfx_unsupported("combiner c + d", __LINE__);
+        }
+        A = CC_0;
+        B = CC_0;
+        C = CC_0;
+        D = color_comb_component(c);
+    }
+    return A | (B << 3) | (C << 6) | (D << 9);
 }
 
 static void gfx_dp_set_combine_mode(uint32_t rgb, uint32_t alpha) {
@@ -1992,6 +2023,77 @@ static void gfx_run_dl(Gfx* cmd) {
     }
 }
 
+
+/* ---------------------------------------------------------------------------
+ * S2DEX support.  The 2D microcode's lists carry ordinary RDP commands next to
+ * its own object commands, so port/src/gfx/gfx_s2dex.c interprets the object
+ * commands and hands everything else back to the interpreter above through
+ * these entry points.  Nothing here changes the F3DEX2 path.
+ * ------------------------------------------------------------------------ */
+
+/* Run a (sub) display list of plain RDP/F3DEX2 commands, up to its G_ENDDL. */
+void gfx_pc_run_dl(Gfx *cmd) {
+    gfx_run_dl(cmd);
+}
+
+/* A segmented or physical address as a host pointer, and as an N64 address. */
+void *gfx_pc_seg_addr(uint32_t w1) {
+    return seg_addr(w1);
+}
+uint32_t gfx_pc_seg_n64(uint32_t w1) {
+    uint32_t a = w1;
+    if (a < 0x10000000u) {
+        a = segment_table[(a >> 24) & 0xF] + (a & 0x00FFFFFFu);
+    }
+    return a;
+}
+
+/* One textured rectangle, exactly as G_TEXRECT draws it. */
+void gfx_pc_tex_rect(int32_t ulx, int32_t uly, int32_t lrx, int32_t lry, uint8_t tile,
+                     int16_t uls, int16_t ult, int16_t dsdx, int16_t dtdy, int flip) {
+    gfx_dp_texture_rectangle(ulx, uly, lrx, lry, tile, uls, ult, dsdx, dtdy, flip != 0);
+}
+
+/* An arbitrary textured quad (G_OBJ_SPRITE's rotated sprite): corners in
+ * U10.2 screen coordinates, texture coordinates in S10.5 texels, both in
+ * upper-left, lower-left, lower-right, upper-right order. */
+void gfx_pc_tex_quad(const float *xs, const float *ys, const float *us, const float *vs) {
+    struct XYWidthHeight default_viewport = {0, 0, gfx_current_dimensions.width, gfx_current_dimensions.height};
+    struct XYWidthHeight viewport_saved = rdp.viewport;
+    uint32_t geometry_mode_saved = rsp.geometry_mode;
+    int i;
+
+    for (i = 0; i < 4; i++) {
+        struct LoadedVertex *v = &rsp.loaded_vertices[MAX_VERTICES + i];
+        float x = xs[i] / (4.0f * HALF_SCREEN_WIDTH) - 1.0f;
+        float y = -(ys[i] / (4.0f * HALF_SCREEN_HEIGHT)) + 1.0f;
+        v->x = gfx_adjust_x_for_aspect_ratio(x);
+        v->y = y;
+        v->z = -1.0f;
+        v->w = 1.0f;
+        v->u = us[i];
+        v->v = vs[i];
+    }
+
+    rdp.viewport = default_viewport;
+    rdp.viewport_or_scissor_changed = true;
+    rsp.geometry_mode = 0;
+
+    gfx_sp_tri1(MAX_VERTICES + 0, MAX_VERTICES + 1, MAX_VERTICES + 3);
+    gfx_sp_tri1(MAX_VERTICES + 1, MAX_VERTICES + 2, MAX_VERTICES + 3);
+
+    rsp.geometry_mode = geometry_mode_saved;
+    rdp.viewport = viewport_saved;
+    rdp.viewport_or_scissor_changed = true;
+}
+
+/* G_OBJ_RENDERMODE's G_OBJRM_BILERP, which the object commands apply on their
+ * own rather than through G_SETOTHERMODE_H. */
+void gfx_pc_set_texture_filter(int bilerp) {
+    rdp.other_mode_h = (rdp.other_mode_h & ~(3U << G_MDSFT_TEXTFILT)) |
+                       (uint32_t)(bilerp ? G_TF_BILERP : G_TF_POINT);
+}
+
 static void gfx_sp_reset() {
     rsp.modelview_matrix_stack_size = 1;
     rsp.current_num_lights = 2;
@@ -2015,7 +2117,7 @@ struct GfxRenderingAPI *gfx_get_current_rendering_api(void) {
 
 static bool frame_open;
 
-void gfx_run(Gfx *commands) {
+void gfx_run_ucode(Gfx *commands, int s2dex) {
     gfx_sp_reset();
     if (!frame_open) {
         gfx_wapi->get_dimensions(&gfx_current_dimensions.width, &gfx_current_dimensions.height);
@@ -2030,8 +2132,16 @@ void gfx_run(Gfx *commands) {
         memset(&rendering_state.viewport, 0xFF, sizeof(rendering_state.viewport));
         memset(&rendering_state.scissor, 0xFF, sizeof(rendering_state.scissor));
     }
-    gfx_run_dl(commands);
+    if (s2dex) {
+        gfx_s2dex_run(commands);
+    } else {
+        gfx_run_dl(commands);
+    }
     gfx_flush();
+}
+
+void gfx_run(Gfx *commands) {
+    gfx_run_ucode(commands, 0);
 }
 
 unsigned sbk_stat_present;

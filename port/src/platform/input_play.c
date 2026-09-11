@@ -244,7 +244,9 @@ void sbk_input_play_step(uint16_t *buttons, int8_t *x, int8_t *y) {
                 case C_DUMP: {
                     extern int sbk_frame_dump_left, sbk_dump_task, sbk_dump_frames;
                     extern unsigned sbk_task_count;
+                    extern int sbk_s2dex_trace;
                     sbk_dump_frames = c->frames;
+                    sbk_s2dex_trace = 1;   /* and decode the next S2DEX task's objects */
                     sbk_dump_task = (int)sbk_task_count + 1; /* the dumper arms on this task */
                     printf("sbk-play: read %u: dump %d frames from task %d\n", reads, c->frames, sbk_dump_task);
                     break;

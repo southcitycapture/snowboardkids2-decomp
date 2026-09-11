@@ -205,6 +205,9 @@ int main(int argc, char **argv) {
         } else if (strcmp(argv[i], "--noaudio") == 0) {
             sbk_audio_muted = 1;
             sbk_audio_disabled = 1; /* skip the command-list interpreter entirely */
+        } else if (strcmp(argv[i], "--s2dextrace") == 0) {
+            extern int sbk_s2dex_trace;
+            sbk_s2dex_trace = 1;  /* decode the first S2DEX task's object commands */
         } else if (strcmp(argv[i], "--dumptris") == 0) {
             sbk_dump_tris = 1;
         } else if (strcmp(argv[i], "--bigtri") == 0 && i + 1 < argc) {
@@ -377,6 +380,14 @@ int main(int argc, char **argv) {
         }
         if (sbk_race_debug_enabled && retraces % 60 == 0) {
             sbk_race_debug(retraces);
+        }
+        if (retraces % 600 == 0) {
+            extern unsigned sbk_s2dex_counts[16], sbk_s2dex_unknown;
+            printf("sbk: s2dex rect=%u rect_r=%u sprite=%u ldtx=%u/%u/%u/%u bg=%u/%u rm=%u seldl=%u unknown=%u\n",
+                   sbk_s2dex_counts[1], sbk_s2dex_counts[0xC], sbk_s2dex_counts[2],
+                   sbk_s2dex_counts[5], sbk_s2dex_counts[6], sbk_s2dex_counts[7], sbk_s2dex_counts[8],
+                   sbk_s2dex_counts[9], sbk_s2dex_counts[0xA], sbk_s2dex_counts[0xB], sbk_s2dex_counts[4],
+                   sbk_s2dex_unknown);
         }
         if (retraces % 120 == 0) {
             extern unsigned sbk_stat_cont, sbk_task_count, sbk_stat_present;
