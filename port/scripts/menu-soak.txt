@@ -1,0 +1,156 @@
+# A blind walk: START at the title, then A every four seconds for five minutes.
+# Enough to get through the file select, the mode menus and into a race, and
+# to find out what falls over on the way.
+wait 240
+press START 3
+wait 150
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117
+press A 3
+wait 117

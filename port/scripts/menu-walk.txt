@@ -1,16 +1,23 @@
-# Title -> START -> through the save-slot and player-count prompts.
-wait 1500         # let the attract demo run out and come back to the title
+# Title -> START -> "Start game" -> through whatever the sequel asks next.
+# A press every three seconds: enough to walk defaults without outrunning a fade.
+wait 240
 press START 3
-wait 120
-press A 3         # save slot / confirm
-wait 90
-press A 3
-wait 90
-press A 3
-wait 90
-press START 3
+wait 150
+press A 3         # ~MENU~ : Start game
 wait 120
 press A 3
 wait 120
+press A 3
+wait 120
+press A 3
+wait 120
+press A 3
+wait 120
+press A 3
+wait 120
+press A 3
+wait 120
+press A 3
+wait 300
 press A 3
 wait 300
