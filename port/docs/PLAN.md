@@ -294,8 +294,12 @@ subtracts to size the boot ucode.
    before that run, or whether `MusInitialize`'s heap is not reaching the
    synthesizer.
 4. **Controller Pak, EEPROM, fullscreen, pad, launcher slot**: EEPROM written
-   and read (the file-select screen proves it); the rest is inherited from the
-   first game's port and untested here.
+   and read (the file-select screen proves it, and the navigator's own
+   `saved slot 0` lines confirm the write lands mid-campaign). **Fullscreen
+   works** -- `g4-shots/sbk2-campaign-fullscreen.png` is a fullscreen race on
+   the G4, HUD and all four riders correct. The Controller Pak, the pad and the
+   launcher slot are still inherited from the first game's port and untested
+   here.
 
 ## Self-play: what the sequel's state looks like from outside
 
@@ -525,10 +529,15 @@ so a rider that wedges itself costs a minute instead of a quarter of an hour.
 
   With the row re-anchored on the game's own data, Turtle Island finishes.
 
-* A full progression through every course, with a verified EEPROM write after
-  each race, therefore still has not been watched end to end.
-  `nightmare_search.py sweep` (the per-course rider ladder) has not been run
-  either; only `nm`, the Nightmare row itself, has.
+* `nightmare_search.py sweep` -- the *per-course rider ladder*, which is a
+  different search from `nm` -- still has not been run. Only `nm`, the
+  Nightmare row itself, has, and only one course (0) has a golden movie. The
+  ladder is what would fill `--plan` out beyond its single row.
+* A full progression through **every** course has still not been watched end to
+  end in one sitting. What has been watched: Sunny Mountain and Turtle Island
+  each raced and won, an EEPROM write verified after each
+  (`sbk-nav: saved slot 0`), the town left by the right door, and the course
+  list parked on the game's own next-up marker.
 * The near player model renders as a **black silhouette** during a race while
   the distant riders are correct (`g4-shots/sbk2-autoplay-race.png`). This is a
   graphics bug the self-play tooling made easy to see, not a self-play bug --

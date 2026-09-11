@@ -172,3 +172,38 @@ The determinism recipe is the sequel's, not the first game's `--nopak --nopad`:
 The last one is a trap worth naming: a golden movie replayed against a
 different `gAIPlayerParams` row is not a regression test. `golden_spec()` now
 writes the four `nm*` values into the spec it replays.
+
+## The campaign run
+
+`--autonav --autoplay --nightmare --saveevery 1 --plan 0:0:8:0`, fullscreen, on
+the user's own `eeprom.sav` (backed up first to
+`~/eeprom.sav.bak-2026-09-11-campaign`).
+
+It picked the save up where it stood -- Sunny Mountain already won, 12,500 gold
+-- and then drove itself:
+
+```
+sbk-nav: town -> leave for the course list (exit #1, since race 0)
+sbk-nav: level list: cursor -> 1 (level 1 of 2 offered)
+sbk-nav: cutscene skipped
+sbk-nav: race 1 finished, gold=12500, want=SAVE
+sbk-nav: saved slot 0, gold=18400 (save #1)
+sbk-nav: race 2 finished, gold=18400, want=SAVE
+sbk-nav: saved slot 0, gold=41200 (save #2)
+```
+
+Two courses won and two EEPROM writes verified in one sitting, then on to
+**level 3, the Jingle Town boss race** -- lap 1/1, boss HUD, the ten snowman
+markers along the bottom (`g4-shots/sbk2-campaign-level3.png`). Turtle Island,
+the course that could not be finished at all before, is now just the second one
+on the way through.
+
+Screenshots: `g4-shots/sbk2-campaign-fullscreen.png` (a fullscreen race start,
+which is also what settles that fullscreen works for the sequel) and
+`g4-shots/sbk2-campaign-level3.png` (the boss race).
+
+Worth noting for whoever runs this next: the navigator logged
+`town -> leave for the course list (exit #1, since race 2)` three times in a
+row around the level-3 handover. `nav_town_exits` is being reset each time, so
+the loop guard that counts town exits never sees a run -- if the campaign ever
+does stall on the boss courses, that counter is the first thing to look at.
