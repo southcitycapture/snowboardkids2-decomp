@@ -20,3 +20,10 @@ src/race/race_main.c	    __asm__ volatile("mult $2,%0\n\tmflo $13\n\tsw $13,0x18
 
 # save_slot_select.c materialises the 0x380000 row pitch with a bare `lui`.
 src/ui/save_slot_select.c	                    __asm__("lui %0, 0x38" : "=r"(inc) : "r"(yPos));	                    inc = 0x00380000; /* was: lui %0, 0x38 */
+
+# Overlay dispatch: every level (and the race/cutscene/credits partition) is
+# linked at the same VRAM address, so loading one has to point the port's
+# dispatch thunks at that overlay's own functions (port/tools/gen_overlays.py).
+# The DMA itself still runs: it writes MIPS code nobody executes into the
+# emulated RDRAM, and clears the overlay's BSS there.
+src/system/rom_loader.c	    if (bssEnd != bssStart) {	    { extern void sbk_overlay_activate(void *); sbk_overlay_activate(romStart); }\n    if (bssEnd != bssStart) {

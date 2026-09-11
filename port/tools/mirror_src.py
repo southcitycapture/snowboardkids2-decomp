@@ -76,6 +76,7 @@ def main():
     ap.add_argument("src")
     ap.add_argument("dst")
     ap.add_argument("--pins", help="pins.txt from gen_pins.py")
+    ap.add_argument("--renames", help="overlay renames from gen_overlays.py")
     ap.add_argument("--suffix", default="__sbk_unpinned")
     ap.add_argument("--twins-static", action="store_true", help="make the twins file-local (library sources whose tentative definitions duplicate the game's own)")
     args = ap.parse_args()
@@ -88,8 +89,25 @@ def main():
                 if parts:
                     pinned.add(parts[0])
 
+    # the destination inside the gen tree names the original source
+    dst_abs = os.path.abspath(args.dst).replace(os.sep, "/")
+    rel = dst_abs.split("/gen/", 1)[1] if "/gen/" in dst_abs else os.path.relpath(
+        os.path.abspath(args.src), os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+
     with open(args.src) as f:
         src_text = f.read()
+    # This file belongs to an overlay: its own definitions are renamed so the
+    # plain names can be the dispatch thunks (see tools/gen_overlays.py). A
+    # #define renames the header's declaration with it.
+    if args.renames:
+        defines = []
+        with open(args.renames) as f:
+            for line in f:
+                parts = line.split()
+                if len(parts) == 3 and parts[0] == rel:
+                    defines.append("#define %s %s\n" % (parts[1], parts[2]))
+        if defines:
+            src_text = "".join(defines) + src_text
     src_text, renamed = split_anonymous_aggregates(src_text, pinned, args.suffix)
     out = []
     if True:
@@ -147,15 +165,13 @@ def main():
     # applied to the mirrored copy only. Each must match exactly once.
     text = "".join(out)
     patches = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "patches.txt")
-    # key on the destination inside the gen tree (the source may be a textconv temp file)
-    dst_abs = os.path.abspath(args.dst).replace(os.sep, "/")
-    rel = dst_abs.split("/gen/", 1)[1] if "/gen/" in dst_abs else os.path.relpath(os.path.abspath(args.src), os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
     if os.path.exists(patches):
         with open(patches) as pf:
             for line in pf:
                 if not line.strip() or line.startswith("#"):
                     continue
                 path, old, new = line.rstrip("\n").split("\t")
+                new = new.replace("\\n", "\n")  # a patch may insert a line
                 if path != rel:
                     continue
                 if text.count(old) != 1:

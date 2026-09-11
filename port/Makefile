@@ -86,6 +86,13 @@ PORT_DEFINED := osTvType osRomBase osResetType osAppNMIBuffer osMemSize osRomTyp
 PORT_C     := $(wildcard src/*.c src/ultra/*.c src/gfx/*.c src/audio/*.c src/platform/*.c src/debug/*.c src/ui/*.c)
 PORT_ASM   := $(CTX_ASM)
 
+# ---- overlays (see tools/gen_overlays.py) ---------------------------------------
+OV_STAMP   := $(BUILD)/overlays.stamp
+OV_THUNKS  := $(BUILD)/overlay_thunks.s
+OV_TABLE   := $(BUILD)/overlay_table.c
+OV_RENAMES := $(BUILD)/overlay_renames.txt
+OV_OBJS    := $(BUILD)/overlay_thunks.o $(BUILD)/overlay_table.o
+
 GAME_OBJS  := $(patsubst %.c,$(BUILD)/game/%.o,$(GAME_C) $(ULTRA_C) $(LIBMUS_C))
 PORT_OBJS  := $(patsubst %.c,$(BUILD)/port/%.o,$(PORT_C)) $(patsubst %.s,$(BUILD)/port/%.o,$(PORT_ASM))
 ROM_SYMS   := $(BUILD)/rom_syms.o
@@ -158,6 +165,14 @@ $(PINS_STAMP): $(N64_MAP) $(OBJ_LIST) tools/gen_pins.py
 
 $(PINS_S) $(PINS_TXT): $(PINS_STAMP)
 
+# Included fragments (.inc / .inc.c under src/) are pulled in by the main file's
+# #include; mirror them too so the include finds the filtered copy.
+# src/core/main.c #includes src/data/shared_model_part_display_lists.c, so the
+# mirror has to shadow the whole src tree (-I$(GEN)/src comes first in GAME_INC)
+# or the include would pull in the unfiltered original and define the pinned
+# globals a second time.
+GEN_FRAGMENTS := $(patsubst $(ROOT)/%,$(GEN)/%,$(shell find $(ROOT)/src -name '*.c' 2>/dev/null))
+
 # Which twins exist can only be known once every game source has been mirrored:
 # a pinned global need not have a C definition to rename (some are
 # `__asm__(".globl X\nX = base + N")` aliases into another array), and a copy
@@ -179,19 +194,12 @@ $(BUILD)/pin_table.o: $(PIN_TABLE) src/ultra/sbk_pins.h
 # use its own character encoding (upstream runs tools/textconv.py before the
 # compiler, and so must we), definitions of pinned globals are renamed to twins
 # and port/patches.txt substitutions are applied.
-$(GEN)/%.c: $(ROOT)/%.c tools/mirror_src.py patches.txt $(PINS_TXT) $(ROOT)/tools/textconv.py $(ROOT)/tools/charmap.txt
+$(GEN)/%.c: $(ROOT)/%.c tools/mirror_src.py patches.txt $(PINS_TXT) $(OV_RENAMES) $(ROOT)/tools/textconv.py $(ROOT)/tools/charmap.txt
 	@mkdir -p $(dir $@)
 	@$(PYTHON) $(ROOT)/tools/textconv.py $(ROOT)/tools/charmap.txt $< $@.tc
-	@$(PYTHON) tools/mirror_src.py --pins $(PINS_TXT) $(MIRROR_FLAGS) $@.tc $@
+	@$(PYTHON) tools/mirror_src.py --pins $(PINS_TXT) --renames $(OV_RENAMES) $(MIRROR_FLAGS) $@.tc $@
 	@rm -f $@.tc
 
-# Included fragments (.inc / .inc.c under src/) are pulled in by the main file's
-# #include; mirror them too so the include finds the filtered copy.
-# src/core/main.c #includes src/data/shared_model_part_display_lists.c, so the
-# mirror has to shadow the whole src tree (-I$(GEN)/src comes first in GAME_INC)
-# or the include would pull in the unfiltered original and define the pinned
-# globals a second time.
-GEN_FRAGMENTS := $(patsubst $(ROOT)/%,$(GEN)/%,$(shell find $(ROOT)/src -name '*.c' 2>/dev/null))
 
 $(GEN)/lib/%.c: MIRROR_FLAGS = --twins-static
 
@@ -219,8 +227,21 @@ $(BUILD)/rom_syms.s: $(N64_MAP) tools/gen_rom_syms.py $(PINS_TXT) $(PINS_STAMP)
 $(ROM_SYMS): $(BUILD)/rom_syms.s
 	$(AS) -o $@ $<
 
-$(EXE): $(GAME_OBJS) $(PORT_OBJS) $(DATA_OBJS) $(ROM_SYMS) $(PIN_OBJS) Makefile
-	$(CC) -o $@ $(GAME_OBJS) $(PORT_OBJS) $(DATA_OBJS) $(ROM_SYMS) $(PIN_OBJS) $(LDFLAGS)
+$(OV_STAMP): $(N64_MAP) $(LD_SCRIPT) tools/gen_overlays.py
+	@mkdir -p $(dir $@)
+	$(PYTHON) tools/gen_overlays.py $(N64_MAP) --ld $(LD_SCRIPT) --prefix '$(SYM_PREFIX)' --thunks $(OV_THUNKS) --table $(OV_TABLE) --renames $(OV_RENAMES)
+	@touch $@
+
+$(OV_THUNKS) $(OV_TABLE) $(OV_RENAMES): $(OV_STAMP)
+
+$(BUILD)/overlay_thunks.o: $(OV_THUNKS)
+	$(AS) -o $@ $<
+
+$(BUILD)/overlay_table.o: $(OV_TABLE) src/ultra/sbk_overlay.h
+	$(CC) $(PORT_CFLAGS) -c -o $@ $<
+
+$(EXE): $(GAME_OBJS) $(PORT_OBJS) $(DATA_OBJS) $(ROM_SYMS) $(PIN_OBJS) $(OV_OBJS) Makefile
+	$(CC) -o $@ $(GAME_OBJS) $(PORT_OBJS) $(DATA_OBJS) $(ROM_SYMS) $(PIN_OBJS) $(OV_OBJS) $(LDFLAGS)
 	@echo "built $@"
 
 clean:

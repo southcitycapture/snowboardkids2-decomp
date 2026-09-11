@@ -286,6 +286,7 @@ int main(int argc, char **argv) {
 
     sbk_rdram_init();
     sbk_pin_init();
+    { extern void sbk_overlay_init(void); sbk_overlay_init(); }
     sbk_os_init();
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) != 0) {
