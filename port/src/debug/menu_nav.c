@@ -56,6 +56,7 @@ int sbk_race_is_demo(const GameState *gs);
 extern int sbk_campaign_boost;
 extern int sbk_rival_tax;
 extern int sbk_campaign_wedge;
+extern int sbk_item_relief;
 
 int sbk_menutrace;
 int sbk_autonav;
@@ -336,6 +337,7 @@ static void nav_handicap(int level, int place) {
     if (level != last_level) {
         last_level = level;
         rung = losses = wedges = 0;
+        sbk_item_relief = 0;
         nav_ladder_set(0);
     }
 
@@ -345,11 +347,20 @@ static void nav_handicap(int level, int place) {
     if (sbk_campaign_wedge) {
         sbk_campaign_wedge = 0;
         wedges++;
-        if (rung > 0 && nav_ladder[rung].boost > 0) rung--;
-        nav_ladder_set(rung);
-        printf("sbk-nav: level %d wedged (%d so far); not counted as a loss, retrying at rung %d "
-               "(boost=%d rivaltax=%d)\n",
-               level, wedges, rung, sbk_campaign_boost, sbk_rival_tax);
+        /* The rung is kept. The first wedge on course 1 came at a rung whose
+         * boost had already finished a race, and its signature -- lap 0, a
+         * fixed sector, the position byte-identical frame to frame -- is the
+         * chairlift wedge of docs/nightmare-row.md, not the boost. Dropping a
+         * rung on it only threw away a handicap that had never been tried, and
+         * the ladder oscillated between the two.
+         *
+         * From the second wedge on the same course the item chance comes down
+         * instead, which is the documented cause: the way out of the lift wait
+         * is a scheduleTask, and item spam is what fills the pool it needs. */
+        if (wedges >= 2) sbk_item_relief += 55;
+        printf("sbk-nav: level %d wedged (%d so far); not a loss, retrying at rung %d "
+               "(boost=%d rivaltax=%d itemrelief=%d)\n",
+               level, wedges, rung, sbk_campaign_boost, sbk_rival_tax, sbk_item_relief);
         fflush(stdout);
         return;
     }
@@ -360,6 +371,7 @@ static void nav_handicap(int level, int place) {
                    level, rung, sbk_campaign_boost, sbk_rival_tax, losses);
         }
         rung = losses = wedges = 0;
+        sbk_item_relief = 0;
         nav_ladder_set(0);
         fflush(stdout);
         return;

@@ -156,11 +156,24 @@ static int nightmare_written;
 static int nm_tax = 0, nm_delay = 120, nm_use = 205, nm_alt = 205;
 /* Added to the rivals' row-0 tax by the navigator's handicap ladder. */
 int sbk_rival_tax;
+/* Taken off every item's useChance, on both rows, when a course keeps wedging.
+ *
+ * docs/nightmare-row.md has the chain: a lap wraps at the chairlift, the only
+ * way out of the lift wait is spawnChairliftEffect, and that is a scheduleTask
+ * that returns NULL once the task pool is full -- which item spam fills. The
+ * searched row (use=205) was measured on one Sunny Mountain race; course 1
+ * wedges at it, at exactly the documented signature (lap 0, a fixed sector, the
+ * position byte-identical frame to frame). Backing the item chance off is the
+ * lever that attacks the cause rather than the symptom, and it is only reached
+ * after the watchdog has had to rescue the same course twice. */
+int sbk_item_relief;
 
 static void nightmare_write_row(void) {
     int i;
     int rival = nm_tax + sbk_rival_tax;
+    int use = nm_use - sbk_item_relief;
     if (rival > 255) rival = 255;
+    if (use < 40) use = 40;
     gAIPlayerParams[NIGHTMARE_ROW][0].useChance = (u8)nm_tax;
     gAIPlayerParams[NIGHTMARE_ROW][0].delay = (u8)nm_delay;
     gAIPlayerParams[NIGHTMARE_ROW][0].altChance = (u8)nm_alt;
@@ -168,7 +181,7 @@ static void nightmare_write_row(void) {
     gAIPlayerParams[RIVAL_ROW][0].delay = (u8)nm_delay;
     gAIPlayerParams[RIVAL_ROW][0].altChance = (u8)nm_alt;
     for (i = 1; i < 0x11; i++) {
-        gAIPlayerParams[NIGHTMARE_ROW][i].useChance = (u8)nm_use;
+        gAIPlayerParams[NIGHTMARE_ROW][i].useChance = (u8)use;
         gAIPlayerParams[NIGHTMARE_ROW][i].delay = (u8)nm_delay;
         gAIPlayerParams[NIGHTMARE_ROW][i].altChance = (u8)nm_alt;
         gAIPlayerParams[RIVAL_ROW][i] = gAIPlayerParams[NIGHTMARE_ROW][i];
