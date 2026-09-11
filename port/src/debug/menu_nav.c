@@ -38,6 +38,8 @@
 #include "system/task_scheduler.h"
 #include "ui/save_slot_gfx.h"
 #include "ui/title_ui_elements.h"
+#include "ui/level_preview.h"
+#include "effects/cutscene_keyframes.h"
 #include "../platform/input.h"
 
 extern TaskScheduler gSchedulerListSentinel;
@@ -53,6 +55,9 @@ int sbk_menutrace;
 int sbk_autonav;
 int sbk_autonav_shop;
 int sbk_autonav_every = 1;
+/* --trial level=N: which course the next race should be. -1 = whatever the menu
+ * offers. Set by race_dbg.c's trial parser. */
+int sbk_nav_target_level = -1;
 
 /* The story map's save point: location handler 7 = initSaveSlotScreen, and the
  * map's own id for it is one less. */
@@ -231,11 +236,58 @@ static void nav_act(unsigned long retraces) {
         return;
     }
 
+    /* The cutscenes. The sequel plays a long one before and after every story
+     * race (the pre-race one alone is 55 s), and the only way out is START --
+     * which a navigator must never queue, because a START still in flight when
+     * the next race begins pauses it. So the *state* is parked instead:
+     * CUTSCENE_STATE_SKIP_START is exactly what the button sets
+     * (src/effects/cutscene_keyframes.c), fade and all. */
+    if (sbk_menu_on("updateCutscenePlayback")) {
+        CutsceneTaskMemory *c = (CutsceneTaskMemory *)sbk_menu_alloc("updateCutscenePlayback");
+        if (c != NULL && c->playbackState == CUTSCENE_STATE_PLAYING) {
+            c->playbackState = CUTSCENE_STATE_SKIP_START;
+            printf("sbk-nav: cutscene skipped\n");
+            fflush(stdout);
+        }
+        return;
+    }
+
     /* The title: START is entry 0, and a monkey that drifts onto TRAINING or
      * OPTION never comes back to the campaign. */
     if (sbk_menu_on("handleTitleMenuInput")) {
         TitleScreenState *t = (TitleScreenState *)sbk_menu_alloc("handleTitleMenuInput");
         if (t != NULL && t->menuMode == 0) t->menuSelection = 0;
+        nav_press("press A 3");
+        return;
+    }
+
+    /* The course list. It keeps a *cursor index* into its own levelIdList[] in
+     * selectedIndex and only turns it into gGameSessionContext->currentLevel
+     * when the choice is confirmed -- the same shape as the first game's
+     * character-select course menu. So a trial parks the cursor on the course
+     * it wants and lets the navigator's own A press confirm it. */
+    if (sbk_menu_on("handleLevelSelectInput")) {
+        LevelSelectState *ls = (LevelSelectState *)sbk_menu_alloc("handleLevelSelectInput");
+        if (ls != NULL && sbk_nav_target_level >= 0 && ls->menuState == 0) {
+            int i;
+            for (i = 0; i < ls->maxLevelCount && i < 12; i++) {
+                if (ls->levelIdList[i] == (u8)sbk_nav_target_level) {
+                    if (ls->selectedIndex != (s8)i) {
+                        static int said = -1;
+                        ls->selectedIndex = (s8)i;
+                        ls->selectedLevelId = (u8)sbk_nav_target_level;
+                        ls->previousLevelId = (u8)sbk_nav_target_level;
+                        if (said != sbk_nav_target_level) {
+                            said = sbk_nav_target_level;
+                            printf("sbk-nav: level list: cursor -> %d (level %d of %d offered)\n", i,
+                                   sbk_nav_target_level, ls->maxLevelCount);
+                            fflush(stdout);
+                        }
+                    }
+                    break;
+                }
+            }
+        }
         nav_press("press A 3");
         return;
     }

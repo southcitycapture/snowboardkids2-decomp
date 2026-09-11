@@ -160,7 +160,11 @@ int sbk_trial_parse(const char *spec) {
             else if (!strcmp(key, "board")) trial.board = val;
             else if (!strcmp(key, "boost")) trial.boost = val;
             else if (!strcmp(key, "quit")) trial.quit = val;
-            else if (!strcmp(key, "level")) trial.level = val;
+            else if (!strcmp(key, "level")) {
+                extern int sbk_nav_target_level;
+                trial.level = val;
+                sbk_nav_target_level = val;
+            }
             else if (!strcmp(key, "nm")) trial.nm = val;
             else if (!strcmp(key, "gold")) trial.gold = val;
             else if (!strcmp(key, "nmtax")) nm_tax = val;
