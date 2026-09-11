@@ -19,7 +19,8 @@ command lists, a fixed-function OpenGL 1.3 backend, scripted input.
 | Audio: ABI 1 confirmed, aspMain byte-identical to the first game, samples produced | plays, not yet listened to |
 | A race | played end to end by the game's own CPU rider, first place |
 | Self-play: `--racedbg`, `--peek`, `--autoplay`, `--soak`, `--nightmare` | works |
-| The navigator: `--autonav`, `--menutrace`, `--saveevery`, `--trial`, `--plan` | works; the campaign wins Sunny Mountain, writes the EEPROM, and advances itself to the next course. The CPU rider then wedges on Turtle Island's lift gate -- `docs/PLAN.md`, "What is not done" |
+| The navigator: `--autonav`, `--menutrace`, `--saveevery`, `--trial`, `--plan` | works; the campaign wins a course, writes the EEPROM, leaves the town by the right door and aims itself at the next course |
+| The lift wedge that stopped the campaign on Turtle Island | fixed -- it was the Nightmare row starving the task pool, not the borrowed path table. `docs/nightmare-row.md` |
 | The campaign end to end (every course, a save after each race) | not yet watched through |
 
 The title screen matches the emulator reference frame
@@ -71,8 +72,10 @@ Scripts in `scripts/`: `title-start.txt`, `menu-walk.txt`, `menu-soak.txt`.
 
 The game beta-tests itself. `--autoplay` hands player 1 to the game's own CPU
 rider; `--nightmare` retunes a spare row of `gAIPlayerParams` so every rider
-throws everything instantly and carries no speed handicap, and gives player 1
-the fastest board; `--autonav` walks the menus by name and drives the campaign
+throws items hard and carries no speed handicap, and gives player 1 the fastest
+board -- the row's numbers are **searched, not guessed**, and
+`docs/nightmare-row.md` says what they are and what happens when they go off
+the end of the game's own scale (the race stops ending); `--autonav` walks the menus by name and drives the campaign
 between races; `--soak` is the same without the navigator (a monkey pressing A).
 
     snowboardkids2 --fullscreen --autonav --autoplay --nightmare --saveevery 1

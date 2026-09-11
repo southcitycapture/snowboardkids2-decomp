@@ -469,27 +469,49 @@ more flags, because it keeps the entire campaign in the EEPROM:
 | `--eeprom FILE` | the save device points at a scratch file, deleted before every trial. Without it a trial rewrites the user's `eeprom.sav` *and* stops repeating, because the menus differ once the progress does |
 | `--unlockall` | `buildUnlockedLevelList` (`story_intro.c`) only offers courses whose `levelUnlockStatus` is non-zero, so on a fresh scratch save `level=N` can only ever aim at course 0. This runs the game's **own** cheat, `unlockAllContent` (`title_screen.c`), rather than a hand-written save block, and re-runs it whenever `loadSaveData` overwrites it |
 
+A golden movie and the navigator do not fight, which is worth knowing before
+reading a `regress` failure as one. `sbk_input_play_read` prefers the movie
+whenever one is loaded and only falls back to the script otherwise
+(`port/src/platform/input_play.c`), so on a replay the `.m64` supplies every
+button and `--autonav` supplies only the things a button never carried anyway
+-- the parked cursors, the skipped cutscene, the town's exit byte. That split is
+what makes the replay reproducible at all: the navigator's presses are in the
+movie, its memory writes are not.
+
 `--frames 60000` is the other half: at `--headless`'s 12x that is about 80 s of
 wall clock, and a Sunny Mountain race plus the menu walk is under 20000 frames,
 so a rider that wedges itself costs a minute instead of a quarter of an hour.
 
 ## What is not done
 
-* **The CPU rider wedges itself on Turtle Island.** The campaign now walks
-  itself: Sunny Mountain is won (12,500 gold), the EEPROM is written, the town
-  is left by the right door, and the course list is parked on course 1 -- "level
-  list: cursor -> 1 (level 1 of 2 offered)", the game's own next-up marker read
-  back. Then the rider reaches Turtle Island's **LIFT IN** gate and stops dead:
-  lap 1 of 3, 4th, no movement for ten minutes of wall clock
-  (`g4-shots/sbk2-turtle-stuck.png`). The handoff itself is clean -- "path table
-  attached (0x802ad430)" -- so this is not the missing-asset retry; it is the
-  borrowed path table. Player 1 has no `bossRaceData` of its own, so the port
-  lends it rider 2's and reads **slot 0**, and slot 0 is the preference set for
-  a rider standing somewhere else. On a course whose route forks at a lift that
-  is enough to park it. The way in is `--racedbg` on level 1 watching
-  `sectorIndex` / `lapProgressRemaining` / `behaviorMode` at the gate, and then
-  whether the slot should be `playerIndex`-indexed after all (`race_main.c`
-  ~1105) rather than always 0.
+* ~~**The CPU rider wedges itself on Turtle Island.**~~ **Found and fixed** --
+  see `docs/nightmare-row.md` for the whole chain. It was never the borrowed
+  path table. The attach now logs the asset's header, and Turtle Island's is
+  `16,16,504,992`: three authored sets for four `playerIndex` values, with the
+  human's index aliased onto rider 2's, so lending slot 0 and lending slot 1
+  hand over identical bytes. The wedge reproduced either way.
+
+  What it actually is: **a lap wraps at the chairlift, not a finish line.** All
+  three `currentLap++` sites in `race_main.c` (4604, 4752, 4959) are lift steps,
+  and while a rider waits for the lift it is pinned at `storedPosition` every
+  frame. On Turtle Island the way out of that wait is
+  `if (spawnChairliftEffect(player))` (`race_main.c:4516`, `memoryPoolId == 1`
+  has its own branch), and `spawnChairliftEffect` is a `scheduleTask` that
+  returns NULL when the task pool is full (`particle_items.c:2221`).
+
+  The old `--nightmare` row filled that pool. It wrote `delay=0,
+  useChance=255`: every item thrown the instant it is held, by all four riders,
+  for the whole race -- against an authored floor of `delay` 120 across every
+  one of the game's own eight rows. The last rider to reach the lift cannot get
+  a task, and sits there for ever. Every observation fits: player 1 froze at
+  sector 96 with `prog=0`, `lap=0`, its position byte-identical frame to frame
+  **and identical across two separate runs** (a rider being *held*, not lost);
+  the rivals were already onto lap 1 because they reached the lift while the
+  pool still had room; plain `--autoplay` with no Nightmare row finished Sunny
+  Mountain three times; and both hung trials in the first sweep were that row.
+
+  With the row re-anchored on the game's own data, Turtle Island finishes.
+
 * A full progression through every course, with a verified EEPROM write after
   each race, therefore still has not been watched end to end.
   `nightmare_search.py sweep` (the per-course rider ladder) has not been run
@@ -499,10 +521,13 @@ so a rider that wedges itself costs a minute instead of a quarter of an hour.
   graphics bug the self-play tooling made easy to see, not a self-play bug --
   probably the same class as the combiner fix above, and `--dumpdl` on a race
   task is the way in.
-* The draw-distance patch (`--drawdistance`): the sequel's far planes are
-  `RACE_VIEWPORT_FAR_PLANE 3800.0f`, `MULTIPLAYER_RACE_VIEW_FAR_PLANE 3000.0f`
-  and `BOSS_RACE_VIEW_FAR_PLANE 2000.0f` in `src/race/race_session.c`; the
-  patches.txt entries still name the *first* game's files and so never match.
+* ~~The draw-distance patch never matches.~~ **Done.** The three entries in
+  `patches.txt` name the sequel's own `src/race/race_session.c` and its
+  `RACE_VIEWPORT_FAR_PLANE 3800.0f` / `MULTIPLAYER_RACE_VIEW_FAR_PLANE 3000.0f`
+  / `BOSS_RACE_VIEW_FAR_PLANE 2000.0f`, and the mirrored source comes out as
+  `(3800.0f * sbk_far_scale)`. `sbk_far_scale` reaches every game translation
+  unit through `port/src/port_override.h`, which `port/Makefile` force-includes,
+  so no game file has to be touched to see it.
 * Registering the sequel in the first game's launcher (`src/settings.c` there
   lists the games) — a small separate change in the other repo, once this one
   plays a race.
