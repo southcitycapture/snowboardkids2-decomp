@@ -134,24 +134,49 @@ int sbk_race_is_demo(const GameState *gs) {
  * is touched.
  */
 #define NIGHTMARE_ROW 7
+/* The rivals' own row.
+ *
+ * Under --autoplay player 1 is a CPU rider too, so it pays the row-0 speed tax
+ * along with everyone else -- which makes a shared row useless as a difficulty
+ * lever: taxing the rivals taxed us by exactly as much. Row 6 is the second
+ * spare (gCpuCharacterSnowboardConfigs names only 0..5) and is written as a
+ * copy of the Nightmare row with one byte changed, the tax. The rivals are
+ * pointed at it and player 1 stays on the untaxed row 7, so sbk_rival_tax is a
+ * lever that slows *only* the opposition.
+ *
+ * This is the lever the campaign needed. Raising player 1's own top speed
+ * instead works for one step and then wedges the rider: at +21% it overshot
+ * something on course 1 and the race never ended (46,000 retraces against a
+ * normal 20,000), because a standard race only finishes when the *human* slot's
+ * rider crosses the line. Slowing the rivals changes no physics on our side at
+ * all. */
+#define RIVAL_ROW 6
 static int nightmare_written;
 /* Tunable by --trial nm*: searched, not guessed (port/tools/nightmare_search.py). */
 static int nm_tax = 0, nm_delay = 120, nm_use = 205, nm_alt = 205;
+/* Added to the rivals' row-0 tax by the navigator's handicap ladder. */
+int sbk_rival_tax;
 
 static void nightmare_write_row(void) {
     int i;
+    int rival = nm_tax + sbk_rival_tax;
+    if (rival > 255) rival = 255;
     gAIPlayerParams[NIGHTMARE_ROW][0].useChance = (u8)nm_tax;
     gAIPlayerParams[NIGHTMARE_ROW][0].delay = (u8)nm_delay;
     gAIPlayerParams[NIGHTMARE_ROW][0].altChance = (u8)nm_alt;
+    gAIPlayerParams[RIVAL_ROW][0].useChance = (u8)rival;
+    gAIPlayerParams[RIVAL_ROW][0].delay = (u8)nm_delay;
+    gAIPlayerParams[RIVAL_ROW][0].altChance = (u8)nm_alt;
     for (i = 1; i < 0x11; i++) {
         gAIPlayerParams[NIGHTMARE_ROW][i].useChance = (u8)nm_use;
         gAIPlayerParams[NIGHTMARE_ROW][i].delay = (u8)nm_delay;
         gAIPlayerParams[NIGHTMARE_ROW][i].altChance = (u8)nm_alt;
+        gAIPlayerParams[RIVAL_ROW][i] = gAIPlayerParams[NIGHTMARE_ROW][i];
     }
     if (!nightmare_written) {
         nightmare_written = 1;
-        printf("sbk: nightmare: gAIPlayerParams row %d retuned tax=%d delay=%d use=%d alt=%d\n", NIGHTMARE_ROW,
-               nm_tax, nm_delay, nm_use, nm_alt);
+        printf("sbk: nightmare: gAIPlayerParams row %d retuned tax=%d delay=%d use=%d alt=%d (rivals on row %d)\n",
+               NIGHTMARE_ROW, nm_tax, nm_delay, nm_use, nm_alt, RIVAL_ROW);
         fflush(stdout);
     }
 }
@@ -257,6 +282,69 @@ static void trial_retune(Player *p, int boost) {
     p->lateralDeadzone = (s->lateralDeadzone << 15) / 100 + 0x1000;
     p->baseGravity = (s->gravity << 14) / 100 + 0x3000;
     p->baseAcceleration = (s->acceleration << 17) / 100 + 0x28000;
+}
+
+/* ----------------------------------------------------------- the race watchdog
+ *
+ * A standard race ends when every *human* slot's rider has the finished flag
+ * (race_session.c ~1135: `count == gs->playerCount` over animationFlags &
+ * 0x80000), and in story mode that is player 1 alone. So a wedged player 1 is
+ * not a slow race, it is a race that never ends -- and an unattended campaign
+ * behind it never moves again. It happened at the third course-1 retry: 46,000
+ * retraces against a normal 20,000, the rider pinned in place.
+ *
+ * docs/nightmare-row.md has the mechanism for the first one found: a lap wraps
+ * at the chairlift, the only way out of the lift wait is spawnChairliftEffect,
+ * and that is a scheduleTask returning NULL once the task pool is full.
+ *
+ * The watchdog does not try to diagnose which wedge it is. It watches player 1's
+ * lap, sector and world position, and when all four are byte-identical for a
+ * minute it ends the race the game's own way -- finishPosition last, then the
+ * finished flag -- so the result comes back as a 4 (raced, not won), the course
+ * keeps its "go back for this one" marker, and the campaign carries on. Forcing
+ * the flag *without* first forcing the place would be a save-corrupting bug: a
+ * finishPosition that happened to be 0 would write the course down as won.
+ */
+int sbk_campaign_wedge; /* set here, consumed by menu_nav.c's handicap ladder */
+#define WEDGE_RETRACES 3600
+
+static void race_watchdog(GameState *gs, unsigned long retraces) {
+    static unsigned long since;
+    static s32 last[5];
+    static void *last_gs;
+    Player *p = &gs->players[0];
+    s32 now[5];
+    extern int sbk_menu_on(const char *);
+
+    if (!sbk_autoplay || !sbk_menu_on("handleRaceStateUpdate")) {
+        last_gs = NULL;
+        return;
+    }
+    now[0] = p->currentLap;
+    now[1] = p->sectorIndex;
+    now[2] = (s32)p->worldPos.x;
+    now[3] = (s32)p->worldPos.y;
+    now[4] = (s32)p->worldPos.z;
+
+    if (last_gs != (void *)gs || memcmp(now, last, sizeof(now)) != 0) {
+        memcpy(last, now, sizeof(now));
+        last_gs = (void *)gs;
+        since = retraces;
+        return;
+    }
+    if (retraces - since < WEDGE_RETRACES) return;
+    since = retraces;
+
+    printf("sbk: WEDGE -- player 1 has not moved for %d retraces on level %d "
+           "(lap=%d sect=%d pos=%d,%d,%d anim=%08x); ending the race as a loss\n",
+           WEDGE_RETRACES, gs->memoryPoolId, p->currentLap, p->sectorIndex, (int)now[2], (int)now[3], (int)now[4],
+           (unsigned)p->animationFlags);
+    fflush(stdout);
+    /* Last place first, THEN the finished flag: a race that was never finished
+     * must never be recorded as won. */
+    p->finishPosition = (u8)(gs->numPlayers > 0 ? gs->numPlayers - 1 : 3);
+    p->animationFlags |= PLAYER_FINISHED_FLAG;
+    sbk_campaign_wedge = 1;
 }
 
 /* ------------------------------------------------------------------ autoplay */
@@ -410,10 +498,14 @@ void sbk_autoplay_tick(unsigned long retraces) {
         int i;
         Player *p1 = &gs->players[0];
         if (sbk_nightmare) {
+            /* The rivals go on RIVAL_ROW, which is the Nightmare row plus the
+             * handicap ladder's tax; player 1 is put on the untaxed row 7 by
+             * autoplay_arm. Slot 0 is skipped here even when it is a CPU. */
             for (i = 1; i < gs->numPlayers; i++) {
-                if (gs->players[i].isCpuControlled) gs->players[i].aiDifficultyIndex = NIGHTMARE_ROW;
+                if (gs->players[i].isCpuControlled) gs->players[i].aiDifficultyIndex = RIVAL_ROW;
             }
         }
+        race_watchdog(gs, retraces);
         if (sbk_autoplay && p1->isCpuControlled == 0) {
             autoplay_arm(gs, retraces);
         }

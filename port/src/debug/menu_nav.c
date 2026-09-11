@@ -51,8 +51,11 @@ extern GameSessionContext *gGameSessionContext;
 extern u8 storyMapLocationIndex;
 GameState *sbk_race_state(void);
 int sbk_race_is_demo(const GameState *gs);
-/* race_dbg.c: 1/256ths added to player 1's top speed, raised here. */
+/* race_dbg.c: the handicap ladder's two levers, and the wedge flag its race
+ * watchdog raises. */
 extern int sbk_campaign_boost;
+extern int sbk_rival_tax;
+extern int sbk_campaign_wedge;
 
 int sbk_menutrace;
 int sbk_autonav;
@@ -297,37 +300,81 @@ static void nav_progress(const char *why) {
  * need it, and it is capped: past about +50% the rider overshoots the course's
  * own corners and gets slower, so a boost that has run to the cap is a real
  * finding to report rather than a knob to keep turning. */
-#define NAV_BOOST_STEP 28
-#define NAV_BOOST_MAX 128
+/* The ladder. Two levers, and the order matters:
+ *
+ *   boost      1/256ths added to player 1's own top speed (trial_retune)
+ *   rivaltax   added to the rivals' row-0 speed tax, which race_main.c ~804
+ *              takes off maxSpeedCap for CPU riders -- and only the rivals pay
+ *              it, because they are put on RIVAL_ROW and player 1 is not
+ *
+ * One boost step (+10%) is safe and won nothing; two (+21%) wedged the rider on
+ * course 1 -- it stopped moving and, since a standard race only ends when the
+ * human slot's rider finishes, the race never ended at all. So the boost is
+ * held at one step and everything above it slows the opposition instead, which
+ * changes no physics on our side. The tax tops out at 255, beyond which the
+ * byte simply saturates.
+ *
+ * A course that loses every rung is a real finding about the rider, not a knob
+ * to keep turning, and the last rung says so. */
+static const struct { s16 boost, tax; } nav_ladder[] = {
+    { 0, 0 }, { 28, 0 }, { 28, 96 }, { 28, 160 }, { 28, 220 }, { 28, 255 },
+};
+#define NAV_LADDER_TOP ((int)(sizeof(nav_ladder) / sizeof(nav_ladder[0])) - 1)
+
+static void nav_ladder_set(int rung) {
+    if (rung < 0) rung = 0;
+    if (rung > NAV_LADDER_TOP) rung = NAV_LADDER_TOP;
+    sbk_campaign_boost = nav_ladder[rung].boost;
+    sbk_rival_tax = nav_ladder[rung].tax;
+}
 
 static void nav_handicap(int level, int place) {
     static int last_level = -1;
-    static int losses;
-    if (place == 0) {
-        if (sbk_campaign_boost != 0) {
-            printf("sbk-nav: level %d won with boost=%d after %d loss(es); boost back to 0\n", level,
-                   sbk_campaign_boost, losses);
-        }
-        sbk_campaign_boost = 0;
-        losses = 0;
-        last_level = level;
-        return;
-    }
+    static int rung;
+    static int losses, wedges;
+
     if (level != last_level) {
         last_level = level;
-        losses = 0;
-        sbk_campaign_boost = 0;
+        rung = losses = wedges = 0;
+        nav_ladder_set(0);
     }
+
+    /* A wedge is not a loss: the rider never finished, so the race says nothing
+     * about whether the ladder is high enough. Climbing on one would also climb
+     * *towards* the setting that caused it, since the boost is what wedges. */
+    if (sbk_campaign_wedge) {
+        sbk_campaign_wedge = 0;
+        wedges++;
+        if (rung > 0 && nav_ladder[rung].boost > 0) rung--;
+        nav_ladder_set(rung);
+        printf("sbk-nav: level %d wedged (%d so far); not counted as a loss, retrying at rung %d "
+               "(boost=%d rivaltax=%d)\n",
+               level, wedges, rung, sbk_campaign_boost, sbk_rival_tax);
+        fflush(stdout);
+        return;
+    }
+
+    if (place == 0) {
+        if (rung != 0) {
+            printf("sbk-nav: level %d won at rung %d (boost=%d rivaltax=%d) after %d loss(es); back to rung 0\n",
+                   level, rung, sbk_campaign_boost, sbk_rival_tax, losses);
+        }
+        rung = losses = wedges = 0;
+        nav_ladder_set(0);
+        fflush(stdout);
+        return;
+    }
+
     losses++;
-    if (sbk_campaign_boost < NAV_BOOST_MAX) {
-        sbk_campaign_boost += NAV_BOOST_STEP;
-        if (sbk_campaign_boost > NAV_BOOST_MAX) sbk_campaign_boost = NAV_BOOST_MAX;
-        printf("sbk-nav: level %d lost %d time(s); retrying with boost=%d (+%d%% top speed)\n", level, losses,
-               sbk_campaign_boost, sbk_campaign_boost * 100 / 256);
+    if (rung < NAV_LADDER_TOP) {
+        rung++;
+        nav_ladder_set(rung);
+        printf("sbk-nav: level %d lost %d time(s); retrying at rung %d (boost=%d +%d%% top speed, rivaltax=%d)\n",
+               level, losses, rung, sbk_campaign_boost, sbk_campaign_boost * 100 / 256, sbk_rival_tax);
     } else {
-        printf("sbk-nav: WARNING -- level %d lost %d time(s) at the boost cap (%d); the rider cannot win this "
-               "course on speed alone\n",
-               level, losses, sbk_campaign_boost);
+        printf("sbk-nav: WARNING -- level %d lost %d time(s) at the top of the handicap ladder "
+               "(boost=%d rivaltax=%d); the rider cannot win this course\n",
+               level, losses, sbk_campaign_boost, sbk_rival_tax);
     }
     fflush(stdout);
 }
