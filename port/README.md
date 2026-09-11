@@ -26,12 +26,16 @@ logo, background, menu, copyright lines, Rumble Pak badge. Until the combiner
 fix in `gfx_pc.c` (see `docs/PLAN.md`, "a combiner input gfx_pc did not have")
 everything drawn under the game's sprite setup list was transparent black.
 
-Screenshots taken on the G4 itself are in `~/Apps/islandPowerPC/g4-shots`:
-`sbk2-boot-20s.png` (the attract demo), `sbk2-ov-45s.png` (the title screen
-with the character line-up), `sbk2-title-55s.png` and `sbk2-save-52s.png` (the
-file select, without and with the EEPROM), `sbk2-menu-45s.png` /
-`sbk2-menu-65s.png` (the level preview), `sbk2-soak-a.png` (the story
-overworld).
+## Screenshots (taken on the G4)
+
+| | |
+| --- | --- |
+| ![Title](docs/screenshots/title.png) | ![Race](docs/screenshots/race-hud.png) |
+| The title screen: logo, snow background, menu, copyright, Rumble Pak badge. Pixel-for-pixel the layout of the emulator's frame. | A race with the full HUD: lap, item slots, place, the progress bar with rider heads, coins, and a sky that reaches the horizon. |
+| ![File select](docs/screenshots/file-select.png) | |
+| The file select, drawn from the 512-byte EEPROM image. | |
+
+More, uncropped, are in `~/Apps/islandPowerPC/g4-shots`.
 
 ## Build and run
 
