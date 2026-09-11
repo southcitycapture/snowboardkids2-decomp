@@ -142,6 +142,7 @@ int main(int argc, char **argv) {
         sbk_perf_enabled = sbk_settings.perf;
     }
 
+    int saveevery_given = 0;
     for (i = 1; i < argc; i++) {
         if (strcmp(argv[i], "--fullscreen") == 0 || strcmp(argv[i], "-f") == 0) {
             fullscreen = 1;
@@ -227,6 +228,7 @@ int main(int argc, char **argv) {
         } else if (strcmp(argv[i], "--saveevery") == 0 && i + 1 < argc) {
             extern int sbk_autonav_every;
             sbk_autonav_every = atoi(argv[++i]);
+            saveevery_given = 1;
         } else if (strcmp(argv[i], "--menutrace") == 0) {
             extern int sbk_menutrace;
             sbk_menutrace = 1;
@@ -280,8 +282,16 @@ int main(int argc, char **argv) {
         } else if (strcmp(argv[i], "--nightmare") == 0) {
             sbk_nightmare = 1;
         } else if (strcmp(argv[i], "--soak") == 0) {
+            /* The sequel's town cannot be left by mashing A: A walks into the
+             * nearest building (the rider picker) and A again walks out, for
+             * ever. So a soak drives the menus with the navigator, and unless
+             * --saveevery says otherwise it never visits the save point --
+             * a soak has no business writing the player's EEPROM. */
+            extern int sbk_autonav, sbk_autonav_every;
             sbk_settings.launcher = 0;
             sbk_autoplay = sbk_soak = 1;
+            sbk_autonav = 1;
+            if (!saveevery_given) sbk_autonav_every = 0;
         } else if (strcmp(argv[i], "--drawdistance") == 0 && i + 1 < argc) {
             sbk_far_scale = (float)atof(argv[++i]);
             if (sbk_far_scale < 0.25f) sbk_far_scale = 0.25f;

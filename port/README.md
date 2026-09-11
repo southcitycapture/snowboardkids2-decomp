@@ -76,7 +76,7 @@ throws items hard and carries no speed handicap, and gives player 1 the fastest
 board -- the row's numbers are **searched, not guessed**, and
 `docs/nightmare-row.md` says what they are and what happens when they go off
 the end of the game's own scale (the race stops ending); `--autonav` walks the menus by name and drives the campaign
-between races; `--soak` is the same without the navigator (a monkey pressing A).
+between races; `--soak` is the same with the save point skipped: the town cannot be left by pressing A (A walks into the rider picker and out again for ever), so a soak uses the navigator too, and only writes the EEPROM if `--saveevery` says so.
 
     snowboardkids2 --fullscreen --autonav --autoplay --nightmare --saveevery 1
 
