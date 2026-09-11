@@ -377,9 +377,22 @@ about a quarter of the rider's speed -- and every other slot decides how soon
 and how often an item is thrown. The rows the game's own data names
 (`gCpuCharacterSnowboardConfigs`) are 0-5, so **row 7 is spare**: `--nightmare`
 writes the retune there and points every CPU rider at it, leaving the game's
-own table untouched. The values are `tax=0, delay=0, useChance=255,
-altChance=255` and are exposed to `--trial` as `nmtax/nmdelay/nmuse/nmalt` so
-`nightmare_search.py nm` can search them rather than have them guessed.
+own table untouched. The four values are exposed to `--trial` as
+`nmtax/nmdelay/nmuse/nmalt` so `nightmare_search.py nm` can **search** them
+rather than have them guessed -- which turned out to matter more than it
+sounds. The first guess was `tax=0, delay=0, useChance=255, altChance=255`:
+every item thrown the instant it is held, by every rider. That row does not
+make the game hard, it makes races **stop ending** -- items are scheduled
+tasks, and the only way out of the lift wait that wraps a lap is a
+`scheduleTask` that returns NULL once the pool is full. `docs/nightmare-row.md`
+has the chain and the sweep.
+
+The searched row is `tax=0, delay=120, useChance=205, altChance=205`, and it is
+now the default. It sits inside the shape the game's own eight rows use (their
+item `delay` never goes below 90). On Sunny Mountain it comes first in 14,106
+frames; `useChance=255` at the same delay does not finish, `delay=150` drops to
+second and `delay=90` to third -- so 120 is a real optimum, not the end of a
+monotonic trend.
 
 `--nightmare` also gives player 1 `SNOWBOARD_SPEED_LEVEL_3`, the fastest board
 that has no drawback.

@@ -328,6 +328,13 @@ def golden_spec(level):
     spec = "level=%s,char=%s,board=%s" % (r["level"], r["char"], r["board"])
     if int(r["boost"] or 0):
         spec += ",boost=%s" % r["boost"]
+    # Pin the Nightmare row into the spec when the winning row carried one.
+    # Leaving it implicit works only while the port's built-in defaults happen
+    # to equal the searched row -- and a golden movie that replays against a
+    # different row is not a regression test, it is a coin toss.
+    if r.get("nmuse"):
+        spec += ",nmtax=%s,nmdelay=%s,nmuse=%s,nmalt=%s" % (
+            r["nmtax"], r["nmdelay"], r["nmuse"], r["nmalt"])
     return spec, r
 
 

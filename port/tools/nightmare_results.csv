@@ -1,1 +1,7 @@
 spec,level,char,board,boost,diff,nmtax,nmdelay,nmuse,nmalt,place,finished_before,frames,gold,wall_s
+"level=0,char=0,board=8,nmtax=0,nmdelay=120,nmuse=205,nmalt=205",0,0,8,0,7,0,120,205,205,1,0,14106,2600,331
+"level=0,char=0,board=8,nmtax=0,nmdelay=120,nmuse=255,nmalt=255",,,,,,0,120,255,255,,,,,428
+"level=0,char=0,board=8,nmtax=0,nmdelay=150,nmuse=205,nmalt=205",0,0,8,0,7,0,150,205,205,2,1,24598,2900,514
+"level=0,char=0,board=8,nmtax=0,nmdelay=90,nmuse=205,nmalt=205",0,0,8,0,7,0,90,205,205,3,2,14906,1300,345
+"level=0,char=0,board=8,nmtax=168,nmdelay=120,nmuse=205,nmalt=205",,,,,,168,120,205,205,,,,,340
+"level=0,char=0,board=8,nmtax=0,nmdelay=0,nmuse=255,nmalt=255",0,0,8,0,7,0,0,255,255,2,1,15170,1300,349

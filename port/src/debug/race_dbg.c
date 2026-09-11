@@ -102,9 +102,22 @@ int sbk_race_is_demo(const GameState *gs) {
  *
  * so row 0's useChance is a top-speed *tax* (0xA8 on the easiest row costs
  * about a quarter of the speed) and every other row's delay/useChance decide
- * how fast and how often an item is thrown. A "nightmare" row is therefore
- * useChance 0 in slot 0 (no tax) and delay 0 / chances 255 everywhere else
- * (throw everything, immediately).
+ * how fast and how often an item is thrown.
+ *
+ * The obvious row -- no tax, delay 0, every chance 255 -- is the wrong one, and
+ * not by a little: it is the row that stops races ending. Items are scheduled
+ * tasks, `spawnChairliftEffect` (particle_items.c:2221) is the only way out of
+ * the lift wait that wraps a lap, and it is a `scheduleTask` that returns NULL
+ * when the pool is full. Spam every item on every rider and the last one to
+ * reach the lift waits for ever, pinned at storedPosition. docs/nightmare-row.md
+ * has the whole chain and the sweep that measured it.
+ *
+ * So the defaults below are searched, not guessed
+ * (`nightmare_search.py nm 0`), and they sit inside the shape the game's own
+ * eight rows use -- whose item `delay` never goes below 90, and averages 183
+ * even on the hardest. On Sunny Mountain, tax=0/delay=120/use=205 comes first
+ * in 14,106 frames; use=255 at the same delay does not finish at all, delay=150
+ * drops to second and delay=90 to third.
  *
  * The game only ever uses rows named by gCpuCharacterSnowboardConfigs, and
  * those are 0..5; row 7 is spare, so the retune writes there and the riders
@@ -114,7 +127,7 @@ int sbk_race_is_demo(const GameState *gs) {
 #define NIGHTMARE_ROW 7
 static int nightmare_written;
 /* Tunable by --trial nm*: searched, not guessed (port/tools/nightmare_search.py). */
-static int nm_tax = 0, nm_delay = 0, nm_use = 255, nm_alt = 255;
+static int nm_tax = 0, nm_delay = 120, nm_use = 205, nm_alt = 205;
 
 static void nightmare_write_row(void) {
     int i;
