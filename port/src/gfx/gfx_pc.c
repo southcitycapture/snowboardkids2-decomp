@@ -114,6 +114,7 @@ static struct RSP {
     struct LoadedVertex loaded_vertices[MAX_VERTICES + 4];
 
     uint8_t saved_opcode;
+    uint32_t branch_dl;   /* G_RDPHALF_1 ahead of a G_BRANCH_Z: the branch target */
     uint8_t saved_tile;
     uint16_t saved_uls, saved_ult;
     int32_t saved_lrx, saved_lry, saved_ulx, saved_uly;
@@ -1827,7 +1828,15 @@ static void gfx_run_dl(Gfx* cmd) {
                 }
                 break;
             case (uint8_t)G_BRANCH_Z:
-                gfx_unsupported("G_BRANCH_Z", __LINE__);
+                /* gsSPBranchLessZraw: a G_RDPHALF_1 carrying the target came
+                 * first. The test picks a level of detail from the vertex's
+                 * screen Z; the port always takes the branch, i.e. always the
+                 * nearest LOD -- there is no reason to draw the coarse model
+                 * on a machine that is not the RSP, and taking it
+                 * unconditionally is what keeps the display list well formed
+                 * (the fall-through path is the other model, not a return). */
+                cmd = (Gfx *)seg_addr(rsp.branch_dl);
+                --cmd; /* incremented after the break */
                 break;
             case (uint8_t)G_TRI2:
                 gfx_sp_tri1(C0(16, 8) / 2, C0(8, 8) / 2, C0(0, 8) / 2);
@@ -1853,6 +1862,7 @@ static void gfx_run_dl(Gfx* cmd) {
 #else
             case (uint8_t)G_RDPHALF_1:
 #endif
+                rsp.branch_dl = cmd->words.w1; /* a G_BRANCH_Z's target arrives here first */
                 switch (rsp.saved_opcode) {
                     case G_TEXRECT:
                     case G_TEXRECTFLIP:

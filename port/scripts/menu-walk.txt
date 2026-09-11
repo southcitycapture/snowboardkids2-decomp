@@ -1,18 +1,16 @@
-# Title -> Start -> answer the prompts with A a few times, then poke Start.
-wait 240
+# Title -> START -> through the save-slot and player-count prompts.
+wait 1500         # let the attract demo run out and come back to the title
 press START 3
-wait 150
-press A 3
+wait 120
+press A 3         # save slot / confirm
 wait 90
 press A 3
 wait 90
 press A 3
 wait 90
 press START 3
-wait 90
+wait 120
 press A 3
-wait 90
-stick 80 0 10
-wait 30
+wait 120
 press A 3
-wait 200
+wait 300

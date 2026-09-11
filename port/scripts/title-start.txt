@@ -1,8 +1,8 @@
-# Let the title demo play, then press Start and poke through whatever prompts follow.
+# Let the attract demo play, then press Start on the title screen.
 wait 240          # ~8 s at 30 reads/s
 press START 3
-wait 120
+wait 180
 press START 3
-wait 90
+wait 120
 press A 3
-wait 90
+wait 120
