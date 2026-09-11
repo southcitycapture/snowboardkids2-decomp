@@ -1,0 +1,430 @@
+/* Self-play for Snowboard Kids 2: --racedbg, --peek, --autoplay, --soak,
+ * --nightmare, --trial.
+ *
+ * The first game's race_dbg.c reached into globals (gRacePlayers, gRaceCourseIndex)
+ * that the sequel does not have. Everything here is reached through the *task
+ * scheduler* instead, because the sequel keeps every screen's state in the
+ * scheduler's own allocation:
+ *
+ *   gSchedulerListSentinel.next        priority-ordered list of TaskScheduler
+ *   TaskScheduler.allocatedState       that screen's state struct
+ *   TaskScheduler.gamestateHandler     what it will run next (named with dladdr)
+ *
+ * The race is the scheduler whose renderContext is 0x37: `setRenderContext(0x37)`
+ * in initRace (src/race/race_session.c) is the *only* call to setRenderContext
+ * in the whole game, which makes it an unambiguous tag. Its allocation is the
+ * GameState of include/gamestate.h, and `players` / `numPlayers` in it are the
+ * race's riders.
+ */
+#include "../ultra/ultra.h"
+#include <stdio.h>
+#include <stdint.h>
+#include <string.h>
+#include "common.h"
+#include "gamestate.h"
+#include "race/hit_reactions.h"
+#include "system/task_scheduler.h"
+#include "../platform/input.h"
+
+/* race/race_session.h drags in half the graphics headers; the four enum values
+ * this file needs are copied instead (enum RaceType / enum GameMode there). */
+#define RACE_TYPE_DEMO 10
+#define RACE_TYPE_INTRO 11
+#define GAME_MODE_DEMO 2
+#define GAME_MODE_INTRO 3
+
+extern TaskScheduler gSchedulerListSentinel;
+extern GameSessionContext *gGameSessionContext;
+
+/* src/race/character_stats.c, resident and pinned. */
+typedef struct {
+    u8 maxSpeed;
+    u8 handling;
+    u8 cornering;
+    u8 lateralDeadzone;
+    u8 gravity;
+    u8 acceleration;
+} SbkSnowboardStats;
+extern SbkSnowboardStats gSnowboardStatsTable[SNOWBOARD_COUNT][9];
+
+/* race_main.c lives in the .race overlay, so gAIPlayerParams is a plain native
+ * symbol (the overlay region is pin-skipped and only *text* symbols are
+ * renamed). One overlay defines it, so the name is unambiguous. */
+
+#define RACE_RENDER_CONTEXT 0x37
+#define SCHEDULER_STATE_RUNNING 1
+/* race_main.c ~5190: the rider has crossed the line (and its input is cut). */
+#define PLAYER_FINISHED_FLAG 0x80000
+
+int sbk_race_debug_enabled;
+int sbk_autoplay;   /* --autoplay: player 1 driven by the game's own CPU rider */
+int sbk_soak;       /* --soak: keep confirming through the menus between races */
+int sbk_nightmare;  /* --nightmare: a difficulty row above the hardest */
+int sbk_dumpon;
+int sbk_status;
+int sbk_course_trace;
+
+/* ------------------------------------------------------------------ anchors */
+
+GameState *sbk_race_state(void) {
+    TaskScheduler *s = gSchedulerListSentinel.next;
+    while (s != NULL) {
+        if (s->renderContext == (u8)RACE_RENDER_CONTEXT && s->schedulerState == SCHEDULER_STATE_RUNNING &&
+            s->allocatedState != NULL) {
+            GameState *gs = (GameState *)s->allocatedState;
+            if (gs->players != NULL && gs->numPlayers >= 1 && gs->numPlayers <= 4) return gs;
+        }
+        s = s->next;
+    }
+    return NULL;
+}
+
+/* A demo/attract/intro race must be left alone: its riders replay a recorded
+ * input stream and handing one to the CPU desynchronises the whole thing. */
+int sbk_race_is_demo(const GameState *gs) {
+    if (gs == NULL) return 1;
+    if (gs->raceType == RACE_TYPE_DEMO || gs->raceType == RACE_TYPE_INTRO) return 1;
+    if (gGameSessionContext != NULL &&
+        (gGameSessionContext->gameMode == GAME_MODE_DEMO || gGameSessionContext->gameMode == GAME_MODE_INTRO))
+        return 1;
+    if (gs->players[0].inputPlaybackMode != 0) return 1;
+    return 0;
+}
+
+/* ------------------------------------------------------------- the nightmare
+ *
+ * The sequel's CPU riders are tuned by gAIPlayerParams[difficulty][item]:
+ * 8 difficulty rows of 17 entries (one per item plus row 0, which is the
+ * rider's *own* handicap). Two things read it:
+ *
+ *   race_main.c ~804   maxSpeedCap -= gAIPlayerParams[d][0].useChance * 0x202
+ *   hit_reactions.c    per-item use delay / chance / alt chance
+ *
+ * so row 0's useChance is a top-speed *tax* (0xA8 on the easiest row costs
+ * about a quarter of the speed) and every other row's delay/useChance decide
+ * how fast and how often an item is thrown. A "nightmare" row is therefore
+ * useChance 0 in slot 0 (no tax) and delay 0 / chances 255 everywhere else
+ * (throw everything, immediately).
+ *
+ * The game only ever uses rows named by gCpuCharacterSnowboardConfigs, and
+ * those are 0..5; row 7 is spare, so the retune writes there and the riders
+ * that should be terrifying are pointed at it. Nothing in the game's own data
+ * is touched.
+ */
+#define NIGHTMARE_ROW 7
+static int nightmare_written;
+/* Tunable by --trial nm*: searched, not guessed (port/tools/nightmare_search.py). */
+static int nm_tax = 0, nm_delay = 0, nm_use = 255, nm_alt = 255;
+
+static void nightmare_write_row(void) {
+    int i;
+    gAIPlayerParams[NIGHTMARE_ROW][0].useChance = (u8)nm_tax;
+    gAIPlayerParams[NIGHTMARE_ROW][0].delay = (u8)nm_delay;
+    gAIPlayerParams[NIGHTMARE_ROW][0].altChance = (u8)nm_alt;
+    for (i = 1; i < 0x11; i++) {
+        gAIPlayerParams[NIGHTMARE_ROW][i].useChance = (u8)nm_use;
+        gAIPlayerParams[NIGHTMARE_ROW][i].delay = (u8)nm_delay;
+        gAIPlayerParams[NIGHTMARE_ROW][i].altChance = (u8)nm_alt;
+    }
+    if (!nightmare_written) {
+        nightmare_written = 1;
+        printf("sbk: nightmare: gAIPlayerParams row %d retuned tax=%d delay=%d use=%d alt=%d\n", NIGHTMARE_ROW,
+               nm_tax, nm_delay, nm_use, nm_alt);
+        fflush(stdout);
+    }
+}
+
+/* ------------------------------------------------------------------- --trial
+ *
+ * --trial char=N,board=N,boost=N,nm=1,quit=1,level=N: one race experiment.
+ * `board` is a SnowboardId (0..17), `boost` is 1/256ths added to the rider's
+ * top speed. The setup is applied at the autoplay handoff, which is the first
+ * frame the race allocation exists and the rider's own stats have been
+ * applied; one result line is printed when player 1 finishes.
+ */
+static struct {
+    int on, chr, board, boost, quit, level, nm, gold;
+} trial = { 0, -1, -1, 0, 0, -1, -1, -1 };
+
+static unsigned long trial_start, trial_frames;
+static int trial_gold0, trial_done;
+
+int sbk_trial_parse(const char *spec) {
+    const char *p = spec;
+    trial.on = 1;
+    while (*p) {
+        char key[16];
+        int val;
+        if (sscanf(p, "%15[a-z]=%d", key, &val) == 2) {
+            if (!strcmp(key, "char")) trial.chr = val;
+            else if (!strcmp(key, "board")) trial.board = val;
+            else if (!strcmp(key, "boost")) trial.boost = val;
+            else if (!strcmp(key, "quit")) trial.quit = val;
+            else if (!strcmp(key, "level")) trial.level = val;
+            else if (!strcmp(key, "nm")) trial.nm = val;
+            else if (!strcmp(key, "gold")) trial.gold = val;
+            else if (!strcmp(key, "nmtax")) nm_tax = val;
+            else if (!strcmp(key, "nmdelay")) nm_delay = val;
+            else if (!strcmp(key, "nmuse")) nm_use = val;
+            else if (!strcmp(key, "nmalt")) nm_alt = val;
+        }
+        while (*p && *p != ' ' && *p != ',') p++;
+        while (*p == ' ' || *p == ',') p++;
+    }
+    sbk_autoplay = 1;
+    return 0;
+}
+
+/* --plan LEVEL:CHAR:BOARD:BOOST,... : the rider's book, one row per course. */
+#define PLAN_MAX 16
+static struct { int level, chr, board, boost; } plan[PLAN_MAX];
+static int nplan;
+
+int sbk_plan_parse(const char *spec) {
+    const char *p = spec;
+    while (*p && nplan < PLAN_MAX) {
+        int c, ch, b, bo;
+        if (sscanf(p, "%d:%d:%d:%d", &c, &ch, &b, &bo) == 4) {
+            plan[nplan].level = c;
+            plan[nplan].chr = ch;
+            plan[nplan].board = b;
+            plan[nplan].boost = bo;
+            nplan++;
+        }
+        while (*p && *p != ',') p++;
+        while (*p == ',') p++;
+    }
+    printf("sbk: plan: %d level rows\n", nplan);
+    return nplan;
+}
+
+static void plan_apply(int level) {
+    int i;
+    for (i = 0; i < nplan; i++) {
+        if (plan[i].level != level) continue;
+        trial.chr = plan[i].chr;
+        trial.board = plan[i].board;
+        trial.boost = plan[i].boost;
+        printf("sbk: plan: level %d -> char=%d board=%d boost=%d\n", level, trial.chr, trial.board, trial.boost);
+        return;
+    }
+}
+
+/* applyCharacterSnowboardStats (src/race/character_stats.c), port side, with
+ * the boost folded into the top speed. Recomputed here rather than called: the
+ * game's own version reads getCurrentAllocation(), and gActiveScheduler points
+ * at whatever the last dispatch left when the host loop runs. */
+static void trial_retune(Player *p, int boost) {
+    const SbkSnowboardStats *s = &gSnowboardStatsTable[p->snowboardId % SNOWBOARD_COUNT][p->characterId % 9];
+    s32 top = (s32)(s->maxSpeed * 353894 / 100 + 0xEB333);
+    top += (s32)(((long long)top * boost) >> 8);
+    p->baseMaxSpeed = top;
+    p->maxSpeedCap = top;
+    p->handling = s->handling + 0x19;
+    p->cornering = s->cornering + 1;
+    p->lateralDeadzone = (s->lateralDeadzone << 15) / 100 + 0x1000;
+    p->baseGravity = (s->gravity << 14) / 100 + 0x3000;
+    p->baseAcceleration = (s->acceleration << 17) / 100 + 0x28000;
+}
+
+/* ------------------------------------------------------------------ autoplay */
+
+static void autoplay_arm(GameState *gs, unsigned long retraces) {
+    Player *p = &gs->players[0];
+
+    p->isCpuControlled = 1;
+    /* The CPU steering wants the level's path-preference table. Only the
+     * riders the game made CPUs get a bossRaceData asset, and the table inside
+     * it is indexed by playerIndex -- so borrow rider 1's copy and read slot 0
+     * out of it. Do NOT set players[0].bossRaceData: that pointer is freed. */
+    if (p->aiPathData == NULL && gs->numPlayers > 1 && gs->players[1].bossRaceData != NULL) {
+        void *d = gs->players[1].bossRaceData;
+        p->aiPathData = (void *)((s32)d + ((s32 *)d)[0]);
+    }
+    p->aiDifficultyIndex = (u8)(sbk_nightmare ? NIGHTMARE_ROW : 0);
+
+    if (trial.on) {
+        plan_apply(gs->memoryPoolId);
+        if (trial.chr >= 0) p->characterId = (u8)trial.chr;
+        if (trial.board >= 0) p->snowboardId = (u8)trial.board;
+        if (trial.nm >= 0) p->aiDifficultyIndex = (u8)(trial.nm ? NIGHTMARE_ROW : 0);
+        trial_retune(p, trial.boost);
+        if (trial.gold >= 0) p->raceGold = trial.gold;
+        trial_start = retraces ? retraces : 1;
+        trial_gold0 = p->raceGold;
+        trial_done = 0;
+        printf("sbk-trial: start r=%lu level=%d type=%d char=%d board=%d top=%d diff=%d\n", retraces,
+               gs->memoryPoolId, gs->raceType, p->characterId, p->snowboardId, (int)p->baseMaxSpeed,
+               p->aiDifficultyIndex);
+    } else if (sbk_nightmare) {
+        /* Amazing, not just aggressive: the top board on the rider's own
+         * character, and the speed tax taken off. */
+        p->snowboardId = SNOWBOARD_SPEED_LEVEL_3;
+        trial_retune(p, 0);
+    }
+    printf("sbk: autoplay: player 1 handed to the CPU rider (level=%d type=%d diff=%d path=%p)\n", gs->memoryPoolId,
+           gs->raceType, p->aiDifficultyIndex, p->aiPathData);
+    fflush(stdout);
+}
+
+static void trial_tick(GameState *gs, unsigned long retraces) {
+    Player *p;
+    if (!trial.on || trial_start == 0 || trial_done || gs == NULL) return;
+    p = &gs->players[0];
+    if (p->animationFlags & PLAYER_FINISHED_FLAG) {
+        int i, ahead = 0;
+        trial_done = 1;
+        trial_frames = retraces - trial_start;
+        for (i = 1; i < gs->numPlayers; i++) {
+            if (gs->players[i].animationFlags & PLAYER_FINISHED_FLAG) ahead++;
+        }
+        printf("sbk-trial: result level=%d char=%d board=%d boost=%d diff=%d place=%d finished_before=%d "
+               "frames=%lu gold=%d\n",
+               gs->memoryPoolId, p->characterId, p->snowboardId, trial.boost, p->aiDifficultyIndex,
+               p->finishPosition + 1, ahead, trial_frames, (int)(p->raceGold - trial_gold0));
+        fflush(stdout);
+        if (trial.quit) {
+            extern void sbk_request_quit_now(void);
+            sbk_request_quit_now();
+        }
+    }
+}
+
+/* ------------------------------------------------------------------- --status */
+
+static void status_tick(unsigned long retraces) {
+    static int last_gold = -1;
+    int gold;
+    if (!sbk_status || gGameSessionContext == NULL) return;
+    gold = (int)gGameSessionContext->gold;
+    if (retraces % 300 != 0 && gold == last_gold) return;
+    last_gold = gold;
+    printf("sbk-status: r=%lu gold=%d mode=%d level=%d players=%d lap=%d slot=%d story=%d credits=%d\n", retraces,
+           gold, gGameSessionContext->gameMode, gGameSessionContext->currentLevel, gGameSessionContext->numPlayers,
+           gGameSessionContext->lapCount, gGameSessionContext->saveSlotIndex,
+           gGameSessionContext->modeState.isStoryMode, gGameSessionContext->creditsCompleted);
+    fflush(stdout);
+}
+
+/* --------------------------------------------------------------------- ticks */
+
+void sbk_autoplay_tick(unsigned long retraces) {
+    static unsigned soak_step;
+    static int was_racing;
+    GameState *gs;
+    extern void sbk_menu_nav_tick(unsigned long);
+    extern int sbk_menu_on(const char *);
+
+    sbk_menu_nav_tick(retraces);
+    status_tick(retraces);
+
+    if (sbk_nightmare) nightmare_write_row();
+
+    gs = sbk_race_state();
+    if (gs != NULL && !sbk_race_is_demo(gs)) {
+        int i;
+        Player *p1 = &gs->players[0];
+        if (sbk_nightmare) {
+            for (i = 1; i < gs->numPlayers; i++) {
+                if (gs->players[i].isCpuControlled) gs->players[i].aiDifficultyIndex = NIGHTMARE_ROW;
+            }
+        }
+        if (sbk_autoplay && p1->isCpuControlled == 0) {
+            autoplay_arm(gs, retraces);
+        }
+        /* The path table only exists once the level's assets have landed, which
+         * is after the handoff; keep trying until it does. */
+        if (sbk_autoplay && p1->aiPathData == NULL && gs->numPlayers > 1 && gs->players[1].bossRaceData != NULL) {
+            void *d = gs->players[1].bossRaceData;
+            p1->aiPathData = (void *)((s32)d + ((s32 *)d)[0]);
+            printf("sbk: autoplay: path table attached (%p)\n", p1->aiPathData);
+            fflush(stdout);
+        }
+        trial_tick(gs, retraces);
+        was_racing = 1;
+        /* The results screens run on the race's own scheduler, so "a race
+         * allocation exists" is not "a race is being played": only
+         * handleRaceStateUpdate is. */
+        if (sbk_menu_on("handleRaceStateUpdate")) return;
+    } else if (was_racing) {
+        was_racing = 0;
+        trial_start = 0;
+    }
+
+    /* Menus. --autonav (menu_nav.c) drives them by name; --soak on its own is
+     * the monkey: A, A, A, up-then-A every 1.5 s, never START (a queued START
+     * pauses the race that is about to begin). */
+    if (sbk_soak && retraces % 90 == 0) {
+        extern int sbk_autonav;
+        if (sbk_autonav) return;
+        switch (soak_step++ & 3) {
+            case 0:
+                sbk_input_play_add("stick 0 80 3");
+                sbk_input_play_add("wait 6");
+                sbk_input_play_add("press A 3");
+                break;
+            default:
+                sbk_input_play_add("press A 3");
+                break;
+        }
+    }
+}
+
+/* --------------------------------------------------------- --peek / --racedbg */
+
+static struct { unsigned addr, len; } peeks[8];
+static int npeeks;
+
+int sbk_peek_add(const char *spec) {
+    unsigned a, n;
+    if (npeeks >= 8 || sscanf(spec, "%x:%x", &a, &n) != 2) return -1;
+    peeks[npeeks].addr = a;
+    peeks[npeeks].len = n > 256 ? 256 : n;
+    npeeks++;
+    sbk_race_debug_enabled = 1;
+    return 0;
+}
+
+static void dump_peeks(unsigned long retraces) {
+    int i;
+    unsigned k;
+    for (i = 0; i < npeeks; i++) {
+        const unsigned char *p = (const unsigned char *)(uintptr_t)peeks[i].addr;
+        printf("sbk-peek: r=%lu %08x:", retraces, peeks[i].addr);
+        for (k = 0; k < peeks[i].len; k++) printf("%s%02x", (k % 4) ? "" : " ", p[k]);
+        printf("\n");
+    }
+}
+
+void sbk_race_debug(unsigned long retraces) {
+    GameState *gs;
+    int i;
+    extern const char *sbk_menu_names(void);
+
+    dump_peeks(retraces);
+    if (npeeks) return;
+
+    gs = sbk_race_state();
+    if (gs == NULL) {
+        printf("sbk-race: r=%lu no race (screens: %s)\n", retraces, sbk_menu_names());
+        fflush(stdout);
+        return;
+    }
+    printf("sbk-race: r=%lu level=%d type=%d players=%d/%d lap=%d/%d frame=%u paused=%d intro=%d demo=%d rank=",
+           retraces, gs->memoryPoolId, gs->raceType, gs->playerCount, gs->numPlayers, gs->players[0].currentLap,
+           gs->finalLapNumber, (unsigned)gs->raceFrameCounter, gs->gamePaused, gs->raceIntroState,
+           sbk_race_is_demo(gs));
+    for (i = 0; i < gs->numPlayers && i < 4; i++) printf("%s%d", i ? "," : "", gs->rankOrder[i]);
+    printf("\n");
+    for (i = 0; i < gs->numPlayers && i < 4; i++) {
+        Player *p = &gs->players[i];
+        printf("sbk-race: r=%lu p%d cpu=%d diff=%d chr=%d board=%d place=%d lap=%d prog=%d sect=%d stick=%d,%d "
+               "btn=%04x pos=%d,%d,%d spd=%d/%d anim=%08x beh=%d item=%d/%d gold=%d\n",
+               retraces, i, p->isCpuControlled, p->aiDifficultyIndex, p->characterId, p->snowboardId,
+               p->finishPosition + 1, p->currentLap, p->lapProgressRemaining, p->sectorIndex, p->inputStickX,
+               p->inputStickY, (unsigned)p->inputButtonsHeld, (int)p->worldPos.x, (int)p->worldPos.y, (int)p->worldPos.z,
+               (int)p->smoothedSpeedCap, (int)p->baseMaxSpeed, (unsigned)p->animationFlags, p->behaviorMode, p->primaryItemId,
+               p->secondaryItemId, (int)p->raceGold);
+    }
+    fflush(stdout);
+}
