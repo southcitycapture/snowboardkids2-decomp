@@ -153,10 +153,21 @@ $(OBJ_LIST): Makefile
 	@printf '%s\n' $(patsubst %.c,build/%.o,$(GAME_C)) > $@
 
 $(PINS_STAMP): $(N64_MAP) $(OBJ_LIST) tools/gen_pins.py
-	$(PYTHON) tools/gen_pins.py $< --objs $(OBJ_LIST) --native-txt $(BUILD)/native_syms.txt $(if $(wildcard $(N64_NM)),--nm $(N64_NM)) $(foreach r,$(PIN_SKIP),--pin-skip $(r)) --prefix '$(SYM_PREFIX)' --pins-s $(PINS_S) --pins-txt $(PINS_TXT) --table-c $(PIN_TABLE)
+	$(PYTHON) tools/gen_pins.py $< --objs $(OBJ_LIST) --native-txt $(BUILD)/native_syms.txt $(if $(wildcard $(N64_NM)),--nm $(N64_NM)) $(foreach r,$(PIN_SKIP),--pin-skip $(r)) --prefix '$(SYM_PREFIX)' --pins-s $(PINS_S) --pins-txt $(PINS_TXT)
 	@touch $@
 
-$(PINS_S) $(PINS_TXT) $(PIN_TABLE): $(PINS_STAMP)
+$(PINS_S) $(PINS_TXT): $(PINS_STAMP)
+
+# Which twins exist can only be known once every game source has been mirrored:
+# a pinned global need not have a C definition to rename (some are
+# `__asm__(".globl X\nX = base + N")` aliases into another array), and a copy
+# row for a twin that was never emitted is an undefined symbol at load time.
+$(GEN)/twins.txt: $(GEN_FRAGMENTS)
+	@mkdir -p $(dir $@)
+	@grep -rhoE '[A-Za-z_][A-Za-z0-9_]*__sbk_size' $(GEN)/src | sed 's/__sbk_size//' | sort -u > $@
+
+$(PIN_TABLE): $(N64_MAP) $(OBJ_LIST) tools/gen_pins.py $(GEN)/twins.txt
+	$(PYTHON) tools/gen_pins.py $< --objs $(OBJ_LIST) $(if $(wildcard $(N64_NM)),--nm $(N64_NM)) $(foreach r,$(PIN_SKIP),--pin-skip $(r)) --prefix '$(SYM_PREFIX)' --twins-present $(GEN)/twins.txt --table-c $@
 
 $(BUILD)/pins.o: $(PINS_S)
 	$(AS) -o $@ $<

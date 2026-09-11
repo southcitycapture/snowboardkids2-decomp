@@ -41,3 +41,7 @@ unsigned long long __d_to_ull(double d) { return (unsigned long long)d; }
 
 /* --drawdistance N: scales the race far plane and the prop cull range (see port/patches.txt) */
 float sbk_far_scale = 1.0f;
+
+/* libultra's gu/libm_vals.s: the quiet NaN sinf/cosf return for a bad argument
+ * (the file is MIPS assembly, so the port supplies the value itself). */
+const float __libm_qnan_f = 0.0f / 0.0f;

@@ -18,7 +18,13 @@ MAP_RE = re.compile(r"^\s+0x([0-9a-fA-F]+)\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)
 SYM_RE = re.compile(r"^\s+0x([0-9a-fA-F]+)\s+([A-Za-z_][A-Za-z0-9_]*)\s*$")
 LD_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*([^;]+);")
 IDENT_RE = re.compile(r"(?<![0-9A-Za-z_])[A-Za-z_][A-Za-z0-9_]*")
-ADDR_SUFFIX = ("_ROM_START", "_ROM_END", "_VRAM", "_VRAM_END")
+# Overlay loading (LOAD_OVERLAY in include/system/rom_loader.h) takes the
+# address of every section boundary of a segment, not just its ROM range.
+ADDR_SUFFIX = ("_ROM_START", "_ROM_END", "_VRAM", "_VRAM_END",
+               "_TEXT_START", "_TEXT_END", "_TEXT_SIZE",
+               "_DATA_START", "_DATA_END", "_DATA_SIZE",
+               "_RODATA_START", "_RODATA_END", "_RODATA_SIZE",
+               "_BSS_START", "_BSS_END", "_BSS_SIZE")
 
 
 def main():
