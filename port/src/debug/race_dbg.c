@@ -329,12 +329,12 @@ static void autoplay_arm(GameState *gs, unsigned long retraces) {
 
 static void trial_tick(GameState *gs, unsigned long retraces) {
     Player *p;
-    if (!trial.on || trial_start == 0 || trial_done || gs == NULL) return;
+    if (!trial.on || trial_done || gs == NULL) return;
     p = &gs->players[0];
     if (p->animationFlags & PLAYER_FINISHED_FLAG) {
         int i, ahead = 0;
         trial_done = 1;
-        trial_frames = retraces - trial_start;
+        trial_frames = trial_start ? retraces - trial_start : 0;
         for (i = 1; i < gs->numPlayers; i++) {
             if (gs->players[i].animationFlags & PLAYER_FINISHED_FLAG) ahead++;
         }
@@ -403,7 +403,14 @@ void sbk_autoplay_tick(unsigned long retraces) {
         if (sbk_menu_on("handleRaceStateUpdate")) return;
     } else if (was_racing) {
         was_racing = 0;
-        trial_start = 0;
+        /* Do NOT clear trial_start here. sbk_race_state() wants a scheduler in
+         * SCHEDULER_STATE_RUNNING, and the race's scheduler leaves that state
+         * for a few frames at a lift cutaway and at the goal banner -- so this
+         * branch runs *during* a race, not only between races. Clearing the
+         * stamp here silently disarmed trial_tick for the rest of the race:
+         * three races finished with anim=00080000 on player 1 and not one
+         * printed a result or honoured quit=1. autoplay_arm() re-stamps it for
+         * every new race anyway, which is the only place that should. */
     }
 
     /* Menus. --autonav (menu_nav.c) drives them by name; --soak on its own is

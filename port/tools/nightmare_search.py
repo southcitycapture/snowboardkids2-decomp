@@ -55,29 +55,50 @@ def g4(*args, **kw):
     return subprocess.run([G4, *args], capture_output=True, text=True, **kw)
 
 
-def trial(spec, frames=60000, timeout=600, extra=()):
-    """One headless race. A trial that outruns `timeout` is hung: stop it and
-    return no result so the sweep moves on.
+def trial(spec, frames=60000, timeout=1500, stall=150, extra=()):
+    """One headless race, ended either by the result line or by the rider
+    standing still.
 
-    Budget one trial at about five minutes. --headless implies --turbo, which
-    takes a retrace "as soon as the game is idle" -- and the sequel is never
-    idle: three threads stay runnable every frame, so headless buys no wall
-    clock at all here and a trial runs at 1x, not the first game's 12x. What it
-    does buy is no display lists and no presents, which is what lets a sweep run
-    with no one watching. 60000 frames still bounds a wedged rider (Turtle
-    Island's lift gate does exactly that) at about seventeen minutes, and the
-    600 s timeout cuts it well before."""
+    --headless implies --turbo, which takes a retrace "as soon as the game is
+    idle" -- and the sequel is never idle: three threads stay runnable every
+    frame, so headless buys no wall clock at all here and a trial runs at 1x,
+    not the first game's 12x. A three-lap Turtle Island race is about eleven
+    minutes of that, which is why `timeout` is 1500 s and not the 600 s it
+    started at: 600 s cut healthy races off mid-final-lap and recorded them as
+    hangs.
+
+    A fixed timeout is the wrong instrument anyway. What a hung trial actually
+    looks like is a rider that has stopped moving -- pinned at `storedPosition`
+    waiting for a chairlift task that will never be allocated -- so this watches
+    p0's position in the --racedbg lines and gives up after `stall` seconds
+    without it changing. A wedge costs two and a half minutes instead of
+    twenty-five, and a slow course is still allowed to finish."""
     g4("stop")
     g4("ssh", "rm -f %s" % TRIAL_EEPROM)
     t0 = time.time()
+    # --menutrace costs nothing and is the only way to read a DNF afterwards:
+    # without it the log cannot say whether the rider was still racing, sitting
+    # on a results screen, or never left a menu. --racedbg is what the stall
+    # detector reads; it prints once a second.
     g4("run", "--headless", "--nopak", "--nopad", "--eeprom", TRIAL_EEPROM,
-       "--unlockall", "--autonav", "--nightmare",
-       "--trial", spec + ",quit=1", "--frames", str(frames), *extra)
+       "--unlockall", "--autonav", "--nightmare", "--menutrace", "--status",
+       "--racedbg", "--trial", spec + ",quit=1", "--frames", str(frames), *extra)
     log = ""
+    last_pos, last_move = None, time.time()
     while time.time() - t0 < timeout:
         time.sleep(10)
         log = g4("ssh", "grep -E 'sbk-trial: result|EXITCODE' isle-log.txt").stdout
         if "EXITCODE" in log or "sbk-trial: result" in log:
+            break
+        # p0's world position, straight off the last --racedbg line for it.
+        pos = g4("ssh", "grep 'sbk-race' isle-log.txt | grep ' p0 ' | tail -1").stdout
+        pos = next((f for f in pos.split() if f.startswith("pos=")), None)
+        if pos is not None and pos != last_pos:
+            last_pos, last_move = pos, time.time()
+        elif pos is not None and time.time() - last_move > stall:
+            print("stalled trial (p0 still for %ds at %s), stopping: %s"
+                  % (stall, last_pos, spec), flush=True)
+            g4("stop")
             break
     else:
         print("hung trial (>%ds), stopping: %s" % (timeout, spec), flush=True)
@@ -134,7 +155,13 @@ def update_row(spec, out):
 
 
 def done(spec):
-    return any(r["spec"] == spec for r in rows())
+    """Measured already -- *including* the ones that never finished.
+
+    This reads all_rows(), not rows(). rows() drops anything with no place,
+    and a row with no place is a trial that burned the full timeout: exactly
+    the ones worth not repeating. Checking rows() here made every hung point
+    in the grid cost its ten minutes again on the next sweep."""
+    return any(r["spec"] == spec for r in all_rows())
 
 
 def run(spec):
@@ -193,20 +220,53 @@ def sweep_nightmare(level=0):
     ways. Every rider in the race sits on this row, player 1 included, so the
     tax is not a difficulty dial: it is a speed limit on the whole field, and
     lowering it makes everyone faster, not just the rivals. The items are the
-    real difficulty. What the search wants is the row where the rider still
-    finishes first on the *lowest* tax -- fast on merit rather than on a
-    handicap the rivals are carrying."""
-    grid = [(tax, delay, use)
-            for tax in (0, 0xA8)
-            for delay, use in ((0, 255), (30, 255), (0, 128))]
-    grid += [(32, 0, 255), (64, 0, 255)]   # the tax between the two extremes
+    real difficulty.
+
+    The grid is anchored on the game's *own* eight rows rather than on round
+    numbers, because the first attempt at this row was not merely aggressive,
+    it was off the end of the authored scale -- and that is what hung the first
+    sweep. Reading gAIPlayerParams (race_main.c:391) across all eight rows:
+
+        row   0 (easiest) ......... 5 (hardest named) .. 6/7 (spare)
+        tax    168   128   96   64   32   16              0
+        item useChance (avg)  93 -> 153, never above 230
+        item delay     (avg) 231 -> 183, and **never below 120 in any row**
+
+    The old row wrote delay=0, useChance=255: six times faster than the
+    fastest item the designers ever shipped, on every rider at once. The field
+    stunlocks itself -- every rider spends the race in a hit reaction -- and
+    the race genuinely never ends. Both hung trials in the first sweep were
+    that row, and it is kept below as the control that reproduces the hang.
+
+    What the search wants is the row that finishes *fastest in first place*
+    while staying inside the shape the game's own data uses."""
+    grid = [
+        # (tax, delay, useChance). Tax 0 = row 6's, the hardest authored.
+        (0, 120, 205),    # the hardest authored shape with the tax taken off
+        (0, 120, 255),    # ...and every item certain to be used
+        (0, 150, 205),    # item delay slower than row 5's average
+        (0, 90, 205),     # ...and faster than any authored row
+        (168, 120, 205),  # row 0's tax: the floor, for the table
+        (0, 0, 255),      # the control: the row that hung the first sweep
+    ]
     for tax, delay, use in grid:
         run("level=%d,char=0,board=8,nmtax=%d,nmdelay=%d,nmuse=%d,nmalt=%d"
             % (level, tax, delay, use, use))
 
 
+def all_rows():
+    """Every measured row, finished or not. rows() drops the ones with no
+    place, because a golden movie can only be cut from a race that ended -- but
+    a trial that never ended is the whole point of a Nightmare search, so the nm
+    table reads this instead."""
+    if not os.path.exists(OUT):
+        return []
+    with open(OUT) as f:
+        return list(csv.DictReader(f))
+
+
 def nm_rows():
-    return [r for r in rows() if r.get("nmuse") not in (None, "")]
+    return [r for r in all_rows() if r.get("nmuse") not in (None, "")]
 
 
 def nmtable():
@@ -215,10 +275,13 @@ def nmtable():
           % ("level", "tax", "delay", "use", "alt", "place", "frames", "gold", "wall_s"))
     for r in sorted(nm_rows(), key=lambda r: (int(r["nmtax"] or 0), int(r["nmdelay"] or 0),
                                               -int(r["nmuse"] or 0))):
+        # No place means the rider never crossed the line inside the trial's
+        # window: with every rider on the row throwing everything on sight, the
+        # whole field can stunlock itself and the race simply does not end.
         print("%-6s %-6s %-8s %-6s %-6s %-6s %-8s %-7s %s"
               % (r["level"], r["nmtax"], r["nmdelay"], r["nmuse"], r["nmalt"],
-                 r["place"], r["frames"], r["gold"], r["wall_s"]))
-    wins = [r for r in nm_rows() if int(r["place"]) == 1]
+                 r["place"] or "DNF", r["frames"] or "-", r["gold"] or "-", r["wall_s"]))
+    wins = [r for r in nm_rows() if r["place"] and int(r["place"]) == 1]
     if wins:
         best = min(wins, key=lambda r: (int(r["nmtax"]), int(r["frames"])))
         print("\nbest (wins on the lowest tax): tax=%s delay=%s use=%s alt=%s "
