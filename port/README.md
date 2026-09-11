@@ -15,9 +15,16 @@ command lists, a fixed-function OpenGL 1.3 backend, scripted input.
 | First frame: boot, threads, ROM DMA, the attract demo rendering on the real G4 | done |
 | Overlay dispatch: one N64 address, fourteen native level functions | done |
 | Menus: title screen, file select (EEPROM), level preview, the story overworld | renders and responds |
+| 2D: the title logo, the tile-map backgrounds, sprites and the race HUD | matches the reference |
 | Audio: ABI 1 confirmed, aspMain byte-identical to the first game, samples produced | plays, not yet listened to |
-| A race | not driven yet |
+| A race | runs with its full HUD (blind walk, not yet played) |
 | Self-play, trials, the campaign navigator | not ported (see docs/PLAN.md) |
+
+The title screen matches the emulator reference frame
+(`g4-shots/sbk2-s2dex-fix1.png` against Mupen64Plus's `snowboard_kids2-020.png`):
+logo, background, menu, copyright lines, Rumble Pak badge. Until the combiner
+fix in `gfx_pc.c` (see `docs/PLAN.md`, "a combiner input gfx_pc did not have")
+everything drawn under the game's sprite setup list was transparent black.
 
 Screenshots taken on the G4 itself are in `~/Apps/islandPowerPC/g4-shots`:
 `sbk2-boot-20s.png` (the attract demo), `sbk2-ov-45s.png` (the title screen
@@ -36,6 +43,7 @@ overworld).
                    [--play SCRIPT|MOVIE.m64] [--record MOVIE.m64]
                    [--frames N] [--hashframe] [--mute] [--noaudio] [--wav OUT.wav]
                    [--pak FILE.mpk] [--nopak] [--nopad] [--trace] [--dumpdl N]
+                   [--s2dextrace]
                    [--dumpframes N] [--dumptris] [--bigtri N] [--perf] [snowboardkids2.z64]
 
 `--nopak` turns off the EEPROM as well as the Controller Pak, and the game then
@@ -58,4 +66,5 @@ long version, the survey facts and the gotchas.
 ## Licence note
 
 `src/gfx/gfx_pc.c` derives from sm64-port, whose licence allows source
-distribution only. Share this branch as source; do not distribute binaries.
+distribution only (`src/gfx/gfx_s2dex.c`, the S2DEX interpreter beside it, is
+this port's own code). Share this branch as source; do not distribute binaries.

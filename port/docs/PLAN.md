@@ -85,7 +85,8 @@ the display-list interpreter, the GL 1.3 backend) read the first game's
   maps.
 * Graphics ucode: **F3DEX2** (`gspF3DEX2_fifo`), with `gspS2DEX_fifo` for the
   2D sprite path; `microcodeGroups[]` in `src/graphics/graphics.c` picks one by
-  `uses3DRendering`.
+  `uses3DRendering`. See "S2DEX" below for what the sequel actually asks that
+  microcode to do.
 * Audio: libmus over libultra's libaudio, `alAudioFrame`, ucode `aspMain` —
   **audio ABI 1, and `assets/rsp/aspMain.textbin.bin` is byte-identical to the
   first game's**, so `port/src/audio/audio_task.c` was reused unchanged and
@@ -95,6 +96,67 @@ the display-list interpreter, the GL 1.3 backend) read the first game's
   Pak. The first game had no EEPROM; `port/src/ultra/os_eeprom.c` is new.
 * Segments: only 0, 1, 2, 3, set per display-list object.
 * No `osGetTime` / `osSetTimer` / `osGetCount` anywhere in `src/`.
+
+### S2DEX: the 2D microcode, and what the sequel uses it for
+
+Viewports are grouped into tasks by `uses3DRendering`, and a 2D group's task
+carries `gspS2DEX_fifoTextStart` as its ucode. `port/src/gfx/gfx_task.c`
+compares `task->t.ucode` against that address (the ROM symbols make it a plain
+constant, 0x800854E0) and sends the list to `port/src/gfx/gfx_s2dex.c` instead
+of gfx_pc's F3DEX2 loop; `gfx_run_ucode(dl, s2dex)` is the one entry point that
+knows the difference, and the F3DEX2 path is byte-for-byte the old one.
+
+The interpreter owns the list's *control flow* and the object commands, and
+hands every run of consecutive plain RDP commands back to gfx_pc unchanged
+(`gfx_pc_run_dl`, a run at a time so that a G_TEXRECT and its two
+`G_RDPHALF` words stay together). Implemented: `G_OBJ_RENDERMODE` (the
+`G_OBJRM_BILERP` bit picks the texture filter), `G_OBJ_LOADTXTR` for all three
+block types (TXTRBLOCK, TXTRTILE and TLUT), `G_OBJ_RECTANGLE`,
+`G_OBJ_RECTANGLE_R`, `G_OBJ_SPRITE`, the `G_OBJ_LDTX_*` load-and-draw trio,
+`G_OBJ_MOVEMEM` (uObjMtx and uObjSubMtx), `G_BG_1CYC` and `G_BG_COPY`,
+`G_SELECT_DL` with `G_RDPHALF_0`, and `G_DL`/`G_ENDDL`.
+
+Two facts about the port's shape here:
+
+* **gfx_pc has no TMEM.** Its "loaded texture" is a pointer into RDRAM plus a
+  line stride, while an object command addresses TMEM in 64-bit words. So
+  `G_OBJ_LOADTXTR` only *records* which RDRAM address each TMEM word came from
+  (an eight-entry table), and a sprite's `imageAdrs` is resolved against that
+  table at draw time, when the load is replayed as the SETTIMG / SETTILE /
+  LOADBLOCK / SETTILESIZE gfx_pc already understands. A background is drawn as
+  horizontal bands sized to stay under the 4 KB a TMEM load can hold.
+* **The sequel never sends an object command.** Its 2D lists are plain RDP
+  work -- combiners, blender modes, texture loads, `gSPTextureRectangle` --
+  with exactly one S2DEX command in them, the `gSPObjRenderMode` at the head of
+  `gSpriteRDPSetupDL` (`src/graphics/sprite_rdp.c`) and two more in
+  `sprite_rdp.c` / `text/text_layout.c`. A census over the attract demo, the
+  title, the file select and a race counts tens of thousands of
+  `G_OBJ_RENDERMODE` and zero of everything else; `guS2DInitBg` and the uObj
+  structs appear nowhere in `src/`. The interpreter above is therefore mostly
+  insurance for screens not yet reached (`--s2dextrace` decodes a task's
+  objects, and the per-10-second `sbk: s2dex ...` line counts them).
+
+### What was really hiding the 2D: a combiner input gfx_pc did not have
+
+The title logo, the tile-map backgrounds behind the menus, the copyright
+lines and the Rumble Pak badge were all missing, and none of it was the
+microcode's fault. `gSpriteRDPSetupDL` sets
+
+    gsDPSetCombineLERP(1, 0, TEXEL0, 0,  1, 0, TEXEL0, 0, ...)
+
+-- (1 - 0) * TEXEL0 + 0, i.e. "just the texel" -- and gfx_pc's combiner model
+has no constant 1 among its inputs (`color_comb_component` returns CC_0 for
+anything it does not know). The 1 arrived as 0, sm64-port's simplifier saw
+`a == b`, zeroed the product, and the result was transparent black. Everything
+that draws under that setup list without setting a combiner of its own --
+`renderSpriteFrame`, `renderTiledTextureMap` -- was invisible; everything that
+does set one (`gDPSetCombineMode(G_CC_DECALRGBA)` in the text paths) was fine,
+which is why menu text rendered and nothing else did. `color_comb` now folds
+`(1, 0, c, d)` into the addend, and the title screen matches the reference.
+
+The lesson generalises: when a 2D element is missing, dump the task
+(`--dumpdl N --dumptris`) and look at the `sbk-tri:` line's `cc=` field before
+suspecting geometry. The quads were always there.
 
 ### The big one: overlays
 
@@ -215,12 +277,17 @@ subtracts to size the boot ucode.
 1. **Boot to first frame** (done 2026-09-11): threads, ROM DMA, display lists,
    frames presented and audio samples produced on the real G4. The attract
    demo renders a course (`g4-shots/sbk2-boot-20s.png`).
-2. **Menus** (partly done 2026-09-11): the title screen with the character
-   line-up and the START / TRAINING / OPTION menu
+2. **Menus** (done 2026-09-11): the title screen now matches the reference
+   frame -- logo, snow background, START / TRAINING / OPTION, the copyright
+   lines and the Rumble Pak badge (`g4-shots/sbk2-s2dex-fix1.png` against
+   `snowboard_kids2-020.png`) -- and a race runs with its full HUD
+   (`g4-shots/sbk2-fix-130s.png`). Before the combiner fix only the menu text
+   was on screen (`g4-shots/sbk2-ov-45s.png`). Earlier notes: the title screen
+   with the character line-up and the START / TRAINING / OPTION menu
    (`g4-shots/sbk2-ov-45s.png`), the file-select screen and its ~MENU~
    (`sbk2-save-52s.png`), and the level preview with its 3D fly-through and
-   character model (`sbk2-menu-45s.png`, `sbk2-menu-65s.png`). A race has not
-   been driven yet.
+   character model (`sbk2-menu-45s.png`, `sbk2-menu-65s.png`). A blind walk
+   with A every four seconds reaches a race and drives it without a crash.
 3. **Audio**: ABI 1 confirmed and `audio_task.c` reused as-is; the demo
    produces samples. Not yet listened to on the G4, and the menus so far report
    a peak of zero — worth checking whether the sequel simply has no menu music
