@@ -63,6 +63,15 @@ int sbk_nightmare;  /* --nightmare: a difficulty row above the hardest */
 int sbk_dumpon;
 int sbk_status;
 int sbk_course_trace;
+/* 1/256ths added to player 1's top speed, raised by the navigator every time the
+ * campaign loses the same course again (menu_nav.c). A campaign cannot finish a
+ * course the CPU rider is simply not fast enough to win, and an unattended run
+ * that re-races a lost course with identical settings re-loses it: this is the
+ * one lever that makes the retry different. It is folded in by trial_retune,
+ * which is applyCharacterSnowboardStats with the boost in it, so nothing but
+ * player 1's own baseMaxSpeed changes -- the rivals, the items and the course
+ * are untouched. */
+int sbk_campaign_boost;
 
 /* ------------------------------------------------------------------ anchors */
 
@@ -333,10 +342,13 @@ static void autoplay_arm(GameState *gs, unsigned long retraces) {
         /* Amazing, not just aggressive: the top board on the rider's own
          * character, and the speed tax taken off. */
         p->snowboardId = SNOWBOARD_SPEED_LEVEL_3;
-        trial_retune(p, 0);
+        trial_retune(p, sbk_campaign_boost);
+    } else if (sbk_campaign_boost != 0) {
+        trial_retune(p, sbk_campaign_boost);
     }
-    printf("sbk: autoplay: player 1 handed to the CPU rider (level=%d type=%d diff=%d path=%p)\n", gs->memoryPoolId,
-           gs->raceType, p->aiDifficultyIndex, p->aiPathData);
+    printf("sbk: autoplay: player 1 handed to the CPU rider (level=%d type=%d diff=%d boost=%d top=%d path=%p)\n",
+           gs->memoryPoolId, gs->raceType, p->aiDifficultyIndex, sbk_campaign_boost, (int)p->baseMaxSpeed,
+           p->aiPathData);
     fflush(stdout);
 }
 

@@ -51,6 +51,8 @@ extern GameSessionContext *gGameSessionContext;
 extern u8 storyMapLocationIndex;
 GameState *sbk_race_state(void);
 int sbk_race_is_demo(const GameState *gs);
+/* race_dbg.c: 1/256ths added to player 1's top speed, raised here. */
+extern int sbk_campaign_boost;
 
 int sbk_menutrace;
 int sbk_autonav;
@@ -235,6 +237,29 @@ static int nav_next_story_level(void) {
     return -1;
 }
 
+/* The three Cross minigames, which are *not* on the course list: they are
+ * buildings in the town. handleGameStateComplete (src/story/map_state.c)
+ * intercepts storyMapLocationIndex 3, 6 and 9 -- the three
+ * initStoryMapLocationIntro entries of storyMapLocationHandlers[] -- and sets
+ * gGameSessionContext->currentLevel to 0xD, 0xE and 0xC itself before running
+ * initStoryModeRace, so their save slots are levelUnlockStatus[13], [14] and
+ * [12]. A location id is one less than its handler index.
+ *
+ * The campaign cannot skip them. updateStorySlotUnlockStatus only opens slot 10
+ * -- the last two courses, and so the credits -- when slots 0..9 are all 1 *and*
+ * slots 12..14 are all 1 as well, and a slot still at 0 is never offered by the
+ * course list at all. Returns the location id to walk into, or -1. */
+static int nav_next_cross(void) {
+    static const struct { u8 slot, location; } cross[3] = { { 13, 2 }, { 14, 5 }, { 12, 8 } };
+    int i;
+    if (EepromSaveData == NULL) return -1;
+    for (i = 0; i < 3; i++) {
+        u8 st = EepromSaveData->levelUnlockStatus[cross[i].slot];
+        if (st != 0 && st != 1) return cross[i].location;
+    }
+    return -1;
+}
+
 static int nav_saves_pending(void) { return nav_want == NAV_SAVE; }
 
 /* The campaign's own progress bar. levelUnlockStatus is the one place the game
@@ -258,6 +283,55 @@ static void nav_progress(const char *why) {
     fflush(stdout);
 }
 
+/* The handicap.
+ *
+ * Only finishPosition 0 marks a course won, and the campaign's first real stall
+ * was not a menu at all: the CPU rider came *second* on course 1, and a retry
+ * with identical settings comes second again -- for ever, unattended. The
+ * navigator therefore makes each retry of the same course different, by the one
+ * lever that changes nothing but player 1: sbk_campaign_boost, 1/256ths added
+ * to its top speed by trial_retune (race_dbg.c). Every rival, every item and
+ * every course stays exactly as the game authored it.
+ *
+ * A win resets it, so the help is never carried into a course that does not
+ * need it, and it is capped: past about +50% the rider overshoots the course's
+ * own corners and gets slower, so a boost that has run to the cap is a real
+ * finding to report rather than a knob to keep turning. */
+#define NAV_BOOST_STEP 28
+#define NAV_BOOST_MAX 128
+
+static void nav_handicap(int level, int place) {
+    static int last_level = -1;
+    static int losses;
+    if (place == 0) {
+        if (sbk_campaign_boost != 0) {
+            printf("sbk-nav: level %d won with boost=%d after %d loss(es); boost back to 0\n", level,
+                   sbk_campaign_boost, losses);
+        }
+        sbk_campaign_boost = 0;
+        losses = 0;
+        last_level = level;
+        return;
+    }
+    if (level != last_level) {
+        last_level = level;
+        losses = 0;
+        sbk_campaign_boost = 0;
+    }
+    losses++;
+    if (sbk_campaign_boost < NAV_BOOST_MAX) {
+        sbk_campaign_boost += NAV_BOOST_STEP;
+        if (sbk_campaign_boost > NAV_BOOST_MAX) sbk_campaign_boost = NAV_BOOST_MAX;
+        printf("sbk-nav: level %d lost %d time(s); retrying with boost=%d (+%d%% top speed)\n", level, losses,
+               sbk_campaign_boost, sbk_campaign_boost * 100 / 256);
+    } else {
+        printf("sbk-nav: WARNING -- level %d lost %d time(s) at the boost cap (%d); the rider cannot win this "
+               "course on speed alone\n",
+               level, losses, sbk_campaign_boost);
+    }
+    fflush(stdout);
+}
+
 /* A race has ended when a result handler comes up. The purse is in
  * gGameSessionContext->gold; it only reaches the EEPROM through the map's save
  * point, so after every N races the navigator aims the rider at it. */
@@ -272,12 +346,13 @@ static void nav_watch(void) {
          * that never prints the place cannot tell a stall from a loss. */
         GameState *gs = sbk_race_state();
         int place = gs != NULL ? (int)gs->players[0].finishPosition : -1;
+        int level = gGameSessionContext ? gGameSessionContext->currentLevel : -1;
         nav_races++;
         if (sbk_autonav_every > 0 && nav_races % sbk_autonav_every == 0) nav_want = NAV_SAVE;
-        printf("sbk-nav: race %d finished on level %d, place=%d (%s), gold=%d, want=%s\n", nav_races,
-               gGameSessionContext ? gGameSessionContext->currentLevel : -1, place + 1,
+        printf("sbk-nav: race %d finished on level %d, place=%d (%s), gold=%d, want=%s\n", nav_races, level, place + 1,
                place == 0 ? "WON" : "lost", gGameSessionContext ? (int)gGameSessionContext->gold : -1,
                nav_want == NAV_SAVE ? "SAVE" : "RACE");
+        nav_handicap(level, place);
         fflush(stdout);
     }
     in_results = results;
@@ -461,12 +536,21 @@ static void nav_act(unsigned long retraces) {
     if (sbk_menu_on("gameStateCleanupHandler")) {
         GameState *m = (GameState *)sbk_menu_alloc("gameStateCleanupHandler");
         if (m != NULL && m->unk427 == 0) {
+            int cross;
             if (nav_want == NAV_SAVE) {
                 m->discoveredLocationId = STORY_SAVE_LOCATION;
                 m->locationDiscovered = 1;
                 m->unk427 = (u8)(STORY_SAVE_LOCATION + 1);
                 printf("sbk-nav: town -> save point (location %d, handler %d)\n", STORY_SAVE_LOCATION,
                        STORY_SAVE_LOCATION + 1);
+            } else if (nav_next_story_level() < 0 && (cross = nav_next_cross()) >= 0) {
+                /* Nothing left on the course list means the campaign is at the
+                 * slot-10 gate, which wants the three Cross minigames won. They
+                 * are entered from the town like any other building. */
+                m->discoveredLocationId = (u8)cross;
+                m->locationDiscovered = 1;
+                m->unk427 = (u8)(cross + 1);
+                printf("sbk-nav: town -> Cross minigame (location %d, handler %d)\n", cross, cross + 1);
             } else {
                 m->unk427 = STORY_LEAVE_TOWN;
                 nav_town_exits++;
