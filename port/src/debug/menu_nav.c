@@ -40,6 +40,7 @@
 #include "ui/title_ui_elements.h"
 #include "ui/level_preview.h"
 #include "effects/cutscene_keyframes.h"
+#include "ui/save_data.h"
 #include "../platform/input.h"
 
 extern TaskScheduler gSchedulerListSentinel;
@@ -179,6 +180,25 @@ static unsigned long nav_last_action;
 
 static void nav_press(const char *line) { sbk_input_play_add(line); }
 
+/* Which course the campaign should play next, when no --trial level says.
+ *
+ * The game marks it itself: updateStorySlotUnlockStatus (src/core/session_manager.c)
+ * leaves every finished course at levelUnlockStatus 1 and writes 5 into the
+ * next one, which is the same 5 the level list's own cursor logic and the
+ * rider picker's exit read. Without this the navigator confirms whatever the
+ * list opens on -- which is gGameSessionContext->currentLevel, the course just
+ * played -- and the campaign grinds Sunny Mountain for ever instead of
+ * advancing. Slots 12..14 are the Cross minigames, which are entered from the
+ * town, so the scan stops at 12. */
+static int nav_next_story_level(void) {
+    int i;
+    if (EepromSaveData == NULL) return -1;
+    for (i = 0; i < 12; i++) {
+        if (EepromSaveData->levelUnlockStatus[i] == 5) return i;
+    }
+    return -1;
+}
+
 static int nav_saves_pending(void) { return nav_want == NAV_SAVE; }
 
 /* A race has ended when a result handler comes up. The purse is in
@@ -289,19 +309,20 @@ static void nav_act(unsigned long retraces) {
      * it wants and lets the navigator's own A press confirm it. */
     if (sbk_menu_on("handleLevelSelectInput")) {
         LevelSelectState *ls = (LevelSelectState *)sbk_menu_alloc("handleLevelSelectInput");
-        if (ls != NULL && sbk_nav_target_level >= 0 && ls->menuState == 0) {
+        int want = sbk_nav_target_level >= 0 ? sbk_nav_target_level : nav_next_story_level();
+        if (ls != NULL && want >= 0 && ls->menuState == 0) {
             int i;
             for (i = 0; i < ls->maxLevelCount && i < 12; i++) {
-                if (ls->levelIdList[i] == (u8)sbk_nav_target_level) {
+                if (ls->levelIdList[i] == (u8)want) {
                     if (ls->selectedIndex != (s8)i) {
                         static int said = -1;
                         ls->selectedIndex = (s8)i;
-                        ls->selectedLevelId = (u8)sbk_nav_target_level;
-                        ls->previousLevelId = (u8)sbk_nav_target_level;
-                        if (said != sbk_nav_target_level) {
-                            said = sbk_nav_target_level;
-                            printf("sbk-nav: level list: cursor -> %d (level %d of %d offered)\n", i,
-                                   sbk_nav_target_level, ls->maxLevelCount);
+                        ls->selectedLevelId = (u8)want;
+                        ls->previousLevelId = (u8)want;
+                        if (said != want) {
+                            said = want;
+                            printf("sbk-nav: level list: cursor -> %d (level %d of %d offered)\n", i, want,
+                                   ls->maxLevelCount);
                             fflush(stdout);
                         }
                     }
@@ -383,8 +404,33 @@ static void nav_act(unsigned long retraces) {
     nav_press("press A 3");
 }
 
+/* --unlockall: keep the game's own cheat applied.
+ *
+ * The level list only offers courses whose levelUnlockStatus is non-zero
+ * (buildUnlockedLevelList, src/story/story_intro.c), so on the scratch save a
+ * trial runs with, `--trial level=N` can only ever aim at course 0. Rather than
+ * hand-write a save file, this runs unlockAllContent (src/ui/title_screen.c) --
+ * the cheat the title screen already has -- and re-runs it whenever the game
+ * overwrites the block, which loadSaveData and resetSaveDataToDefaults both do
+ * on the way in. Pair it with --eeprom or --nopak; on the user's real save it
+ * would erase the campaign's progression. */
+int sbk_unlockall;
+
+static void nav_unlockall(void) {
+    extern void unlockAllContent(void);
+    static int said;
+    if (EepromSaveData == NULL || EepromSaveData->levelUnlockStatus[1] == 1) return;
+    unlockAllContent();
+    if (!said) {
+        said = 1;
+        printf("sbk-nav: --unlockall: every course and board offered (the game's own unlockAllContent)\n");
+        fflush(stdout);
+    }
+}
+
 void sbk_menu_nav_tick(unsigned long retraces) {
     collect();
+    if (sbk_unlockall) nav_unlockall();
     if (sbk_menutrace) menutrace(retraces);
     if (!sbk_autonav) return;
     nav_watch();

@@ -12,6 +12,7 @@ finishes and quits.
     nightmare_search.py record 0 2         # re-run the winners with --record
     nightmare_search.py regress            # replay every golden movie, pass/fail
     nightmare_search.py nm                 # search the Nightmare row itself
+    nightmare_search.py nmtable            # ...and the table it produced
     nightmare_search.py plan               # the book, as --plan wants it
     nightmare_search.py campaign           # a long self-playing session
 
@@ -27,8 +28,19 @@ G4 = os.path.expanduser("~/Apps/isle-ppc-tools/g4/g4")
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "nightmare_results.csv")
 GOLDEN = os.path.join(HERE, "..", "scripts", "golden")
-FIELDS = ["spec", "level", "char", "board", "boost", "diff", "place",
-          "finished_before", "frames", "gold", "wall_s"]
+FIELDS = ["spec", "level", "char", "board", "boost", "diff", "nmtax", "nmdelay",
+          "nmuse", "nmalt", "place", "finished_before", "frames", "gold", "wall_s"]
+
+# Where a trial's save block lives. The sequel keeps the whole campaign in the
+# EEPROM -- which courses the level list offers included -- so a trial that
+# shared the user's eeprom.sav would both rewrite it and stop being
+# reproducible. --eeprom points the save device at this scratch file, which is
+# deleted before every trial, and --unlockall then runs the game's own
+# unlockAllContent so `level=N` can aim past course 0. Together with --nopak
+# (no Controller Pak) and --nopad (no gamepad: no Rumble Pak probe, no stray
+# stick) that is the sequel's determinism recipe, the equivalent of the first
+# game's --nopak --nopad.
+TRIAL_EEPROM = "/Users/zach/trial-eeprom.sav"
 
 # Level ids are the game's own (build/include/generated/course_definitions).
 LEVELS = [0, 1, 2, 4, 5, 6, 8, 9, 10]
@@ -47,8 +59,10 @@ def trial(spec, frames=200000, timeout=900, extra=()):
     """One headless race. A trial that outruns `timeout` is hung: stop it and
     return no result so the sweep moves on."""
     g4("stop")
+    g4("ssh", "rm -f %s" % TRIAL_EEPROM)
     t0 = time.time()
-    g4("run", "--headless", "--nopak", "--nopad", "--autonav", "--nightmare",
+    g4("run", "--headless", "--nopak", "--nopad", "--eeprom", TRIAL_EEPROM,
+       "--unlockall", "--autonav", "--nightmare",
        "--trial", spec + ",quit=1", "--frames", str(frames), *extra)
     log = ""
     while time.time() - t0 < timeout:
@@ -60,6 +74,11 @@ def trial(spec, frames=200000, timeout=900, extra=()):
         print("hung trial (>%ds), stopping: %s" % (timeout, spec), flush=True)
         g4("stop")
     row = {"spec": spec, "wall_s": round(time.time() - t0)}
+    for kv in spec.split(","):
+        if "=" in kv:
+            k, v = kv.split("=", 1)
+            if k in ("nmtax", "nmdelay", "nmuse", "nmalt"):
+                row[k] = int(v)
     for line in log.splitlines():
         if line.startswith("sbk-trial: result"):
             for kv in line.split()[2:]:
@@ -159,13 +178,40 @@ def sweep_nightmare(level=0):
     CPU's top-speed tax (race_main.c ~804 subtracts useChance * 0x202 from
     maxSpeedCap) and every other slot's delay/useChance decide how soon and how
     often an item is thrown. The trial exposes all four as nmtax/nmdelay/
-    nmuse/nmalt, so the row can be measured like anything else: the rider that
-    finishes first and fastest with the *lowest* tax is the one that is fast on
-    merit rather than on a handicap the rivals carry."""
-    for tax, delay, use, alt in ((0, 0, 255, 255), (0, 30, 255, 255),
-                                 (0, 0, 128, 128), (32, 0, 255, 255)):
-        run("level=%d,char=0,board=8,nmtax=%d,nmdelay=%d,nmuse=%d,nmalt=%d"
-            % (level, tax, delay, use, alt))
+    nmuse/nmalt, so the row can be measured like anything else.
+
+    The grid separates the two things the row does, because they pull opposite
+    ways. Every rider in the race sits on this row, player 1 included, so the
+    tax is not a difficulty dial: it is a speed limit on the whole field, and
+    lowering it makes everyone faster, not just the rivals. The items are the
+    real difficulty. What the search wants is the row where the rider still
+    finishes first on the *lowest* tax -- fast on merit rather than on a
+    handicap the rivals are carrying."""
+    for tax in (0, 32, 64, 0xA8):
+        for delay, use in ((0, 255), (30, 255), (0, 128)):
+            run("level=%d,char=0,board=8,nmtax=%d,nmdelay=%d,nmuse=%d,nmalt=%d"
+                % (level, tax, delay, use, use))
+
+
+def nm_rows():
+    return [r for r in rows() if r.get("nmuse") not in (None, "")]
+
+
+def nmtable():
+    """The Nightmare sweep as a table: one line per row tried."""
+    print("%-6s %-6s %-8s %-6s %-6s %-6s %-8s %-7s %s"
+          % ("level", "tax", "delay", "use", "alt", "place", "frames", "gold", "wall_s"))
+    for r in sorted(nm_rows(), key=lambda r: (int(r["nmtax"] or 0), int(r["nmdelay"] or 0),
+                                              -int(r["nmuse"] or 0))):
+        print("%-6s %-6s %-8s %-6s %-6s %-6s %-8s %-7s %s"
+              % (r["level"], r["nmtax"], r["nmdelay"], r["nmuse"], r["nmalt"],
+                 r["place"], r["frames"], r["gold"], r["wall_s"]))
+    wins = [r for r in nm_rows() if int(r["place"]) == 1]
+    if wins:
+        best = min(wins, key=lambda r: (int(r["nmtax"]), int(r["frames"])))
+        print("\nbest (wins on the lowest tax): tax=%s delay=%s use=%s alt=%s "
+              "place=%s frames=%s" % (best["nmtax"], best["nmdelay"], best["nmuse"],
+                                      best["nmalt"], best["place"], best["frames"]))
 
 
 # ---------------------------------------------------------------- reporting
@@ -296,6 +342,8 @@ if __name__ == "__main__":
         sweep_nightmare(int(a[1]) if len(a) > 1 else 0)
     elif a and a[0] == "table":
         table()
+    elif a and a[0] == "nmtable":
+        nmtable()
     elif a and a[0] == "plan":
         print(plan_arg())
     elif a and a[0] == "record":

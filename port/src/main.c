@@ -73,7 +73,7 @@ static const char *find_rom(int argc, char **argv) {
         if (argv[i][0] != '-') {
             return argv[i];
         }
-        if (strcmp(argv[i], "--play") == 0 || strcmp(argv[i], "--record") == 0 || strcmp(argv[i], "--drawdistance") == 0 || strcmp(argv[i], "--dumpdl") == 0 || strcmp(argv[i], "--frames") == 0 || strcmp(argv[i], "--wav") == 0 || strcmp(argv[i], "--dumpframes") == 0 || strcmp(argv[i], "--pak") == 0 || strcmp(argv[i], "--bigtri") == 0 || strcmp(argv[i], "--peek") == 0 || strcmp(argv[i], "--cmds") == 0 || strcmp(argv[i], "--trial") == 0 || strcmp(argv[i], "--plan") == 0 || strcmp(argv[i], "--saveevery") == 0 || strcmp(argv[i], "--uiscript") == 0) {
+        if (strcmp(argv[i], "--play") == 0 || strcmp(argv[i], "--record") == 0 || strcmp(argv[i], "--drawdistance") == 0 || strcmp(argv[i], "--dumpdl") == 0 || strcmp(argv[i], "--frames") == 0 || strcmp(argv[i], "--wav") == 0 || strcmp(argv[i], "--dumpframes") == 0 || strcmp(argv[i], "--pak") == 0 || strcmp(argv[i], "--eeprom") == 0 || strcmp(argv[i], "--bigtri") == 0 || strcmp(argv[i], "--peek") == 0 || strcmp(argv[i], "--cmds") == 0 || strcmp(argv[i], "--trial") == 0 || strcmp(argv[i], "--plan") == 0 || strcmp(argv[i], "--saveevery") == 0 || strcmp(argv[i], "--uiscript") == 0) {
             i++; /* option value */
         }
     }
@@ -123,6 +123,7 @@ int main(int argc, char **argv) {
     int fullscreen = 0; /* 1 = yes, -1 = --windowed, 0 = default (fullscreen when SBK_FULLSCREEN=1 or launched from the Finder) */
     extern int sbk_wide_output;
     const char *pak_path = NULL;
+    const char *eeprom_path = NULL;
     int nopak = 0;
     const char *play = NULL, *record = NULL;
     unsigned long max_frames = 0;
@@ -234,6 +235,22 @@ int main(int argc, char **argv) {
             sbk_nopad = 1;  /* no gamepad: no Rumble Pak, no stray stick input */
         } else if (strcmp(argv[i], "--nopak") == 0) {
             nopak = 1;      /* no Controller Pak at all: nothing is opened or written */
+        } else if (strcmp(argv[i], "--eeprom") == 0 && i + 1 < argc) {
+            /* A scratch save file. The sequel keeps its whole campaign in the
+             * EEPROM, so a trial that shares the user's eeprom.sav both changes
+             * it and stops being reproducible -- the menus differ run to run
+             * once the progress differs. This is the EEPROM's --pak. */
+            eeprom_path = argv[++i];
+        } else if (strcmp(argv[i], "--unlockall") == 0) {
+            /* The level list only offers courses whose levelUnlockStatus is
+             * non-zero (buildUnlockedLevelList, src/story/story_intro.c), so on
+             * a scratch save a trial can only ever aim at course 0. This runs
+             * the game's OWN cheat, unlockAllContent (src/ui/title_screen.c) --
+             * not a hand-written save -- so every course is offered. Pair it
+             * with --eeprom or --nopak; on the user's real save it would wipe
+             * the campaign's progression. */
+            extern int sbk_unlockall;
+            sbk_unlockall = 1;
         } else if (strcmp(argv[i], "--peek") == 0 && i + 1 < argc) {
             sbk_peek_add(argv[++i]);
         } else if (strcmp(argv[i], "--cmds") == 0 && i + 1 < argc) {
@@ -282,7 +299,7 @@ int main(int argc, char **argv) {
     }
 
     if (sbk_rom_load(rom) != 0) {
-        fprintf(stderr, "usage: %s [--fullscreen[=WxH]|--fullscreen-desktop|--windowed] [--wide] [--novsync] [--trace] [--play SCRIPT|MOVIE.m64] [--record MOVIE.m64] [--frames N] [--hashframe] [--perf] [--autoplay] [--soak] [--nightmare] [--trial SPEC] [--plan C:CH:B:BO,..] [--pak FILE|--nopak] [--nopad] [--status] [--coursetrace] [--turbo] [--headless] [--mute] [--wav OUT.wav] [snowboardkids2.z64]\n", argv[0]);
+        fprintf(stderr, "usage: %s [--fullscreen[=WxH]|--fullscreen-desktop|--windowed] [--wide] [--novsync] [--trace] [--play SCRIPT|MOVIE.m64] [--record MOVIE.m64] [--frames N] [--hashframe] [--perf] [--autoplay] [--soak] [--nightmare] [--trial SPEC] [--plan C:CH:B:BO,..] [--pak FILE|--nopak] [--eeprom FILE] [--unlockall] [--nopad] [--status] [--coursetrace] [--turbo] [--headless] [--mute] [--wav OUT.wav] [snowboardkids2.z64]\n", argv[0]);
         return 1;
     }
     printf("sbk: ROM %s (%lu bytes)\n", rom, (unsigned long)sbk_rom_size);
@@ -303,7 +320,12 @@ int main(int argc, char **argv) {
     sbk_input_init();
     if (!nopak) {
         sbk_pak_open(pak_path);
-        sbk_eeprom_open(NULL);   /* the sequel's own save device */
+    }
+    /* --nopak on its own is "no save devices at all". A scratch --eeprom is the
+     * exception: a trial still wants the save block to work normally -- the
+     * level list is built from it -- it just must not be the user's. */
+    if (!nopak || eeprom_path != NULL) {
+        sbk_eeprom_open(eeprom_path);   /* the sequel's own save device, or --eeprom's scratch one */
     } else {
         sbk_eeprom_close();
         printf("sbk: no Controller Pak and no EEPROM (--nopak)\n");
