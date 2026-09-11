@@ -297,15 +297,152 @@ subtracts to size the boot ucode.
    and read (the file-select screen proves it); the rest is inherited from the
    first game's port and untested here.
 
+## Self-play: what the sequel's state looks like from outside
+
+The first game's `race_dbg.c` and `menu_nav.c` read globals -- `gRacePlayers`,
+`gRaceCourseIndex`, `gActiveGameTaskList` -- and the sequel has none of them.
+It keeps **every screen's state in the task scheduler's own allocation**, so
+both tools were rebuilt against that shape instead:
+
+```
+gSchedulerListSentinel.next     priority-ordered chain of TaskScheduler
+  .gamestateHandler             what this screen runs next  -> dladdr() names it
+  .allocatedState               this screen's state struct  -> where cursors are parked
+  .renderContext                a tag; 0x37 means "this is the race"
+```
+
+* **Finding the race.** `initRace` (`src/race/race_session.c`) calls
+  `setRenderContext(0x37)`, and that is the *only* call to `setRenderContext`
+  in the whole game -- an unambiguous tag no name matching can beat. Its
+  allocation is the `GameState` of `include/gamestate.h`: `players`,
+  `numPlayers` (all four riders), `playerCount` (the human ones),
+  `rankOrder[]`, `raceType`, `memoryPoolId` (the level), `finalLapNumber`.
+* **Finding a screen.** `dladdr()` on each scheduler's `gamestateHandler`
+  gives the real function name, so `--menutrace` prints the sequel's menu map
+  without a hand-written table. `sbk_menu_alloc("name")` then hands back that
+  screen's struct, which is what the navigator parks.
+* **A race allocation is not a race.** The results screens run on the *same*
+  scheduler as the race, so "hands off the pad while a race allocation exists"
+  sits on the results screen for ever. Only `handleRaceStateUpdate` means a
+  race is being played. This was the first bug the navigator had.
+
+The map, read straight off a `--menutrace` soak on the G4:
+
+```
+initLogoSplash / updateLogoSplash          the logo
+startDemoRace ... handleRaceStateUpdate    the attract demo (gameMode 3)
+handleTitleMenuInput                       START / TRAINING / OPTION
+updateSaveSlotSelectionScreen              the file select (and the only EEPROM writer)
+gameStateCleanupHandler                    the walkable town (game_state_init.c)
+storyMapHandlePlayerInput                  the ski-area map (overlay 1BBA0)
+handleLevelSelectInput                     the course list
+updateCharacterSelect                      rider + board
+updateCutscenePlayback                     the pre- and post-race cutscenes
+handleRaceStateUpdate                      the race
+handle*GameResult / await*AwardGold / await*ContinuePress   the results
+```
+
+### The rider
+
+`--autoplay` sets `players[0].isCpuControlled`. Two things the first game did
+not need:
+
+* **The path table.** Only the riders the game itself made CPUs get a
+  `bossRaceData` asset, and the AI path preferences live inside it at an offset
+  indexed by `playerIndex` (`race_main.c` ~1105). Player 1 has none, so the
+  port lends it rider 2's copy and reads slot 0 out of it -- and has to keep
+  retrying, because the asset does not exist yet at the handoff.
+* **The tuning.** `applyCharacterSnowboardStats`
+  (`src/race/character_stats.c`) builds `baseMaxSpeed`, `handling`,
+  `cornering`, `lateralDeadzone`, `baseGravity` and `baseAcceleration` from
+  `gSnowboardStatsTable[snowboardId][characterId]`; the port recomputes the
+  same six (it cannot *call* it -- the game's version reads
+  `getCurrentAllocation()`, and `gActiveScheduler` points at whatever the last
+  dispatch left when the host loop runs) and folds `--trial boost=N` into the
+  top speed in 1/256ths.
+
+### Nightmare
+
+The sequel has no `actionTriggerChance` / `itemTriggerChance`. Its CPU riders
+are tuned by `gAIPlayerParams[8][0x11]` (`src/race/race_main.c`, in the `.race`
+overlay, so a plain native symbol), three bytes per entry:
+
+| read | what it does |
+| --- | --- |
+| `race_main.c` ~804 | `maxSpeedCap -= gAIPlayerParams[d][0].useChance * 0x202` |
+| `hit_reactions.c` | per item: `delay` before use, `useChance` / `altChance` to use it |
+
+So **row 0's `useChance` is a top-speed tax** -- 0xA8 on the easiest row costs
+about a quarter of the rider's speed -- and every other slot decides how soon
+and how often an item is thrown. The rows the game's own data names
+(`gCpuCharacterSnowboardConfigs`) are 0-5, so **row 7 is spare**: `--nightmare`
+writes the retune there and points every CPU rider at it, leaving the game's
+own table untouched. The values are `tax=0, delay=0, useChance=255,
+altChance=255` and are exposed to `--trial` as `nmtax/nmdelay/nmuse/nmalt` so
+`nightmare_search.py nm` can search them rather than have them guessed.
+
+`--nightmare` also gives player 1 `SNOWBOARD_SPEED_LEVEL_3`, the fastest board
+that has no drawback.
+
+### The navigator
+
+`--autonav` answers each screen by name, and everything it can it **parks**
+rather than presses -- a queued A lands on a prompt the frame it appears, so a
+stick-up queued behind it is always a frame late (the first game's lesson,
+still true):
+
+* `handleTitleMenuInput` -> `TitleScreenState.menuSelection = 0` (START).
+* `handleLevelSelectInput` -> `LevelSelectState.selectedIndex`, a *cursor into
+  its own `levelIdList[]*, is parked on `--trial level=N`; the confirm is the
+  navigator's own A. Exactly the first game's course-cursor move.
+* `updateCutscenePlayback` -> `playbackState = CUTSCENE_STATE_SKIP_START`.
+  The sequel plays a 55-second cutscene before every story race and another
+  after it, and **START is the only skip** -- which a navigator must never
+  queue, because a START still in flight when a race begins pauses it. Parking
+  the state is what the button does anyway, fade and all. It takes a race cycle
+  from ~7 minutes to ~5.
+* `gameStateCleanupHandler` (the walkable town) -> `discoveredLocationId` and
+  `unk427`. A location is normally entered by *walking into* it: a trigger sets
+  `locationDiscovered` / `discoveredLocationId`, the travel task writes
+  `unk427 = id + 1`, and the cleanup handler turns that into
+  `storyMapLocationIndex`, which `map_state.c` uses to dispatch
+  `storyMapLocationHandlers[]`. A bot cannot be asked to walk across a town, so
+  the navigator writes the pair the trigger would have. **id 3** (handler 4,
+  `loadOverlay_1BBA0`) is the ski-area map and leads to the course list and a
+  story race; **id 6** (handler 7, `initSaveSlotScreen`) is the save point.
+  Ids 2, 5 and 8 are the three Cross minigames, which
+  `handleGameStateComplete` intercepts and turns into levels 0xD, 0xE and 0xC.
+* `updateSaveSlotSelectionScreen` is both the way into the game and the game's
+  **only writer of the EEPROM** (`eepromWriteAsync`, `save_slot_select.c`).
+  Three of its states default to the answer that backs out, so all three are
+  parked: `saveSlotMenuState 1` -> `selectedSaveSlot = 0`; `0x33` with
+  `saveSlotDialogType 0xA` -> `saveSlotDialogSelection = 0` (STORY, not
+  EXPERT); `0x33` otherwise -> 0 to save (or, entering the game, 1 when
+  `numValidSlots` says a file exists -- the sequel's version of the first
+  game's "USE THIS SAVE, not START A NEW GAME" trap).
+
+### The trial harness
+
+`port/tools/nightmare_search.py` is the sweep/record/regress/campaign loop.
+Unlike the first game's it needs **no input script**: `--autonav` walks the
+sequel's menus from the logo to the start line on its own, and `--trial
+level=N` aims the course list. `--nopak --nopad` still applies -- with the
+EEPROM and a gamepad in play the menus differ run to run.
+
 ## What is not done
 
-* `--autoplay`, `--soak`, `--nightmare`, `--trial`, `--plan`, `--autonav`,
-  `--status`, `--peek`: the first game's `race_dbg.c` and `menu_nav.c` reach
-  into *its* menu and race state by symbol name, so none of it carries over.
-  `port/src/debug/game_hooks.c` keeps the switches parsing and says so.
-  Rebuilding them against the sequel's state (`RaceState` in
-  `src/race/race_session.c`, the task list in `src/system/task_scheduler.c`) is
-  the next large piece of work.
+* The campaign is *driven* but not yet *finished*: one story race on Sunny
+  Mountain is won by the CPU rider every time (11,400-12,500 gold), the
+  navigator returns to the town and aims at the next location, but a full
+  progression through every course -- and a verified EEPROM write after each
+  race -- has not been watched end to end. `nightmare_search.py sweep` has not
+  been run, so `port/tools/nightmare_results.csv` and
+  `port/scripts/golden/*.m64` are still empty.
+* The near player model renders as a **black silhouette** during a race while
+  the distant riders are correct (`g4-shots/sbk2-autoplay-race.png`). This is a
+  graphics bug the self-play tooling made easy to see, not a self-play bug --
+  probably the same class as the combiner fix above, and `--dumpdl` on a race
+  task is the way in.
 * The draw-distance patch (`--drawdistance`): the sequel's far planes are
   `RACE_VIEWPORT_FAR_PLANE 3800.0f`, `MULTIPLAYER_RACE_VIEW_FAR_PLANE 3000.0f`
   and `BOSS_RACE_VIEW_FAR_PLANE 2000.0f` in `src/race/race_session.c`; the

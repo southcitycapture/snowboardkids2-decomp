@@ -62,6 +62,8 @@ int sbk_nav_target_level = -1;
 /* The story map's save point: location handler 7 = initSaveSlotScreen, and the
  * map's own id for it is one less. */
 #define STORY_SAVE_LOCATION 6
+/* ...and the ski-area map, handler 4, which leads to the course list. */
+#define STORY_RACE_LOCATION 3
 
 /* ------------------------------------------------------------- screen naming */
 
@@ -298,7 +300,38 @@ static void nav_act(unsigned long retraces) {
         return;
     }
 
-    /* The story overworld. A location is entered by *walking into* it: a
+    /* The story overworld proper (src/core/game_state_init.c). Jingle Town is a
+     * walkable 3D town: a trigger fires when the rider reaches a building, sets
+     * locationDiscovered / discoveredLocationId on the map's own GameState, and
+     * the travel task then writes unk427 = id + 1, which is what
+     * gameStateCleanupHandler turns into
+     * storyMapLocationIndex (src/story/map_state.c dispatches
+     * storyMapLocationHandlers[] off it). A bot cannot be asked to walk across
+     * a town, so the navigator parks the pair the trigger would have written:
+     *
+     *   id 3 -> handler 4  loadOverlay_1BBA0, the ski-area map, whose A press
+     *                      leads to the course list and a story race
+     *   id 6 -> handler 7  initSaveSlotScreen, the save point -- the game's
+     *                      ONLY writer of the EEPROM
+     *   id 2/5/8 -> the Speed / X / Shot Cross minigames (handleGameStateComplete
+     *                      intercepts handlers 3, 6 and 9 and sets currentLevel
+     *                      0xD / 0xE / 0xC itself)
+     */
+    if (sbk_menu_on("gameStateCleanupHandler")) {
+        GameState *m = (GameState *)sbk_menu_alloc("gameStateCleanupHandler");
+        if (m != NULL && m->unk427 == 0) {
+            u8 id = (u8)(nav_want == NAV_SAVE ? STORY_SAVE_LOCATION : STORY_RACE_LOCATION);
+            m->discoveredLocationId = id;
+            m->locationDiscovered = 1;
+            m->unk427 = (u8)(id + 1);
+            printf("sbk-nav: town -> location %d (handler %d, want=%s)\n", id, id + 1,
+                   nav_want == NAV_SAVE ? "SAVE" : "RACE");
+            fflush(stdout);
+        }
+        return;
+    }
+
+    /* The ski-area map. A location is entered by *walking into* it: a
      * trigger sets locationDiscovered + discoveredLocationId on the map's own
      * GameState and the map then runs storyMapLocationHandlers[id + 1]. So a
      * save is asked for by parking those two -- the game's normal flow, just

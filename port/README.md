@@ -17,8 +17,10 @@ command lists, a fixed-function OpenGL 1.3 backend, scripted input.
 | Menus: title screen, file select (EEPROM), level preview, the story overworld | renders and responds |
 | 2D: the title logo, the tile-map backgrounds, sprites and the race HUD | matches the reference |
 | Audio: ABI 1 confirmed, aspMain byte-identical to the first game, samples produced | plays, not yet listened to |
-| A race | runs with its full HUD (blind walk, not yet played) |
-| Self-play, trials, the campaign navigator | not ported (see docs/PLAN.md) |
+| A race | played end to end by the game's own CPU rider, first place |
+| Self-play: `--racedbg`, `--peek`, `--autoplay`, `--soak`, `--nightmare` | works |
+| The navigator: `--autonav`, `--menutrace`, `--saveevery`, `--trial`, `--plan` | works; the campaign drives itself through a race and back to the town |
+| The campaign end to end (every course, a save after each race) | not yet watched through |
 
 The title screen matches the emulator reference frame
 (`g4-shots/sbk2-s2dex-fix1.png` against Mupen64Plus's `snowboard_kids2-020.png`):
@@ -48,13 +50,38 @@ More, uncropped, are in `~/Apps/islandPowerPC/g4-shots`.
                    [--frames N] [--hashframe] [--mute] [--noaudio] [--wav OUT.wav]
                    [--pak FILE.mpk] [--nopak] [--nopad] [--trace] [--dumpdl N]
                    [--s2dextrace]
-                   [--dumpframes N] [--dumptris] [--bigtri N] [--perf] [snowboardkids2.z64]
+                   [--dumpframes N] [--dumptris] [--bigtri N] [--perf]
+                   [--racedbg] [--peek ADDR:LEN] [--autoplay] [--soak] [--nightmare]
+                   [--autonav] [--menutrace] [--saveevery N] [--status]
+                   [--trial SPEC] [--plan LEVEL:CHAR:BOARD:BOOST,...]
+                   [snowboardkids2.z64]
 
 `--nopak` turns off the EEPROM as well as the Controller Pak, and the game then
 says "Backup memory is corrupted" on the save screen -- which is how the EEPROM
 was proved to work.
 
 Scripts in `scripts/`: `title-start.txt`, `menu-walk.txt`, `menu-soak.txt`.
+
+## Self-play
+
+The game beta-tests itself. `--autoplay` hands player 1 to the game's own CPU
+rider; `--nightmare` retunes a spare row of `gAIPlayerParams` so every rider
+throws everything instantly and carries no speed handicap, and gives player 1
+the fastest board; `--autonav` walks the menus by name and drives the campaign
+between races; `--soak` is the same without the navigator (a monkey pressing A).
+
+    snowboardkids2 --fullscreen --autonav --autoplay --nightmare --saveevery 1
+
+`--menutrace` prints the sequel's menu map as it moves -- every screen is named
+with `dladdr()` off the task scheduler's `gamestateHandler`, so there is no
+hand-written table. `--racedbg` prints the four riders once a second and
+`--peek ADDR:LEN` dumps RDRAM.
+
+`--trial level=N,char=C,board=B,boost=X,quit=1` runs one race as an experiment
+and prints a result line; `port/tools/nightmare_search.py` sweeps trials on the
+G4, keeps `port/tools/nightmare_results.csv`, records golden movies into
+`port/scripts/golden/` and replays them (`regress`). `docs/PLAN.md`,
+"Self-play", has the state the tooling keys on and why.
 
 The save files live in `~/Library/Application Support/SnowboardKids2`:
 `eeprom.sav` (the raw 512-byte EEPROM image emulators use) and
