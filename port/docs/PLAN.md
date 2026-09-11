@@ -334,7 +334,7 @@ startDemoRace ... handleRaceStateUpdate    the attract demo (gameMode 3)
 handleTitleMenuInput                       START / TRAINING / OPTION
 updateSaveSlotSelectionScreen              the file select (and the only EEPROM writer)
 gameStateCleanupHandler                    the walkable town (game_state_init.c)
-storyMapHandlePlayerInput                  the ski-area map (overlay 1BBA0)
+storyMapHandlePlayerInput                  the rider picker on a town map (overlay 1BBA0)
 handleLevelSelectInput                     the course list
 updateCharacterSelect                      rider + board
 updateCutscenePlayback                     the pre- and post-race cutscenes
@@ -407,11 +407,42 @@ still true):
   `unk427 = id + 1`, and the cleanup handler turns that into
   `storyMapLocationIndex`, which `map_state.c` uses to dispatch
   `storyMapLocationHandlers[]`. A bot cannot be asked to walk across a town, so
-  the navigator writes the pair the trigger would have. **id 3** (handler 4,
-  `loadOverlay_1BBA0`) is the ski-area map and leads to the course list and a
-  story race; **id 6** (handler 7, `initSaveSlotScreen`) is the save point.
-  Ids 2, 5 and 8 are the three Cross minigames, which
-  `handleGameStateComplete` intercepts and turns into levels 0xD, 0xE and 0xC.
+  the navigator writes the pair the trigger would have. **id 6** (handler 7,
+  `initSaveSlotScreen`) is the save point. Ids 2, 5 and 8 are the three Cross
+  minigames, which `handleGameStateComplete` intercepts and turns into levels
+  0xD, 0xE and 0xC.
+
+  **A story course is not a location at all.** `gameStateCleanupHandler` splits
+  on that one byte two ways, and the second way is the campaign's:
+
+  ```
+  unk427 == id + 1   storyMapLocationIndex = id + 1, return 1   -> a building
+  unk427 == 0xFF     return 0xFF                                -> LEAVE
+  ```
+
+  and `awaitStoryMapSelection` (`session_manager.c`) maps **both** 0x44 and
+  0xFF to `loadLevelSelectScreen`. So 0xFF -- despite its callback being called
+  `onStoryMapExitToMenu` -- is "walk out of Jingle Town and go race", which in
+  the game is `finalizeStoryMapExit` (`map_character_anim.c`) writing the byte
+  once the fade lands. The navigator writes the same one.
+
+  This cost an evening. `loadOverlay_1BBA0` (handler 4, id 3) is **not** the
+  ski-area map: it is the *rider picker* laid over a map of the town, nine
+  riders in a 3x3, `okPromptSprites` and all. Its `onStoryMapNormalExit`
+  returns the course-list code 0x44 only while
+  `EepromSaveData->levelUnlockStatus[0] == 5` -- true only until the first
+  course has been won. After that it returns 1, the rider lands back in the
+  town, and a navigator that keeps asking for id 3 loops for ever: 177 laps of
+  it are in the log, each lap a *different* chain of screen names, so the
+  "stuck on one screen" timer never fired. The navigator now counts town exits
+  and says so instead.
+* **Which course next.** The course list opens on
+  `gGameSessionContext->currentLevel`, which is the course just played, so a
+  navigator with nothing to say re-runs Sunny Mountain for ever. The game marks
+  its own intent: `updateStorySlotUnlockStatus` (`session_manager.c`) leaves
+  finished courses at `levelUnlockStatus` 1 and writes **5** into the next one
+  -- the same 5 the rider picker's exit and the list's cursor read. With no
+  `--trial level` the navigator parks on the first slot holding 5.
 * `updateSaveSlotSelectionScreen` is both the way into the game and the game's
   **only writer of the EEPROM** (`eepromWriteAsync`, `save_slot_select.c`).
   Three of its states default to the answer that backs out, so all three are
@@ -426,18 +457,43 @@ still true):
 `port/tools/nightmare_search.py` is the sweep/record/regress/campaign loop.
 Unlike the first game's it needs **no input script**: `--autonav` walks the
 sequel's menus from the logo to the start line on its own, and `--trial
-level=N` aims the course list. `--nopak --nopad` still applies -- with the
-EEPROM and a gamepad in play the menus differ run to run.
+level=N` aims the course list.
+
+The first game's determinism recipe was `--nopak --nopad`. The sequel needs two
+more flags, because it keeps the entire campaign in the EEPROM:
+
+| flag | why |
+| --- | --- |
+| `--nopad` | no gamepad: no Rumble Pak probe, no stray stick |
+| `--nopak` | no Controller Pak (and, alone, no EEPROM either) |
+| `--eeprom FILE` | the save device points at a scratch file, deleted before every trial. Without it a trial rewrites the user's `eeprom.sav` *and* stops repeating, because the menus differ once the progress does |
+| `--unlockall` | `buildUnlockedLevelList` (`story_intro.c`) only offers courses whose `levelUnlockStatus` is non-zero, so on a fresh scratch save `level=N` can only ever aim at course 0. This runs the game's **own** cheat, `unlockAllContent` (`title_screen.c`), rather than a hand-written save block, and re-runs it whenever `loadSaveData` overwrites it |
+
+`--frames 60000` is the other half: at `--headless`'s 12x that is about 80 s of
+wall clock, and a Sunny Mountain race plus the menu walk is under 20000 frames,
+so a rider that wedges itself costs a minute instead of a quarter of an hour.
 
 ## What is not done
 
-* The campaign is *driven* but not yet *finished*: one story race on Sunny
-  Mountain is won by the CPU rider every time (11,400-12,500 gold), the
-  navigator returns to the town and aims at the next location, but a full
-  progression through every course -- and a verified EEPROM write after each
-  race -- has not been watched end to end. `nightmare_search.py sweep` has not
-  been run, so `port/tools/nightmare_results.csv` and
-  `port/scripts/golden/*.m64` are still empty.
+* **The CPU rider wedges itself on Turtle Island.** The campaign now walks
+  itself: Sunny Mountain is won (12,500 gold), the EEPROM is written, the town
+  is left by the right door, and the course list is parked on course 1 -- "level
+  list: cursor -> 1 (level 1 of 2 offered)", the game's own next-up marker read
+  back. Then the rider reaches Turtle Island's **LIFT IN** gate and stops dead:
+  lap 1 of 3, 4th, no movement for ten minutes of wall clock
+  (`g4-shots/sbk2-turtle-stuck.png`). The handoff itself is clean -- "path table
+  attached (0x802ad430)" -- so this is not the missing-asset retry; it is the
+  borrowed path table. Player 1 has no `bossRaceData` of its own, so the port
+  lends it rider 2's and reads **slot 0**, and slot 0 is the preference set for
+  a rider standing somewhere else. On a course whose route forks at a lift that
+  is enough to park it. The way in is `--racedbg` on level 1 watching
+  `sectorIndex` / `lapProgressRemaining` / `behaviorMode` at the gate, and then
+  whether the slot should be `playerIndex`-indexed after all (`race_main.c`
+  ~1105) rather than always 0.
+* A full progression through every course, with a verified EEPROM write after
+  each race, therefore still has not been watched end to end.
+  `nightmare_search.py sweep` (the per-course rider ladder) has not been run
+  either; only `nm`, the Nightmare row itself, has.
 * The near player model renders as a **black silhouette** during a race while
   the distant riders are correct (`g4-shots/sbk2-autoplay-race.png`). This is a
   graphics bug the self-play tooling made easy to see, not a self-play bug --

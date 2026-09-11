@@ -55,9 +55,18 @@ def g4(*args, **kw):
     return subprocess.run([G4, *args], capture_output=True, text=True, **kw)
 
 
-def trial(spec, frames=200000, timeout=900, extra=()):
+def trial(spec, frames=60000, timeout=600, extra=()):
     """One headless race. A trial that outruns `timeout` is hung: stop it and
-    return no result so the sweep moves on."""
+    return no result so the sweep moves on.
+
+    Budget one trial at about five minutes. --headless implies --turbo, which
+    takes a retrace "as soon as the game is idle" -- and the sequel is never
+    idle: three threads stay runnable every frame, so headless buys no wall
+    clock at all here and a trial runs at 1x, not the first game's 12x. What it
+    does buy is no display lists and no presents, which is what lets a sweep run
+    with no one watching. 60000 frames still bounds a wedged rider (Turtle
+    Island's lift gate does exactly that) at about seventeen minutes, and the
+    600 s timeout cuts it well before."""
     g4("stop")
     g4("ssh", "rm -f %s" % TRIAL_EEPROM)
     t0 = time.time()
@@ -187,10 +196,13 @@ def sweep_nightmare(level=0):
     real difficulty. What the search wants is the row where the rider still
     finishes first on the *lowest* tax -- fast on merit rather than on a
     handicap the rivals are carrying."""
-    for tax in (0, 32, 64, 0xA8):
-        for delay, use in ((0, 255), (30, 255), (0, 128)):
-            run("level=%d,char=0,board=8,nmtax=%d,nmdelay=%d,nmuse=%d,nmalt=%d"
-                % (level, tax, delay, use, use))
+    grid = [(tax, delay, use)
+            for tax in (0, 0xA8)
+            for delay, use in ((0, 255), (30, 255), (0, 128))]
+    grid += [(32, 0, 255), (64, 0, 255)]   # the tax between the two extremes
+    for tax, delay, use in grid:
+        run("level=%d,char=0,board=8,nmtax=%d,nmdelay=%d,nmuse=%d,nmalt=%d"
+            % (level, tax, delay, use, use))
 
 
 def nm_rows():

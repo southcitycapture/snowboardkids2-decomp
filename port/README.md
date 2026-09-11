@@ -19,7 +19,7 @@ command lists, a fixed-function OpenGL 1.3 backend, scripted input.
 | Audio: ABI 1 confirmed, aspMain byte-identical to the first game, samples produced | plays, not yet listened to |
 | A race | played end to end by the game's own CPU rider, first place |
 | Self-play: `--racedbg`, `--peek`, `--autoplay`, `--soak`, `--nightmare` | works |
-| The navigator: `--autonav`, `--menutrace`, `--saveevery`, `--trial`, `--plan` | works; the campaign drives itself through a race and back to the town |
+| The navigator: `--autonav`, `--menutrace`, `--saveevery`, `--trial`, `--plan` | works; the campaign wins Sunny Mountain, writes the EEPROM, and advances itself to the next course. The CPU rider then wedges on Turtle Island's lift gate -- `docs/PLAN.md`, "What is not done" |
 | The campaign end to end (every course, a save after each race) | not yet watched through |
 
 The title screen matches the emulator reference frame
@@ -48,7 +48,8 @@ More, uncropped, are in `~/Apps/islandPowerPC/g4-shots`.
     snowboardkids2 [--fullscreen] [--windowed] [--nolauncher]
                    [--play SCRIPT|MOVIE.m64] [--record MOVIE.m64]
                    [--frames N] [--hashframe] [--mute] [--noaudio] [--wav OUT.wav]
-                   [--pak FILE.mpk] [--nopak] [--nopad] [--trace] [--dumpdl N]
+                   [--pak FILE.mpk] [--nopak] [--eeprom FILE] [--unlockall]
+                   [--nopad] [--trace] [--dumpdl N]
                    [--s2dextrace]
                    [--dumpframes N] [--dumptris] [--bigtri N] [--perf]
                    [--racedbg] [--peek ADDR:LEN] [--autoplay] [--soak] [--nightmare]
@@ -58,7 +59,11 @@ More, uncropped, are in `~/Apps/islandPowerPC/g4-shots`.
 
 `--nopak` turns off the EEPROM as well as the Controller Pak, and the game then
 says "Backup memory is corrupted" on the save screen -- which is how the EEPROM
-was proved to work.
+was proved to work. `--eeprom FILE` is the exception: a scratch save file that
+works alongside `--nopak`, so an unattended trial never touches the real
+`eeprom.sav`. `--unlockall` runs the game's own `unlockAllContent` cheat on
+whatever save block is loaded, so the course list offers every course; it
+belongs with `--eeprom` and nowhere near a save you want to keep.
 
 Scripts in `scripts/`: `title-start.txt`, `menu-walk.txt`, `menu-soak.txt`.
 
@@ -76,6 +81,11 @@ between races; `--soak` is the same without the navigator (a monkey pressing A).
 with `dladdr()` off the task scheduler's `gamestateHandler`, so there is no
 hand-written table. `--racedbg` prints the four riders once a second and
 `--peek ADDR:LEN` dumps RDRAM.
+
+`--autonav` plays the campaign, not one course: it leaves Jingle Town by the
+door that leads to the course list (`unk427 = 0xFF`, not a location id -- see
+`docs/PLAN.md`) and parks the list on whichever course the game has marked
+`levelUnlockStatus == 5`, which is its own "next up".
 
 `--trial level=N,char=C,board=B,boost=X,quit=1` runs one race as an experiment
 and prints a result line; `port/tools/nightmare_search.py` sweeps trials on the
