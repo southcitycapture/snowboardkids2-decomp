@@ -666,6 +666,14 @@ static void autoplay_arm(GameState *gs, unsigned long retraces) {
     Player *p = &gs->players[0];
     if (gs->memoryPoolId >= 0 && gs->memoryPoolId < 16) sbk_level_race_type[gs->memoryPoolId] = (int)gs->raceType;
 
+    /* The ladder for *this* course, before the rider is retuned for it -- see
+     * sbk_nav_arm_level. Not in a trial: the trial's levers are the
+     * experiment. */
+    if (!trial.on) {
+        extern void sbk_nav_arm_level(int);
+        sbk_nav_arm_level(gs->memoryPoolId);
+    }
+
     p->isCpuControlled = 1;
     path_table_attach(gs, p, 0);
     p->aiDifficultyIndex = (u8)(sbk_nightmare ? NIGHTMARE_ROW : 0);

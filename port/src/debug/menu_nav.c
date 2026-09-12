@@ -787,6 +787,20 @@ static void nav_level_begin(int level) {
     }
 }
 
+/* Arming the ladder used to be the *end* of a race's business: nav_handicap
+ * called nav_level_begin after the result was in, so the first race a course
+ * ever saw was raced with whatever levers the previous course had left. That
+ * was survivable while rung 0 meant "no handicap at all" -- it is exactly the
+ * honest first attempt -- and it stopped being survivable the moment rung 0
+ * of the Cross ladders became a measured, passing row. Both Cross games lost
+ * a first race at "rung 0" that was not rung 0, and then climbed past the row
+ * that had been shown to pass.
+ *
+ * So race_dbg's autoplay handoff arms the ladder for the course it is about
+ * to hand over, before it retunes the rider. A trial is exempt: a trial's
+ * whole point is the levers named on its command line. */
+void sbk_nav_arm_level(int level) { nav_level_begin(level); }
+
 static void nav_handicap(int level, int place) {
     nav_level_begin(level);
 

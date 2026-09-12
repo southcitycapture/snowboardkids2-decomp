@@ -1157,25 +1157,23 @@ Measured, star board at +31%: **20/20, `playerLost` 0, 8,342 frames of the
 targets=20/20 skill=0/300 -> PASS`, one reach, and the EEPROM written
 (`g4-shots/sbk2-campaign-13.png`).
 
-### X Cross: the rider now jumps, and still does not trick
+### X Cross: the ollie was launched with somebody else's data
 
 X Cross (level 14, type 6) wants 300 skill points in its ninety seconds and
-scored **zero** -- not nearly, zero. Skill points on this course come from one
-place: `race_main.c ~2156` adds `player->trickPoints` to `skillPoints` on the
-landing when the race type is X_CROSS, and `trickPoints` is filled by
-`addTrickScore` / `addSpinTrickScore` during the air.
+scored **zero** -- not nearly, zero. Skill points here come from one place:
+`race_main.c ~2156` adds `player->trickPoints` to `skillPoints` on the landing
+when the race type is X_CROSS, and `trickPoints` is filled by `addTrickScore`
+and `addSpinTrickScore` during the air.
 
-The air is entered at `race_main.c:1314`, and only if `cpuInputFlags` came back
-non-zero from `determineAIPathChoice` -- whose first act is to read
+The air is entered at `race_main.c:1314`, and only if `cpuInputFlags` came
+back non-zero from `determineAIPathChoice` -- whose first act is to read
 `player->aiPathData`, the course's path-preference table. `path_table_attach`
-borrows that table off rider 2, and a Cross game has no rider 2
-(`gs->numPlayers < 2`). **A CPU rider alone on the trick course never jumps.**
-
-So the trick pilot answers that one question through the same shape of hook the
-boss pilot uses (`port/patches.txt`), with 7 -- and 7 specifically, because
-`getTrickType` (`track_height.c ~307`) turns a CPU rider's `cpuInputFlags & 7`
-into a trick by indexing `gSpecialTrickTypeTable` at `(flags << 3) + trickCount`,
-one row of eight per value, and only row 7 chains five tricks in one air:
+borrows that table off rider 2, and a Cross game has no rider 2. **A CPU rider
+alone on the trick course never jumps**, so the trick pilot answers that one
+question itself, with 7: `getTrickType` (`track_height.c ~307`) turns a CPU
+rider's `cpuInputFlags & 7` into a trick by indexing `gSpecialTrickTypeTable`
+at `(flags << 3) + trickCount`, one row of eight per value, and only row 7
+chains five tricks in one air:
 
 ```
 1: -1 -1 -1 -1 -1 -1 -1 -1      5: 01 01 01 -1 -1 -1 -1 -1
@@ -1184,48 +1182,122 @@ one row of eight per value, and only row 7 chains five tricks in one air:
 4: 01 07 -1 -1 -1 -1 -1 -1
 ```
 
-The rider now jumps. It still does not trick, and the reason is measured:
-`updatePostTrickDescentStep` gives the launch `behaviorCounter = 3` and takes
-one off it for every airborne frame, and at zero it returns the rider to phase
-0 with no trick at all. The trick only begins on the branch that sees
-`animationFlags & 1` -- the landing -- while the counter is still above zero.
-**A trick here is a pop, not a jump**: the rider has to be back on the ground
-within two frames of leaving it, and on a descent the ground falls away and the
-counter always wins. 67 jumps at one every 45 frames scored nothing; 228 at one
-every 10 scored nothing; popping only while the rider was already rising fired
-three times in a whole race and scored nothing either.
+That made the rider jump and it still scored nothing, and the reason turned
+out not to be a game rule at all.
 
-**X Cross is not passed.** What to try next, in order: find what the game's own
-CPU riders do on a *normal* course to land a trick (they do -- same code, same
-`gSpecialTrickTypeTable`, and the difference must be *where* the path table
-tells them to jump, which is a lip whose landing comes up to meet them); or
-drive `behaviorStep` into the 6..13 trick handlers directly once the rider is
-airborne, which is a bigger and less honest hook and should be the second
-choice.
+**The launch vector was two words of somebody else's data.**
+`beginPostTrickLaunchStep` (`race_main.c ~1911`) builds the ollie in three
+separate file-scope globals and then hands the address of *the first one* to
+`transformVector2`, which reads three consecutive `s32` as a `Vec3i`:
 
-### Speed Cross: a clock, not a rival
+```c
+D_800BAB40_AA9F0 = player->unkB8C + player->baseAcceleration;   /* y */
+D_800BAB44_AA9F4 = 0x20000;                                     /* z */
+transformVector2(&D_800BAB3C_AA9EC, &rotationTemp2, &launchVelocity);
+```
 
-Speed Cross (level 12, type 4) has one rider in the roster and its pass mark is
-`playerLost == 0` out of `handleSkillGameResult`. Nothing sets `playerLost`
-here but a clock, and the tight one is `initRaceTimerDisplay`'s ninety seconds.
-Measured on the star board at +31%: `lost=1` at 5,746 frames -- **95.8
-seconds**, five and a half over.
+On the N64 the three sit at 0xBAB3C, 0xBAB40 and 0xBAB44 in declaration order
+and that pun is exactly a `Vec3i`. In the Mach-O build they are three
+independent zero-initialised globals and `nm` puts them at 0xb428, 0xb424 and
+0xb420 -- **descending** -- so the transform read the x it meant and then two
+words past the end of the block. Every jump in the port, by every rider on
+every course, human or CPU, was launched with whatever those two words held.
 
-**And the boost ladder does not close that gap, which is the finding.** The
-campaign lost it at +31%, +43%, +56%, +68% and +112%, and `--racedbg` says why:
-at +112% the rider's cap reads `spd=1572864/2985638`. It is doing half its own
-top speed. The rider crosses the line -- `anim=00080000`, the finished flag, at
-sector 87 -- but at about 98 seconds, and it is not the speed cap that is
-holding it there: it is cornering, the line, and the fact that the borrowed AI
-never gets the rider near the cap on a street this shape. Raising the cap
-further buys nothing, and the ladder is the wrong lever for this course.
+The measurement that says so, and the shape of measurement to keep: the only
+term in the launch's y is `baseAcceleration`, so a lever was put on it and it
+was multiplied by five. The two runs came back **byte-identical** -- 5,222
+frames, 716 airborne retraces, 92 jumps, nought points, the same `vy=-973` at
+the same retrace. A lever that changes nothing is a lever that is not being
+read.
 
-What to try instead: the *other* stats. `retune_arm` sets `baseMaxSpeed` and
-`maxSpeedCap` and nothing else, so `baseAcceleration`, `cornering` and
-`lateralDeadzone` -- the three the racing line is actually made of, and the
-three the STAR board was chosen for -- have never been touched by a lever. A
-rider that keeps its speed through the corners is what ninety seconds wants,
-not a rider with a higher ceiling it never reaches.
+`patches.txt` makes the three one array and keeps their names. With the pun
+real, the same jump leaves the lip at `vy=+199,312` instead of `+24,000`
+against a slope carrying the rider down at `-29,000`, and
+`updatePostTrickDescentStep`'s window -- which was never the problem, and
+which the old note here read with the flag's polarity inverted -- is met on
+the first attempt. `animationFlags & 1` is **airborne**, not landed: the
+counter is a two-frame grace period for actually leaving the ground, and the
+rider had been failing to leave it.
+
+Two more facts stood between a jump and a pass.
+
+**A chain still rotating when the board touches down is a crash, not a
+trick.** `updateFlipSpinTrickAnimation` ends by raising `animationFlags`
+0x1000 for as long as 0xC000 -- spin or grab in progress -- is up, and
+`tryFinalizeTrickLanding`'s first test after "am I still in the air" sends a
+rider carrying 0x1000 to `initStunnedAirborneBehavior` with its `trickPoints`
+unread. The first repaired run turned the whole five-trick chain five separate
+times -- `pts=145 mask=ab` -- and banked none of it. Acceleration is what buys
+the air the chain needs, because acceleration *is* the ollie.
+
+**And the pilot has to stop.** X Cross is two tests, not one:
+`handleMeterGameResult` wants `skillPoints >= 0x12C` **and** `playerLost == 0`,
+and `playerLost` is the ninety-second countdown. A rider that tricks all the
+way down the street scored **2,610** points and still failed, because every
+air is time not spent going downhill. So the pilot does what a human does:
+bank the points, then put the board down and race for the line
+(`--tricktarget`, 330 by default, the margin because the last chain is banked
+on the *landing*).
+
+Measured, star board, Nightmare row, `boost=176 accel=1024 hand=128
+corner=-128 dead=512`: **435 skill points of 300, `lost=0`, 4,234 frames of
+the 5,400 the countdown allows.**
+
+### Speed Cross: a hard ceiling, and then the line
+
+Speed Cross (level 12, type 4) has one rider in the roster and its pass mark
+is `playerLost == 0` out of `handleSkillGameResult`. Nothing sets `playerLost`
+here but a clock, and the tight one is `initRaceTimerDisplay`'s ninety
+seconds.
+
+The boost ladder lost it at +31%, +43%, +56%, +68% and +112%, and the reason
+is in the game's own source rather than in the rider: **`race_main.c:854`
+clamps `maxSpeedCap` to 0x180000 and no boost of any size passes it.** The old
+reading of `spd=1572864/2985638` as "the rider is doing half its own top
+speed" was wrong in an instructive way -- 1572864 *is* 0x180000. The rider was
+already flat out. The printed cap was `baseMaxSpeed`, which above the ceiling
+means nothing.
+
+So the boost is not useless, it is just not a top-speed lever: `maxSpeedCap`
+starts at `baseMaxSpeed`, has the CPU penalty `gAIPlayerParams[row][0].useChance
+* 0x202` taken off it (`race_main.c:803`) and the catch-up term applied
+(`:833`) *before* the clamp, so the boost has to be big enough that those two
+cannot pull the rider back off the ceiling -- and no bigger.
+
+The rest is the line, which is what the other three stats are:
+
+| stat | what it does | which way |
+| --- | --- | --- |
+| `handling` | turn rate (`race_main.c:1392`) | more is a rider that gets round |
+| `cornering` | the drag the turn costs (`:1401`) | **less** is faster |
+| `lateralDeadzone` | sideways velocity killed per frame | more is less sideslip |
+
+Splitting `handling` from `cornering` was the whole of it. One lever raising
+both took the wall contacts from 30 to 6 and left the finish exactly where it
+was: it bought the line and paid for it in speed.
+
+Measured, star board, Nightmare row, `boost=176 hand=128 corner=-128
+dead=512`: **`lost=0` at 5,266 frames -- 87.8 seconds of ninety.** Adding X
+Cross's `accel=1024` to the same row loses it again, because the rider carries
+too much off the street's ramps and spends in the air the time it saved on the
+ground. That is why the Cross ladder is three ladders now, one per game.
+
+### The four levers the boost ladder never had
+
+`trial_retune` already computed six fields off `gSnowboardStatsTable` and only
+one of them, `baseMaxSpeed`, had a lever. Four more now do -- `accel`,
+`hand`, `corner`, `dead`, each 1/256ths added to the value the game's own
+table produced, so zero is exactly the old behaviour, and `corner` takes a
+negative. They are reachable from `--trial accel=N,hand=N,corner=N,dead=N` and
+from the Cross ladder's rows.
+
+One trap came with them, and it is the same trap the boost lever fell into a
+day earlier: **`retune_hold` was watching `baseMaxSpeed` alone.** An
+accel-only trial leaves `baseMaxSpeed` exactly where
+`applyCharacterSnowboardStats` recomputes it, so the hold saw nothing to do
+and the lever was undone a second into every race. It watches
+`baseAcceleration` too now. A lever that never reaches the race is the most
+expensive kind of bug this port has met, twice.
 
 ### The three Cross minigames, which are not races
 
