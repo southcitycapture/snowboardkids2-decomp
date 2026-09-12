@@ -980,8 +980,7 @@ static void marshal_tick(GameState *gs, unsigned long retraces) {
     static unsigned long since;
     static s32 best;
     static u8 best_lap;
-    static int pushes, said, in_push;
-    static unsigned long pushing_since;
+    static int pushes, said, in_push, push_frames;
     Player *p = &gs->players[0];
     extern s32 computeAngleToPosition(s32, s32, s32, s32);
     double vx, vy, vz, speed, dx, dz, len;
@@ -989,13 +988,21 @@ static void marshal_tick(GameState *gs, unsigned long retraces) {
     int at_end = 0;
 
     if (!sbk_autoplay || !p->isCpuControlled) return;
-    if (race_is_new(gs, &m_gs, &m_frame)) {
+    /* Re-baseline on a race the frame test somehow did not catch as well: a
+     * rider whose lap went *down*, or whose remaining progress jumped a
+     * quarter of a lap the wrong way, is not the rider this state describes.
+     * Getting this wrong is not harmless -- a stale `best` means no frame
+     * ever counts as progress, and the marshal carries a rider that is
+     * racing perfectly well. */
+    if (race_is_new(gs, &m_gs, &m_frame) || p->currentLap < best_lap ||
+        (p->currentLap == best_lap && p->lapProgressRemaining > best + 2048)) {
         best = p->lapProgressRemaining;
         best_lap = p->currentLap;
         since = retraces;
         pushes = 0;
         said = 0;
         in_push = 0;
+        push_frames = 0;
         return;
     }
     if ((p->animationFlags & PLAYER_FINISHED_FLAG) || gs->raceIntroState != 0) {
@@ -1032,6 +1039,7 @@ static void marshal_tick(GameState *gs, unsigned long retraces) {
         since = retraces;
         said = 0;   /* one line per stall, not one per race */
         in_push = 0;
+        push_frames = 0;
         return;
     }
     if (retraces - since < MARSHAL_ARM || pushes >= MARSHAL_MAX) return;
@@ -1102,12 +1110,14 @@ static void marshal_tick(GameState *gs, unsigned long retraces) {
 
     /* How long the marshal has been *pushing*, which is not how long the
      * rider has been stuck: a stall that starts above the threshold spends
-     * its first seconds being declined, and counting those made the very
-     * first push escalate straight to a carry. */
+     * its first seconds being declined, and counting elapsed time rather than
+     * pushes made the very first push escalate straight to a carry. Counting
+     * the pushes themselves cannot be fooled by either. */
     if (!in_push) {
         in_push = 1;
-        pushing_since = retraces;
+        push_frames = 0;
     }
+    push_frames++;
     p->velocity.x = (s32)(dx / len * (double)MARSHAL_PUSH);
     p->velocity.z = (s32)(dz / len * (double)MARSHAL_PUSH);
     p->rotY = (s16)computeAngleToPosition(tx, tz, (s32)p->worldPos.x, (s32)p->worldPos.z);
@@ -1125,7 +1135,7 @@ static void marshal_tick(GameState *gs, unsigned long retraces) {
      * sector it is in, at the track's own height there, with prevWorldPos
      * moved with it so nothing downstream sees a teleport-sized delta. The
      * watchdog still owns anything this does not fix. */
-    if (retraces - pushing_since >= MARSHAL_LIFT) {
+    if (push_frames >= MARSHAL_LIFT) {
         TrackData *td = &gs->gameData;
         int sec = (int)p->sectorIndex;
         int ok = 1;
@@ -1155,11 +1165,11 @@ static void marshal_tick(GameState *gs, unsigned long retraces) {
             p->rollAngle = 0; /* race_main.c:4504 wants it zero to let the lap wrap */
             printf("sbk-marshal: r=%lu %d frames of pushing at level %d lap %d sect %d prog %d moved player 1 "
                    "nowhere; carrying it to %s at %d,%d,%d\n",
-                   retraces, (int)(retraces - pushing_since), gs->memoryPoolId, p->currentLap, p->sectorIndex,
+                   retraces, push_frames, gs->memoryPoolId, p->currentLap, p->sectorIndex,
                    (int)p->lapProgressRemaining, at_end ? "the lift entry" : "the end of the next sector",
                    (int)p->worldPos.x, (int)p->worldPos.y, (int)p->worldPos.z);
             fflush(stdout);
-            pushing_since = retraces; /* give it another MARSHAL_LIFT to get going */
+            push_frames = 0; /* give it another MARSHAL_LIFT to get going */
         }
     }
     sbk_marshal_pushes++;
