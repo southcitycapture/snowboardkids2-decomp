@@ -445,13 +445,30 @@ static void retune_arm(Player *p, int boost) {
  * the rivals' is how "the CPU rider is off the racing line" stops being a
  * guess. On Starlight Highway our rider crawled sectors 104-115 at half its
  * speed cap with 0x10 set on every sample while the rivals sailed past. */
+/* "Is this a different race from the one I was watching?"
+ *
+ * The pointer alone is not enough and this cost three campaign races: the
+ * scheduler hands the next race the *same* allocation, so `gs` compares equal
+ * across races and every per-race counter in this file carried over. The
+ * marshal's stall clock came into a fresh race already sixty seconds old and
+ * carried the rider at sector 33; the wall counters printed 3444 for a rider
+ * that had raced for nine seconds. The race's own frame counter going
+ * backwards is the other half of the test. */
+static int race_is_new(GameState *gs, void **seen, unsigned *last_frame) {
+    unsigned f = (unsigned)gs->raceFrameCounter;
+    int fresh = (*seen != (void *)gs) || f < *last_frame;
+    *seen = (void *)gs;
+    *last_frame = f;
+    return fresh;
+}
+
 int sbk_wall_frames[4];
 static void *wall_gs;
+static unsigned wall_frame;
 
 static void wall_watch(GameState *gs) {
     int i;
-    if (wall_gs != (void *)gs) {
-        wall_gs = (void *)gs;
+    if (race_is_new(gs, &wall_gs, &wall_frame)) {
         for (i = 0; i < 4; i++) sbk_wall_frames[i] = 0;
     }
     for (i = 0; i < gs->numPlayers && i < 4; i++) {
@@ -721,6 +738,7 @@ static struct {
     unsigned long since[4];
     int burst[4];  /* frames of dense trace still owed */
     int done[4];   /* already autopsied this rider this race */
+    unsigned frame;
 } pin;
 
 /* Which task is standing on top of the rider?
@@ -838,9 +856,12 @@ static void pin_frame(GameState *gs, int i, unsigned long retraces) {
 
 static void pin_watch(GameState *gs, unsigned long retraces) {
     int i;
-    if (pin.gs != (void *)gs) {
+    if (race_is_new(gs, &pin.gs, &pin.frame)) {
+        void *g = pin.gs;
+        unsigned f = pin.frame;
         memset(&pin, 0, sizeof(pin));
-        pin.gs = (void *)gs;
+        pin.gs = g;
+        pin.frame = f;
         for (i = 0; i < 4; i++) {
             pin.best_prog[i] = 0x7FFF;
             pin.since[i] = retraces;
@@ -955,6 +976,7 @@ int sbk_marshal_pushes;
 
 static void marshal_tick(GameState *gs, unsigned long retraces) {
     static void *m_gs;
+    static unsigned m_frame;
     static unsigned long since;
     static s32 best;
     static u8 best_lap;
@@ -967,8 +989,7 @@ static void marshal_tick(GameState *gs, unsigned long retraces) {
     int at_end = 0;
 
     if (!sbk_autoplay || !p->isCpuControlled) return;
-    if (m_gs != (void *)gs) {
-        m_gs = (void *)gs;
+    if (race_is_new(gs, &m_gs, &m_frame)) {
         best = p->lapProgressRemaining;
         best_lap = p->currentLap;
         since = retraces;
