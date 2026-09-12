@@ -971,6 +971,20 @@ static void marshal_tick(GameState *gs, unsigned long retraces) {
         since = retraces;
         return;
     }
+    /* Not at the lift.
+     *
+     * A lap wraps by waiting at the chairlift: tryEnterLift() hands the rider
+     * to initKnockbackBehavior, so behaviourMode is 3 and the rider makes no
+     * lap progress at about 110,000 units a frame -- under the threshold and
+     * over the arming time, which is exactly the shape the marshal is looking
+     * for. Pushing a rider that is queueing for the lift is how this port
+     * earned its first wedge; leave mode 3 and anything the lift has flagged
+     * alone. The game does the same thing itself: the lock-out branch is
+     * guarded by isPlayerNearLiftEntry(). */
+    if (p->behaviorMode == 3 || p->chairliftFlags != 0) {
+        since = retraces;
+        return;
+    }
     if (p->currentLap > best_lap || (p->currentLap == best_lap && p->lapProgressRemaining < best)) {
         best_lap = p->currentLap;
         best = p->lapProgressRemaining;
