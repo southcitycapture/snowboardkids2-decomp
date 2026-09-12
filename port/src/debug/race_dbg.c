@@ -20,10 +20,12 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
+#include <math.h>
 #include "common.h"
 #include "gamestate.h"
 #include "race/hit_reactions.h"
 #include "system/task_scheduler.h"
+#include "graphics/displaylist.h"
 #include "../platform/input.h"
 
 /* race/race_session.h drags in half the graphics headers; the four enum values
@@ -694,6 +696,339 @@ static void status_tick(unsigned long retraces) {
     fflush(stdout);
 }
 
+/* ------------------------------------------------------------ pin autopsy
+ *
+ * --racedbg prints every 30th retrace, which is enough to say "this rider is
+ * not getting anywhere" and useless for saying why: a rider held by a
+ * per-frame positional constraint looks, at 30-frame sampling, like a rider
+ * wandering. The autopsy is the other end of that: the first time any rider in
+ * a race stops making progress for PIN_ARM retraces, it prints a census of
+ * every task the race scheduler is running (by name, through the same cache
+ * the navigator uses) and then PIN_BURST *consecutive* frames of that rider's
+ * whole physical state. One burst per rider per race. */
+#define PIN_ARM 300
+#define PIN_BURST 150
+
+static struct {
+    void *gs;
+    s16 best_prog[4];
+    u8 best_lap[4];
+    unsigned long since[4];
+    int burst[4];  /* frames of dense trace still owed */
+    int done[4];   /* already autopsied this rider this race */
+} pin;
+
+/* Which task is standing on top of the rider?
+ *
+ * A scheduled task's payload is up to TASK_NODE_INLINE_PAYLOAD_SIZE bytes of
+ * whatever struct the level wanted, and almost every placed thing in this game
+ * keeps its world position in there as a Vec3i -- a RenderObject's
+ * transform.translation, a sprite's position, a projectile's own worldPos. The
+ * offset differs per struct and there is no table of them, so the census sweeps
+ * the payload for *any* aligned s32 triple that lands within NEAR of the pinned
+ * rider and prints the offset it found it at. On a course with a hundred
+ * obstacles that would be noise; standing still at one spot with one thing
+ * touching you, it is the answer. */
+#define PIN_NEAR 0x400000
+
+static void pin_census(GameState *gs, int who, unsigned long retraces) {
+    TaskScheduler *s = gSchedulerListSentinel.next;
+    Player *p = &gs->players[who];
+    extern const char *sbk_fn_name(void *);
+    while (s != NULL) {
+        if (s->renderContext == (u8)RACE_RENDER_CONTEXT && s->allocatedState == (void *)gs) {
+            Node *n = s->activeList;
+            int k = 0;
+            while (n != NULL && k < 96) {
+                printf("sbk-pin: r=%lu p%d task[%d] pri=%d cb=%s payload=%p", retraces, who, k, (int)n->priority,
+                       sbk_fn_name((void *)n->callback), (void *)&n->payload);
+                /* scheduleTask returns `&newNode->payload`: the `payload`
+                 * field IS the inline storage, not a pointer to it
+                 * (task_scheduler.c:406). Reading it as a pointer and
+                 * dereferencing it is a SIGSEGV, not a diagnosis. */
+                {
+                    const s32 *w = (const s32 *)&n->payload;
+                    unsigned o;
+                    for (o = 0; o + 3 <= TASK_NODE_INLINE_PAYLOAD_SIZE / 4; o++) {
+                        s32 dx = w[o] - (s32)p->worldPos.x;
+                        s32 dy = w[o + 1] - (s32)p->worldPos.y;
+                        s32 dz = w[o + 2] - (s32)p->worldPos.z;
+                        if (dx > -PIN_NEAR && dx < PIN_NEAR && dy > -PIN_NEAR && dy < PIN_NEAR && dz > -PIN_NEAR &&
+                            dz < PIN_NEAR) {
+                            printf(" NEAR+0x%02x d=%d,%d,%d", o * 4, (int)dx, (int)dy, (int)dz);
+                        }
+                    }
+                }
+                printf("\n");
+                n = n->next;
+                k++;
+            }
+            printf("sbk-pin: r=%lu p%d %d tasks on the race scheduler\n", retraces, who, k);
+            break;
+        }
+        s = s->next;
+    }
+    /* The sector graph and every rider's own path-preference row around the
+     * pin. `aiTarget` is computed by walking sectors[cur].next/left/right
+     * under the rider's aiPathData (ai_pathfinding.c:97), so a target that
+     * points backwards is either a graph link or a preference byte, and this
+     * prints both -- for the riders that get through as well as the one that
+     * does not. */
+    {
+        TrackData *td = &gs->gameData;
+        int sec, j;
+        int lo = (int)p->sectorIndex - 6, hi = (int)p->sectorIndex + 7;
+        if (lo < 0) lo = 0;
+        if (hi > (int)td->sectorCount) hi = (int)td->sectorCount;
+        for (sec = lo; sec < hi; sec++) {
+            TrackSector *t = &td->sectors[sec];
+            printf("sbk-pin: r=%lu p%d sector[%d] next=%d prev=%d right=%d left=%d len=%u prog=%d", retraces, who,
+                   sec, (int)t->nextSectorIndex, (int)t->previousSectorIndex, (int)t->rightSectorIndex,
+                   (int)t->leftSectorIndex, (unsigned)t->segmentLength, (int)t->lapProgressRemaining);
+            for (j = 0; j < gs->numPlayers && j < 4; j++) {
+                const signed char *row = (const signed char *)gs->players[j].aiPathData;
+                if (row == NULL) {
+                    printf(" p%d=--", j);
+                } else {
+                    row += sec * 4;
+                    printf(" p%d=%d/%u/%u/%d", j, (int)row[0], (unsigned)(unsigned char)row[1],
+                           (unsigned)(unsigned char)row[2], (int)row[3]);
+                }
+            }
+            printf("\n");
+        }
+    }
+    {
+        int i;
+        for (i = 0; i < gs->numPlayers && i < 4; i++) {
+            Player *q = &gs->players[i];
+            printf("sbk-pin: r=%lu p%d rider%d pos=%d,%d,%d stored=%d,%d,%d cr=%d nspheres=%d d=%d,%d,%d\n", retraces,
+                   who, i, (int)q->worldPos.x, (int)q->worldPos.y, (int)q->worldPos.z, (int)q->storedPosition.x,
+                   (int)q->storedPosition.y, (int)q->storedPosition.z, (int)q->collisionRadius,
+                   (int)q->collisionSphereCount, (int)(q->worldPos.x - p->worldPos.x),
+                   (int)(q->worldPos.y - p->worldPos.y), (int)(q->worldPos.z - p->worldPos.z));
+        }
+    }
+    fflush(stdout);
+}
+
+static void pin_frame(GameState *gs, int i, unsigned long retraces) {
+    Player *p = &gs->players[i];
+    printf("sbk-pin: r=%lu p%d sect=%d seg=%d prog=%d pos=%d,%d,%d d=%d,%d,%d vel=%d,%d,%d "
+           "aim=%d,%d,%d rotY=%d steer=%d hit=%d kang=%d kvel=%d,%d,%d anim=%08x behf=%08x "
+           "beh=%d/%d/%d/%d unkB8C=%d unkB90=%d face=%d/%d/%d surf=%d slow=%d stun=%d lift=%02x "
+           "spd=%d/%d cr=%d inv=%d\n",
+           retraces, i, p->sectorIndex, (int)p->segmentProgress, (int)p->lapProgressRemaining, (int)p->worldPos.x,
+           (int)p->worldPos.y, (int)p->worldPos.z, (int)(p->worldPos.x - p->prevWorldPos.x),
+           (int)(p->worldPos.y - p->prevWorldPos.y), (int)(p->worldPos.z - p->prevWorldPos.z), (int)p->velocity.x,
+           (int)p->velocity.y, (int)p->velocity.z, (int)p->aiTarget.x, (int)p->aiTarget.y, (int)p->aiTarget.z,
+           (int)p->rotY, (int)p->steeringAngle, (int)p->hitReactionState, (int)p->knockbackAngle,
+           (int)p->knockbackVelocity.x, (int)p->knockbackVelocity.y, (int)p->knockbackVelocity.z,
+           (unsigned)p->animationFlags, (unsigned)p->behaviorFlags, p->behaviorMode, p->behaviorPhase,
+           p->behaviorStep, p->behaviorCounter, (int)p->unkB8C, (int)p->unkB90, p->trackFaceType,
+           p->trackFaceSubtype, p->trackFaceType1Timer, p->surfaceInfo, p->slowdownLevel, p->stunCollisionCounter,
+           p->chairliftFlags, (int)p->smoothedSpeedCap, (int)p->maxSpeedCap, (int)p->collisionRadius,
+           (int)p->invincibilityTimer);
+}
+
+static void pin_watch(GameState *gs, unsigned long retraces) {
+    int i;
+    if (pin.gs != (void *)gs) {
+        memset(&pin, 0, sizeof(pin));
+        pin.gs = (void *)gs;
+        for (i = 0; i < 4; i++) {
+            pin.best_prog[i] = 0x7FFF;
+            pin.since[i] = retraces;
+        }
+    }
+    for (i = 0; i < gs->numPlayers && i < 4; i++) {
+        Player *p = &gs->players[i];
+        if (pin.burst[i] > 0) {
+            pin.burst[i]--;
+            pin_frame(gs, i, retraces);
+            if (pin.burst[i] == 0) fflush(stdout);
+            continue;
+        }
+        if (p->currentLap > pin.best_lap[i] ||
+            (p->currentLap == pin.best_lap[i] && p->lapProgressRemaining < pin.best_prog[i])) {
+            pin.best_lap[i] = p->currentLap;
+            pin.best_prog[i] = p->lapProgressRemaining;
+            pin.since[i] = retraces;
+            pin.done[i] = 0; /* one burst per stall, not one per race */
+            continue;
+        }
+        if (pin.done[i] || (p->animationFlags & PLAYER_FINISHED_FLAG)) continue;
+        /* The start-line countdown is four riders making no progress on
+         * purpose; it is not a pin. */
+        /* The start-line countdown is four riders making no progress on
+         * purpose, and lapProgressRemaining is 0 rather than 8192 until the
+         * race arms -- so the baseline has to be taken again here, not just
+         * the clock. Without the re-baseline `best_prog` stays at that 0 and
+         * every rider looks pinned from the first sector on. */
+        if (gs->raceIntroState != 0 || gs->raceFrameCounter < PIN_ARM) {
+            pin.best_lap[i] = p->currentLap;
+            pin.best_prog[i] = p->lapProgressRemaining;
+            pin.since[i] = retraces;
+            continue;
+        }
+        if (retraces - pin.since[i] < PIN_ARM) continue;
+        pin.done[i] = 1;
+        pin.burst[i] = PIN_BURST;
+        printf("sbk-pin: r=%lu p%d has made no progress for %d retraces on level %d "
+               "(lap=%d prog=%d sect=%d); %d frames of autopsy follow\n",
+               retraces, i, PIN_ARM, gs->memoryPoolId, p->currentLap, (int)p->lapProgressRemaining, p->sectorIndex,
+               PIN_BURST);
+        pin_census(gs, i, retraces);
+    }
+}
+
+/* -------------------------------------------------------------- the marshal
+ *
+ * What Haunted House's wedge actually is, and why only self-play hits it.
+ *
+ * updatePlayerNormalDriving (race_main.c ~1313) has one branch for a CPU rider
+ * that a human rider does not have:
+ *
+ *     if (player->isCpuControlled != 0) {
+ *         player->cpuInputFlags = determineAIPathChoice(player);
+ *         if (player->cpuInputFlags) { setPlayerBehaviorPhase(player, 4); return 1; }
+ *         if ((speed <= 0x5FFFF && player->snowboardId < SNOWBOARD_HIGH_TECH) || ...) {
+ *             if (isPlayerNearLiftEntry(player) == 0) {
+ *                 player->cpuInputFlags = 0;
+ *                 setPlayerBehaviorPhase(player, 4);
+ *                 return 1;
+ *             }
+ *         }
+ *     } else {
+ *         if (player->inputButtonsHeld & 0x8000) { setPlayerBehaviorPhase(player, 4); return 1; }
+ *     }
+ *     ...
+ *     calculateAITargetPosition(player);   <-- never reached on that branch
+ *
+ * Phase 4 is dispatchPostTrickLandingStep -- the ollie. So a CPU rider whose
+ * velocity magnitude drops below 0x5FFFF (about two thirds of top speed) away
+ * from the lift entry hops, and the early `return 1` means it never reaches
+ * calculateAITargetPosition or the steering below it. **A slow CPU rider
+ * cannot steer and cannot re-aim.** It is meant to be a nudge: the rider hops,
+ * gravity rolls it down the hill, it crosses 0x5FFFF again and drives. It is a
+ * dead end wherever gravity cannot do that.
+ *
+ * On Haunted House it cannot. The measured run (port/docs/PLAN.md): the rider
+ * is stunned at sector 47, comes off the drop into sectors 48-50 below the
+ * threshold, spends the whole of 48-51 unable to steer, drifts off the racing
+ * line onto the bank above it -- 0.67 world units higher than the line it took
+ * on the previous lap at the same x -- and settles into the dip there.
+ * Position becomes byte-identical, velocity zero, behaviourPhase 4 cycling its
+ * four trick steps for ever, aiTarget frozen at a waypoint eight sectors
+ * behind. It is not the ghost, not the pendulum, not a push zone, not another
+ * rider and not the task pool: the autopsy (--racedbg, `sbk-pin:`) prints
+ * every task in the race with any position within 0x400000 of the rider and
+ * the only ones are the rider's own snow spray.
+ *
+ * So it is not a port bug, and a human would not hit it: the human branch
+ * above is a button test, and a human keeps steering at any speed. It bites
+ * self-play because self-play *is* a CPU rider -- and it bites the game's own
+ * rivals too, which is why two riders were pinned at sector 50 in the campaign
+ * and one in every trial.
+ *
+ * The fix belongs on the autoplay side, and it is a marshal: when player 1 has
+ * made no progress for MARSHAL_ARM retraces *and* is under the threshold that
+ * locks it out, aim at the racing line two sectors ahead
+ * and give it exactly enough velocity along that line to be over the threshold
+ * on the next frame. One frame later the game's own phase 0 runs again, steers,
+ * and accelerates. Nothing else is touched, no game code is patched, and the
+ * rivals are left alone -- a rival stuck at sector 50 is a rival we beat.
+ */
+#define MARSHAL_SPEED 0x5FFFF /* race_main.c:1319, the lock-out threshold */
+#define MARSHAL_PUSH  0x68000 /* a shade over it, along the racing line */
+#define MARSHAL_ARM   240     /* four seconds of no progress before pushing */
+#define MARSHAL_MAX   3600    /* and never for longer than a minute of them */
+
+int sbk_marshal_pushes;
+
+static void marshal_tick(GameState *gs, unsigned long retraces) {
+    static void *m_gs;
+    static unsigned long since;
+    static s32 best;
+    static u8 best_lap;
+    static int pushes, said;
+    Player *p = &gs->players[0];
+    extern s32 computeAngleToPosition(s32, s32, s32, s32);
+    double vx, vy, vz, speed, dx, dz, len;
+    s32 tx = 0, tz = 0;
+
+    if (!sbk_autoplay || !p->isCpuControlled) return;
+    if (m_gs != (void *)gs) {
+        m_gs = (void *)gs;
+        best = p->lapProgressRemaining;
+        best_lap = p->currentLap;
+        since = retraces;
+        pushes = 0;
+        said = 0;
+        return;
+    }
+    if ((p->animationFlags & PLAYER_FINISHED_FLAG) || gs->raceIntroState != 0) {
+        since = retraces;
+        return;
+    }
+    if (p->currentLap > best_lap || (p->currentLap == best_lap && p->lapProgressRemaining < best)) {
+        best_lap = p->currentLap;
+        best = p->lapProgressRemaining;
+        since = retraces;
+        return;
+    }
+    if (retraces - since < MARSHAL_ARM || pushes >= MARSHAL_MAX) return;
+
+    vx = (double)(s32)p->velocity.x;
+    vy = (double)(s32)p->velocity.y;
+    vz = (double)(s32)p->velocity.z;
+    speed = sqrt(vx * vx + vy * vy + vz * vz);
+    /* Above the threshold the rider is not locked out; whatever is holding it
+     * is a different wedge and the watchdog owns that one. */
+    if (speed > (double)MARSHAL_SPEED) return;
+
+    /* Where "along the line" is.
+     *
+     * calculateAITargetPosition() is the obvious way to ask and the wrong one:
+     * it opens with getCurrentAllocation(), which answers with whatever task
+     * the scheduler is *inside*, and this tick is not inside one -- calling it
+     * from here is a SIGBUS (exit 138, measured). The track graph is plain
+     * data hanging off the race's own GameState, so the marshal reads it
+     * directly and aims at the centre of the end of the sector two ahead,
+     * which is the same place the racing line goes. */
+    {
+        TrackData *td = &gs->gameData;
+        int sec = (int)p->sectorIndex, k;
+        if (sec < 0 || sec >= (int)td->sectorCount) return;
+        for (k = 0; k < 2; k++) {
+            int nxt = (int)td->sectors[sec].nextSectorIndex;
+            if (nxt < 0 || nxt >= (int)td->sectorCount) break;
+            sec = nxt;
+        }
+        tx = (s32)td->vertices[td->sectors[sec].endCenterVertexIndex].x << 16;
+        tz = (s32)td->vertices[td->sectors[sec].endCenterVertexIndex].z << 16;
+    }
+    dx = (double)tx - (double)(s32)p->worldPos.x;
+    dz = (double)tz - (double)(s32)p->worldPos.z;
+    len = sqrt(dx * dx + dz * dz);
+    if (len < 1.0) return;
+
+    p->velocity.x = (s32)(dx / len * (double)MARSHAL_PUSH);
+    p->velocity.z = (s32)(dz / len * (double)MARSHAL_PUSH);
+    p->rotY = (s16)computeAngleToPosition(tx, tz, (s32)p->worldPos.x, (s32)p->worldPos.z);
+    p->steeringAngle = 0;
+    pushes++;
+    sbk_marshal_pushes++;
+    if (!said) {
+        said = 1;
+        printf("sbk-marshal: r=%lu player 1 locked out at level %d lap %d sect %d prog %d "
+               "(speed %d <= %d, phase %d); pushing it along the line to %d,%d\n",
+               retraces, gs->memoryPoolId, p->currentLap, p->sectorIndex, (int)p->lapProgressRemaining, (int)speed,
+               MARSHAL_SPEED, p->behaviorPhase, (int)tx, (int)tz);
+        fflush(stdout);
+    }
+}
+
 /* --------------------------------------------------------------------- ticks */
 
 void sbk_autoplay_tick(unsigned long retraces) {
@@ -725,7 +1060,9 @@ void sbk_autoplay_tick(unsigned long retraces) {
             }
         }
         wall_watch(gs);
+        if (sbk_race_debug_enabled) pin_watch(gs, retraces);
         race_watchdog(gs, retraces);
+        marshal_tick(gs, retraces);
         if (sbk_autoplay && p1->isCpuControlled == 0) {
             autoplay_arm(gs, retraces);
         } else if (sbk_autoplay) {
