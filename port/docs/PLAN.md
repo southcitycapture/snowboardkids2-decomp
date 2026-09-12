@@ -1950,3 +1950,91 @@ Both fixes are the ollie's: make the run one object and `#define` the old
 names onto its members, so the adjacency is the compiler's problem instead of
 the linker's. They are in `port/patches.txt`; no upstream file is touched.
 
+
+## The rendering audit, 2026-09-12
+
+Both ports were compared screen by screen against the real game. Two
+reference sources, and the first one is new tooling worth keeping:
+
+* **mupen64plus with the port's own golden movies.** `mupen64plus-ui-console`
+  has no movie playback, so the audit built a ~60-line input plugin that
+  replays a `.m64` (`GetKeys` hands out one sample per controller read;
+  `SBK_M64` names the file). The port's `port/scripts/golden/*.m64` are real
+  Mupen64 TAS files, so the *same* input drives the native port on the G4 and
+  the emulator on the Mac, and `--testshots f1,f2,...` then writes the
+  emulator's frame at the same VI count the port's new `--shotat` dumps.
+  That gives colour-exact, frame-exact references for every deterministic
+  screen. The one thing it cannot reproduce is a `--autoplay` race: autoplay
+  flips `gRacePlayers[0].isCpu`, which is game state, not controller input.
+  A text script compiled to `.m64` (the same semantics as `--play`) works in
+  both, so new references can be authored without recording on the G4.
+* **A 480p longplay** for everything the emulator cannot be driven to: the
+  town, the shop, the later courses, the credits. Compressed and colour
+  shifted, so it answers "is this element present and is the geometry right",
+  never "is this the right colour".
+
+Contact sheets: `sbk1-audit.png` and `sbk2-audit.png` in the session's
+scratchpad.
+
+### What was wrong, and why
+
+**The riders were dark.** Every lit model in the sequel rendered at roughly
+0.4x brightness with the hue skewed -- measured on the title screen, Nancy's
+hood at (81,84,0) against the emulator's (231,231,0), Slash's board at
+(0,0,80) against (0,0,208). Everything else on the same frame -- the logo,
+the snow, the sky, the text, the Rumble Pak badge -- was already pixel-close,
+which is what pointed at lighting rather than textures.
+
+The cause: `gfx_pc.c` is sm64-port's, and sm64-port sets `MAX_LIGHTS 2`. The
+sequel's viewport setup (`src/graphics/graphics.c:582`) emits `gSPLight` for
+n = 1..numLights and then one more for the ambient at n = numLights+1. A
+`--dumpdl` of the title task shows four of them, at G_MV_LIGHT offsets 48,
+72, 96 and **120**: light indices 0, 1, 2 and 3. The guard
+`lightidx <= MAX_LIGHTS` dropped the last one, so the ambient never arrived,
+and `current_lights[current_num_lights - 1]` then read past a three-element
+array while the diffuse loop read `current_lights_coeffs[2]` past a
+two-element one. `MAX_LIGHTS` is 7 now (what F3DEX2 allows) and
+`G_MW_NUMLIGHT` is clamped.
+
+`G_MW_LIGHTCOL` was implemented in the same pass. `gSPLightColor` is how
+`prepareDisplayListRenderStateWithLights` (`src/graphics/displaylist.c:1735`)
+gives each object its own two light colours and then puts the viewport's
+back; `gfx_sp_moveword` ignored the index entirely. It is not what caused the
+dark riders -- the title screen sends no `db0a` moveword at all -- but it is
+the same class of hole and the sequel sends them elsewhere.
+
+**The rider shadows were grey squares.** `src/effects/nonrace_shadow.c` draws
+a 16x16 **I4** circle with `G_CC_MODULATEIA`: the ring of zero nibbles around
+the disc is what makes it round, and that only works because the RDP
+replicates a `G_IM_FMT_I` texel's intensity into alpha as well as into RGB.
+`import_texture_i4`/`i8` wrote a flat 255 (sm64-port's alpha masks are all
+IA), so the ring was opaque. Caught on the attract demo, where port retrace
+1560 lines up with the emulator's VI frame 2160 and the two frames are
+otherwise the same picture to within edge antialiasing.
+
+### Still open
+
+* **The near rider is black under the overhead camera.** On Sunny Mountain's
+  top-down section the player model draws at RGB (1,1,1) to (7,6,8) -- not
+  "dark", *zero* -- while the distant riders and the whole course are right
+  (`g4-shots/sbk2-autoplay-race.png` is the same thing from an earlier
+  session). The four-light fix above did not remove it, so it is a second,
+  narrower failure: either that camera's viewport sets up lights the port
+  still mishandles, or the model is reached through a draw path whose shade
+  never gets written. The way in is a `--dumpdl` taken *at that retrace* --
+  the audit's dump landed on a neighbouring task and only caught HUD quads
+  (which legitimately carry shade 0 and take their colour from env/prim).
+  Note that `--dumpdl` on a race task crashed the dumper (exit 139) walking a
+  list `dump_addr_ok` let through; that needs fixing before the next attempt.
+* **The attract demo runs shorter in the port than on hardware.** The port
+  reaches the title at retrace ~2460 and leaves it for the demo race at
+  ~4260; the emulator reaches the title at ~3210 and is still on it at 5910.
+  Both render the same content correctly, so this is pacing, not drawing --
+  most likely the port's boot not spending the DMA time the console does.
+* Point-sampled text looks sharper in the port than in mupen64plus. That is
+  the reference being wrong, not the port: the Rice plugin filters magnified
+  textures, and `gfx_pc` honours `G_TF_POINT` as the RDP does.
+
+Both games' goldens were re-run after the shared `gfx_pc.c` changes:
+Snowboard Kids 1 `regress` 8/8 PASS, Snowboard Kids 2 `regress` 1/1 PASS
+(`place=1/14256`, unchanged).
