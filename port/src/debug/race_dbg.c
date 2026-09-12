@@ -443,8 +443,15 @@ static void path_table_attach(GameState *gs, Player *p, int verbose) {
     }
 }
 
+/* Every course's real raceType, learned at the handoff. menu_nav's boss ladder
+ * reads it: a course's type cannot be guessed from its number (course 7 is
+ * RACE_TYPE_BOSS_JUNGLE, course 6 is an ordinary race whose rivals all carry
+ * isBossRacer), and it is the same for every visit to a course. -1 is unknown. */
+int sbk_level_race_type[16] = { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 };
+
 static void autoplay_arm(GameState *gs, unsigned long retraces) {
     Player *p = &gs->players[0];
+    if (gs->memoryPoolId >= 0 && gs->memoryPoolId < 16) sbk_level_race_type[gs->memoryPoolId] = (int)gs->raceType;
 
     p->isCpuControlled = 1;
     path_table_attach(gs, p, 0);

@@ -442,14 +442,29 @@ static const struct { s16 boost, tax, relief; } nav_ladder[] = {
  * while it is empty-handed. The boost column stays small and constant: on a
  * boss the only thing speed buys is staying in throwing range. */
 static const struct { s16 boost, supply; } nav_boss_ladder[] = {
-    { 14, 0 }, { 28, 180 }, { 28, 120 }, { 28, 60 }, { 28, 30 },
+    { 14, 0 }, { 28, 180 }, { 28, 120 }, { 42, 60 }, { 56, 30 },
 };
 
-/* Courses 3 and 7 -- jingle_town_boss and ice_land_boss -- are the two health
- * bosses. Course 0xB, the Crazy Jungle boss, is RACE_TYPE_BOSS_JUNGLE: it has no
- * bossHealth at all and race_main.c decides it on who reaches the line first, so
- * it stays on the ordinary ladder where boost is the lever that works. */
-static int nav_level_is_boss(int level) { return level == 3 || level == 7; }
+/* Which courses are boss courses is not a list: it is asked of the race.
+ * Guessing it by level number was wrong twice over -- course 7 reports
+ * RACE_TYPE_BOSS_JUNGLE (1), the type that is won by reaching the line, not the
+ * health type its level file's name suggests, and course 6 is an ordinary race
+ * whose three rivals all carry isBossRacer. race_dbg records each course's real
+ * raceType at the autoplay handoff, so from the second visit on the ladder
+ * knows; the first visit falls back to the one course measured by hand.
+ *
+ * All three boss types share this ladder because on any of them the boss's
+ * speed is scripted (baseMaxSpeed 0) and the rival levers reach nothing. What
+ * differs is which column pays: supply for a health boss, boost for a
+ * race-to-the-line one, and hitting the boss helps both -- a hovering boss has
+ * its velocity zeroed, which is how a rider that cannot out-run it gets by. */
+static int nav_level_is_boss(int level) {
+    extern int sbk_level_race_type[16];
+    extern int sbk_is_boss_race(int);
+    int t = (level >= 0 && level < 16) ? sbk_level_race_type[level] : -1;
+    if (t >= 0) return sbk_is_boss_race(t);
+    return level == 3;
+}
 
 #define NAV_LADDER_TOP(boss)                                                                                       \
     ((boss) ? (int)(sizeof(nav_boss_ladder) / sizeof(nav_boss_ladder[0])) - 1                                        \

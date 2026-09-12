@@ -74,6 +74,7 @@
 #include "gamestate.h"
 #include "math/geometry.h"
 
+#define RACE_TYPE_BOSS_JUNGLE 1
 #define RACE_TYPE_BOSS_JINGLE 2
 #define RACE_TYPE_BOSS_ICE 3
 #define BOSS_DEFEATED_FLAG 0x100000
@@ -89,6 +90,11 @@ int sbk_boss_supply;      /* retraces between conjured stars while empty; 0 = pi
  * rubber-band keeps it inside 0x1000000 of us whenever it is ahead
  * (updateJingleTownBoss), so there is no reason to fire from further than
  * that plus a margin. */
+/* A ceiling on the handicap. The Ice Land run supplied 66 pans across one long
+ * race, which is far more than the course itself holds and more than the
+ * mechanic needs -- ten heads is ten hits. Sixteen leaves room for the misses
+ * and stops the supply becoming the whole game. */
+int sbk_boss_supply_max = 16;
 int sbk_boss_range = 0x2000000;
 int sbk_boss_cooldown = 10;
 
@@ -97,10 +103,24 @@ extern int sbk_autoplay;
 static unsigned long pilot_now;      /* fed by the host loop, see sbk_boss_pilot_tick */
 static unsigned long last_throw, last_supply;
 static void *pilot_gs;               /* the race this run's counters belong to */
-static int n_thrown, n_supplied, n_picked, hp_seen, last_ammo, reported;
+static u32 last_frame;
+static int n_thrown, n_supplied, n_pans, n_picked, hp_seen, last_ammo, reported;
 
+/* Won by taking the boss's health to 0 (race_main.c ~5188 reads 0x100000).
+ * Course 3 is one of these. */
 int sbk_is_hp_boss_race(int raceType) {
     return raceType == RACE_TYPE_BOSS_JINGLE || raceType == RACE_TYPE_BOSS_ICE;
+}
+
+/* Every boss race, health-decided or not. RACE_TYPE_BOSS_JUNGLE -- which is
+ * what course 7 turned out to be, not the type its level file's name suggests
+ * -- is won by *reaching the line first* (handleBossRaceResult reads
+ * finishPosition), so the heads do not end it. Hitting the boss is still worth
+ * doing there: every head sends it into a hover phase, and a hovering boss has
+ * its velocity.x and .z written to zero, which is how a rider that is not fast
+ * enough to pass it gets past it. So the pilot arms on all three. */
+int sbk_is_boss_race(int raceType) {
+    return raceType == RACE_TYPE_BOSS_JUNGLE || sbk_is_hp_boss_race(raceType);
 }
 
 /* rider 1 is the boss in every boss race the game builds, but look for the flag
@@ -117,9 +137,10 @@ Player *sbk_boss_rider(GameState *gs) {
 static void pilot_reset(GameState *gs, Player *boss) {
     pilot_gs = (void *)gs;
     last_throw = last_supply = pilot_now;
-    n_thrown = n_supplied = n_picked = 0;
+    n_thrown = n_supplied = n_pans = n_picked = 0;
     last_ammo = 0;
     reported = 0;
+    last_frame = 0;
     hp_seen = boss != NULL ? (int)boss->bossHealth : -1;
     printf("sbk: bosspilot: armed on level %d type=%d (boss hp=%d, supply=%d, range=%d)\n", gs->memoryPoolId,
            gs->raceType, hp_seen, sbk_boss_supply, sbk_boss_range);
@@ -136,16 +157,19 @@ s32 sbk_boss_pilot_item(GameState *gs, Player *p, s32 result) {
     s32 mode;
 
     if (!sbk_boss_pilot || !sbk_autoplay || gs == NULL || p == NULL) return result;
-    if (!sbk_is_hp_boss_race(gs->raceType)) return result;
+    if (!sbk_is_boss_race(gs->raceType)) return result;
     if (p != &gs->players[0] || !p->isCpuControlled) return result;
     if (p->animationFlags & PLAYER_FINISHED_FLAG) return result;
 
     boss = sbk_boss_rider(gs);
     if (boss == NULL) return result;
 
-    /* A new race: a different allocation, or the same one handed back with the
-     * ten heads restored. */
-    if (pilot_gs != (void *)gs || (int)boss->bossHealth > hp_seen) pilot_reset(gs, boss);
+    /* A new race: a different allocation, or the same one handed back and
+     * started again. The Ice Land boss refills its own health mid-race
+     * (ice_land_boss.c ~695 writes 3 back), so a risen health bar is *not* the
+     * test -- the race's own frame counter running backwards is. */
+    if (pilot_gs != (void *)gs || gs->raceFrameCounter < last_frame) pilot_reset(gs, boss);
+    last_frame = gs->raceFrameCounter;
 
     /* The heads, watched from the one place that is called every frame with the
      * race's own allocation in hand. A drop is a hit that landed. */
@@ -169,16 +193,34 @@ s32 sbk_boss_pilot_item(GameState *gs, Player *p, s32 result) {
     }
     last_ammo = (int)p->primaryItemAmmo;
 
-    /* Empty-handed, and the ladder has opened the supply: hand over a star. */
-    if (sbk_boss_supply > 0 && p->primaryItemAmmo == 0 && pilot_now - last_supply >= (unsigned long)sbk_boss_supply) {
-        p->primaryItemId = STAR_ITEM_ID;
-        p->primaryItemAmmo = 3;
-        p->itemHudNotificationFlags |= 1;
-        last_supply = pilot_now;
-        last_ammo = 3;
-        n_supplied++;
-        printf("sbk: bosspilot: supplied star x3 (#%d) at r=%lu, boss hp=%d\n", n_supplied, pilot_now, hp_seen);
-        fflush(stdout);
+    /* The supply. The pan comes first, because the pan cannot miss: the
+     * frying-pan secondary spawns a warp effect over *every* other rider
+     * (processPlayerItemUsage -> createWarpEffect), and descendWarpEffect calls
+     * setPlayerBouncedBackState on the boss when it lands -- 0x3E, one head, no
+     * aiming involved. It is also what the course itself hands out: the three
+     * pans lying on the Jingle Town boss run are the walkthrough's weapon of
+     * choice. The rider throws it on its own, through the game's ordinary
+     * shouldUseSecondaryItem path; the pilot only puts it in its hand. Stars
+     * fill the gaps while a pan is in flight. */
+    if (sbk_boss_supply > 0 && n_supplied + n_pans < sbk_boss_supply_max &&
+        pilot_now - last_supply >= (unsigned long)sbk_boss_supply) {
+        if (p->secondaryItemId == SECONDARY_ITEM_NONE) {
+            p->secondaryItemId = SECONDARY_ITEM_PAN;
+            p->itemHudNotificationFlags |= 2;
+            last_supply = pilot_now;
+            n_pans++;
+            printf("sbk: bosspilot: supplied pan (#%d) at r=%lu, boss hp=%d\n", n_pans, pilot_now, hp_seen);
+            fflush(stdout);
+        } else if (p->primaryItemAmmo == 0) {
+            p->primaryItemId = STAR_ITEM_ID;
+            p->primaryItemAmmo = 3;
+            p->itemHudNotificationFlags |= 1;
+            last_supply = pilot_now;
+            last_ammo = 3;
+            n_supplied++;
+            printf("sbk: bosspilot: supplied star x3 (#%d) at r=%lu, boss hp=%d\n", n_supplied, pilot_now, hp_seen);
+            fflush(stdout);
+        }
     }
 
     if (result >= 0) return result;                          /* the AI is already throwing */
@@ -234,13 +276,14 @@ s32 sbk_boss_pilot_item(GameState *gs, Player *p, s32 result) {
 void sbk_boss_pilot_tick(GameState *gs, unsigned long retraces) {
     Player *boss;
     pilot_now = retraces;
-    if (gs == NULL || pilot_gs != (void *)gs || !sbk_is_hp_boss_race(gs->raceType)) return;
+    if (gs == NULL || pilot_gs != (void *)gs || !sbk_is_boss_race(gs->raceType)) return;
     boss = sbk_boss_rider(gs);
     if (boss == NULL) return;
     if (!(gs->players[0].animationFlags & PLAYER_FINISHED_FLAG)) return;
     if (reported) return;
     reported = 1;
-    printf("sbk: bosspilot: race over -- boss hp=%d defeated=%d, stars thrown=%d (supplied=%d, picked up=%d)\n",
-           (int)boss->bossHealth, (boss->animationFlags & BOSS_DEFEATED_FLAG) ? 1 : 0, n_thrown, n_supplied, n_picked);
+    printf("sbk: bosspilot: race over -- boss hp=%d defeated=%d, stars thrown=%d (supplied=%d, pans=%d, picked up=%d)\n",
+           (int)boss->bossHealth, (boss->animationFlags & BOSS_DEFEATED_FLAG) ? 1 : 0, n_thrown, n_supplied, n_pans,
+           n_picked);
     fflush(stdout);
 }
