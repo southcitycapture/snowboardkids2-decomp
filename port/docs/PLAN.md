@@ -1058,22 +1058,160 @@ own save.** The ladder never needed a boost or a bigger tax for course 9 once
 the rider could steer: rung 1, relief 165 + tax 60, the same rung that won
 course 8.
 
-### The new wall: Shoot Cross scores 11 out of 20
+### Shoot Cross: 1/20, then 19/20, then 20/20
 
 Slots 10 and 11 -- the last two courses, and so the credits -- are opened by
 `updateStorySlotUnlockStatus` only when 0..9 are all 1 **and** 12..14 are too,
-and the campaign now stands at exactly that gate. `next=-1` from the navigator
-means the course list has nothing left to offer; it goes to the Cross games
-instead, and Shoot Cross (level 13, type 5) comes back
-`targets=11/20 skill=0/300 -> fail` on every attempt.
+and the campaign stood at exactly that gate looping Shoot Cross.
 
-This is not a wedge and not the marshal's problem. The race runs, ends, and
-saves; the pass mark is a *score*, and none of the handicap ladder's levers --
-a rival speed tax, item relief, our own top speed -- move a target count. The
-shot pilot (`port/src/debug/boss_pilot.c`) is what has to get better, and 11 of
-20 with no skill points at all says it is firing but not hitting: that is the
-next piece of work, and it is a different kind of problem from every wedge in
-this file.
+None of the handicap ladder's levers move a target count, so this was the shot
+pilot's problem, and it took most of a day. The findings are worth keeping in
+order, because every failure was a fact about the game.
+
+**A Cross game is first a clock.** `initShotCrossCountdownTimerTask`
+(`race_effects.c`) puts `0x1194` thirtieths -- a hundred and fifty seconds --
+on Shoot and Speed Cross, `0xA8C` (ninety) on X Cross, and
+`updateShotCrossCountdownTimer` writes `playerLost = 1` when it reaches zero
+whatever the score is. Speed Cross has a second, tighter one:
+`initRaceTimerDisplay` counts `0x4293C` up to `0x433C8`, also 2700 thirtieths,
+also ninety seconds. The rider's own board on no handicap took **155 seconds**
+to run the street and lost on the clock with eight targets standing. So
+`nav_cross_ladder` is a boost-only ladder starting at +31%, and `--trial
+level=12|13|14` now routes through the town so a Cross game can be run on its
+own instead of waited for in a campaign loop.
+
+**The course does not aim for you, and it is not a magnet.** The first pilot
+held the trigger down on a cooldown, on the reading that
+`activateShootCrossTargets`'s `checkPositionPlayerCollisionWithPull` pulls the
+rider onto the targets. It does not: that is the ordinary point-vs-player
+collision (`track_collision.c ~1035`) and it *pushes the rider out*. A target
+is a bollard. 58 shots, one target.
+
+**So the pilot aims.** `launchGhostTargetProjectile` ignores the targeting mode
+and throws straight along the rider's own model transform, so the pilot walks
+`gs->shootCrossTargets->targets` -- twenty `{s8 state; Vec3i position}` records,
+`state` 0 until `checkProjectileTargetHit` writes 1 -- and for the nearest one
+still standing writes `rotY` straight at it for two frames (the *snap*), lets
+the shot leave, and puts the heading back where the rider's own steering had
+got to. That alone is **1/20 -> 19/20**.
+
+Two smaller rules came out of the traces. Range matters both ways: 25 million
+units misses the targets that sit 30-40 off the line, and 84 million has the
+pilot snapping at everything (938 snaps in one race) and driving into walls.
+0x3200000 is the measured middle. And *last chance before nearest chance* -- a
+target the rider is leaving behind will not come round again on a one-way
+course with a clock, so it takes the aim off a nearer one the rider is still
+driving towards.
+
+**Target 8 cannot be hit, and that is the interesting part.** It sits
+twenty-one million units above the road; the rider's line never gets within
+fifty-four million of it in three dimensions; and a ghost projectile is clamped
+to the track surface every frame by `updateGhostTargetProjectile` and dies on
+the first wall, so it cannot climb a bank the rider is not on. Nineteen of
+twenty is recorded exactly like zero.
+
+Four things were tried, and the three that failed each said something:
+
+1. **A detour** -- turn the heading and the velocity towards it, the marshal's
+   nudge. At +19% it stopped at 39,695,257 units out and 20,737,349 up; at +44%
+   with twice the frames to spend it stopped at 39,708,332 and 20,588,529, with
+   148 frames of wall contact against 8. The same spot to a tenth of a percent
+   twice over is collision, not a rider out of room to turn. Both runs also
+   spent their whole clock. `--shotdetour N` re-arms it; it is off by default.
+2. **Carrying the rider to the target** -- the marshal's carry. A ghost
+   projectile is not born at the rider: it comes from
+   `transformVector(alloc->unk48, modelTransform)`, the muzzle offset at
+   `GameState+0x48` (`raceTransformData`) turned by the model transform, and
+   that transform's translation **lags the rider by a frame** and is rebuilt
+   from `worldPos` after the item hook has run. Three carries that put the
+   rider within 1,317 units of the hit point (tolerance 1,835,008) all fired
+   from where the rider had been. Correcting the position by (want - muzzle)
+   chased the stale number and oscillated with a gain of two -- the log has the
+   muzzle landing on exactly `2*want - rider`, frame after frame.
+3. **A rider parked in the air stops being asked about items.** Thirty-one
+   million units up with zero velocity, forty-five frames of hold produced
+   *one* call of `processPlayerItemUsage`: the behaviour phases that call it
+   are not the ones a falling rider is in.
+4. **Moving the target instead of the rider** -- what works. For the frames of
+   one shot the unreachable target's position (level data, read by the hit test
+   and by nothing else that matters, since the sprite's matrix was baked at
+   `initShootCrossTargetsCallback` and does not follow it) is put **four and a
+   half million units in front of the rider**, and put back the moment
+   `checkProjectileTargetHit` has written its state.
+
+   Four and a half million, and not less, is the last fact. Parked *on* the
+   rider it scores nothing, because `activateShootCrossTargets` runs the
+   point-vs-player collision on every target and one inside the rider's own
+   radius puts it into a pull state whose phase never calls the item code --
+   six hundred frames of hold, one shot. Outside that radius and inside the
+   projectile's own `0x1C0000`, it lands.
+
+That last one is the only part of Shoot Cross that is ours rather than the
+game's, and it is capped (`--shotcarry N`), counted, and printed with the
+result and in the race-over line, so no pass can be read without also reading
+how many of its targets were reached for.
+
+Measured, star board at +31%: **20/20, `playerLost` 0, 8,342 frames of the
+9,000 the countdown allows**. On the user's own save, in the campaign, at rung
+0 with no boost at all: `sbk-nav: cross game level 13 type=5: lost=0
+targets=20/20 skill=0/300 -> PASS`, one reach, and the EEPROM written
+(`g4-shots/sbk2-campaign-13.png`).
+
+### X Cross: the rider now jumps, and still does not trick
+
+X Cross (level 14, type 6) wants 300 skill points in its ninety seconds and
+scored **zero** -- not nearly, zero. Skill points on this course come from one
+place: `race_main.c ~2156` adds `player->trickPoints` to `skillPoints` on the
+landing when the race type is X_CROSS, and `trickPoints` is filled by
+`addTrickScore` / `addSpinTrickScore` during the air.
+
+The air is entered at `race_main.c:1314`, and only if `cpuInputFlags` came back
+non-zero from `determineAIPathChoice` -- whose first act is to read
+`player->aiPathData`, the course's path-preference table. `path_table_attach`
+borrows that table off rider 2, and a Cross game has no rider 2
+(`gs->numPlayers < 2`). **A CPU rider alone on the trick course never jumps.**
+
+So the trick pilot answers that one question through the same shape of hook the
+boss pilot uses (`port/patches.txt`), with 7 -- and 7 specifically, because
+`getTrickType` (`track_height.c ~307`) turns a CPU rider's `cpuInputFlags & 7`
+into a trick by indexing `gSpecialTrickTypeTable` at `(flags << 3) + trickCount`,
+one row of eight per value, and only row 7 chains five tricks in one air:
+
+```
+1: -1 -1 -1 -1 -1 -1 -1 -1      5: 01 01 01 -1 -1 -1 -1 -1
+2: 00 -1 -1 -1 -1 -1 -1 -1      6: 06 02 04 -1 -1 -1 -1 -1
+3: 02 02 -1 -1 -1 -1 -1 -1      7: 00 05 03 07 01 -1 -1 -1
+4: 01 07 -1 -1 -1 -1 -1 -1
+```
+
+The rider now jumps. It still does not trick, and the reason is measured:
+`updatePostTrickDescentStep` gives the launch `behaviorCounter = 3` and takes
+one off it for every airborne frame, and at zero it returns the rider to phase
+0 with no trick at all. The trick only begins on the branch that sees
+`animationFlags & 1` -- the landing -- while the counter is still above zero.
+**A trick here is a pop, not a jump**: the rider has to be back on the ground
+within two frames of leaving it, and on a descent the ground falls away and the
+counter always wins. 67 jumps at one every 45 frames scored nothing; 228 at one
+every 10 scored nothing; popping only while the rider was already rising fired
+three times in a whole race and scored nothing either.
+
+**X Cross is not passed.** What to try next, in order: find what the game's own
+CPU riders do on a *normal* course to land a trick (they do -- same code, same
+`gSpecialTrickTypeTable`, and the difference must be *where* the path table
+tells them to jump, which is a lip whose landing comes up to meet them); or
+drive `behaviorStep` into the 6..13 trick handlers directly once the rider is
+airborne, which is a bigger and less honest hook and should be the second
+choice.
+
+### Speed Cross: a clock, not a rival
+
+Speed Cross (level 12, type 4) has one rider in the roster and its pass mark is
+`playerLost == 0` out of `handleSkillGameResult`. Nothing sets `playerLost`
+here but a clock, and the tight one is `initRaceTimerDisplay`'s ninety seconds.
+Measured on the star board at +31%: `lost=1` at 5,746 frames -- **95.8
+seconds**, five and a half over. This is the one remaining wall that the
+existing ladder should walk into on its own, which is why the Cross rung is now
+kept per level across the rotation.
 
 ### The three Cross minigames, which are not races
 
@@ -1181,6 +1319,16 @@ so a rider that wedges itself costs a minute instead of a quarter of an hour.
 
   With the row re-anchored on the game's own data, Turtle Island finishes.
 
+* **X Cross (level 14) is not passed.** See the section above: the rider jumps
+  and does not trick, and the gate is `updatePostTrickDescentStep`'s
+  three-frame `behaviorCounter`. This is the campaign's last wall before slots
+  10 and 11, and so before the credits.
+* **Speed Cross (level 12) has not been passed yet either**, but it is only
+  five and a half seconds over a ninety-second clock and the boost ladder
+  (`nav_cross_ladder`, now kept per Cross level across the rotation) goes on up
+  to +81%. It should fall to the ladder without new code.
+* **Courses 10 and 11 and the credits have not been reached.** They open only
+  when 12..14 are all won.
 * `nightmare_search.py sweep` -- the *per-course rider ladder*, which is a
   different search from `nm` -- still has not been run. Only `nm`, the
   Nightmare row itself, has, and only one course (0) has a golden movie. The
