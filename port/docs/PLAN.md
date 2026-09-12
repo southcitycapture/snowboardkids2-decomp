@@ -1209,9 +1209,23 @@ Speed Cross (level 12, type 4) has one rider in the roster and its pass mark is
 `playerLost == 0` out of `handleSkillGameResult`. Nothing sets `playerLost`
 here but a clock, and the tight one is `initRaceTimerDisplay`'s ninety seconds.
 Measured on the star board at +31%: `lost=1` at 5,746 frames -- **95.8
-seconds**, five and a half over. This is the one remaining wall that the
-existing ladder should walk into on its own, which is why the Cross rung is now
-kept per level across the rotation.
+seconds**, five and a half over.
+
+**And the boost ladder does not close that gap, which is the finding.** The
+campaign lost it at +31%, +43%, +56%, +68% and +112%, and `--racedbg` says why:
+at +112% the rider's cap reads `spd=1572864/2985638`. It is doing half its own
+top speed. The rider crosses the line -- `anim=00080000`, the finished flag, at
+sector 87 -- but at about 98 seconds, and it is not the speed cap that is
+holding it there: it is cornering, the line, and the fact that the borrowed AI
+never gets the rider near the cap on a street this shape. Raising the cap
+further buys nothing, and the ladder is the wrong lever for this course.
+
+What to try instead: the *other* stats. `retune_arm` sets `baseMaxSpeed` and
+`maxSpeedCap` and nothing else, so `baseAcceleration`, `cornering` and
+`lateralDeadzone` -- the three the racing line is actually made of, and the
+three the STAR board was chosen for -- have never been touched by a lever. A
+rider that keeps its speed through the corners is what ninety seconds wants,
+not a rider with a higher ceiling it never reaches.
 
 ### The three Cross minigames, which are not races
 
@@ -1323,10 +1337,12 @@ so a rider that wedges itself costs a minute instead of a quarter of an hour.
   and does not trick, and the gate is `updatePostTrickDescentStep`'s
   three-frame `behaviorCounter`. This is the campaign's last wall before slots
   10 and 11, and so before the credits.
-* **Speed Cross (level 12) has not been passed yet either**, but it is only
-  five and a half seconds over a ninety-second clock and the boost ladder
-  (`nav_cross_ladder`, now kept per Cross level across the rotation) goes on up
-  to +81%. It should fall to the ladder without new code.
+* **Speed Cross (level 12) is not passed**, and the boost ladder is the wrong
+  lever for it: at +112% the rider runs at half its own cap
+  (`spd=1572864/2985638`) and still crosses the line at about 98 seconds
+  against a ninety-second limit. It is corner speed, not top speed. The next
+  thing to try is a lever on `baseAcceleration` / `cornering` /
+  `lateralDeadzone`, which nothing in the ladder has ever touched.
 * **Courses 10 and 11 and the credits have not been reached.** They open only
   when 12..14 are all won.
 * `nightmare_search.py sweep` -- the *per-course rider ladder*, which is a
