@@ -92,17 +92,36 @@ static const void *cur_fn[MAX_NAMES];
 static TaskScheduler *cur_sched[MAX_NAMES];
 static int cur_count;
 
+/* dladdr() walks the binary's symbol table -- a few hundred microseconds on
+ * the G4 -- and the navigator asks for the name of every live scheduler a
+ * dozen times a retrace. Uncached that was ~15 ms a frame: the campaign ran
+ * at 73% of real time with the perf counters showing nothing, because the
+ * tick runs in the host loop, outside every stamped phase. Handlers are code,
+ * so the name of an address never changes: look each one up once. */
+#define NAME_CACHE 256
+static struct { const void *fn; char name[64]; } name_cache[NAME_CACHE];
+static int name_cache_n;
+
 const char *sbk_fn_name(void *fn) {
-    static char buf[160];
+    static char buf[64];
     Dl_info info;
+    int i;
     if (fn == NULL) return "-";
+    for (i = 0; i < name_cache_n; i++) {
+        if (name_cache[i].fn == fn) return name_cache[i].name;
+    }
     if (dladdr(fn, &info) && info.dli_sname != NULL) {
         const char *n = info.dli_sname;
         if (n[0] == '_') n++; /* Mach-O underscore */
         snprintf(buf, sizeof(buf), "%s", n);
-        return buf;
+    } else {
+        snprintf(buf, sizeof(buf), "%p", fn);
     }
-    snprintf(buf, sizeof(buf), "%p", fn);
+    if (name_cache_n < NAME_CACHE) {
+        name_cache[name_cache_n].fn = fn;
+        snprintf(name_cache[name_cache_n].name, sizeof(name_cache[0].name), "%s", buf);
+        return name_cache[name_cache_n++].name;
+    }
     return buf;
 }
 
