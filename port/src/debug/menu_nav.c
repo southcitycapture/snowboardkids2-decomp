@@ -588,7 +588,10 @@ static const struct { s16 boost, supply; } nav_boss_ladder[] = {
  * the 150 -- and +31% took twenty of twenty in 139. So rung 0 here is not "no
  * handicap", it is "enough speed to finish at all", and every rung after a
  * loss buys more of the same. */
-static const s16 nav_cross_ladder[] = { 80, 112, 144, 176, 208 };
+/* Six rungs and a high top, because Speed Cross is a hard clock and the
+ * street is long: the same course Shoot Cross runs in 139 seconds at +31% has
+ * to be run in ninety, and the campaign lost it at +31, +43, +56 and +68. */
+static const s16 nav_cross_ladder[] = { 80, 128, 176, 224, 288, 352 };
 
 static int nav_level_is_cross(int level) { return level >= 12 && level <= 14; }
 
