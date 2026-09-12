@@ -569,10 +569,11 @@ static const struct { s16 boost, supply; } nav_boss_ladder[] = {
  * writes playerLost = 1 whatever the score is. Measured on Shoot Cross, the
  * star board with no boost took 155 seconds to run the street and lost on the
  * clock with eight targets still standing; +19% brought it home in 122 and
- * +19% with the shot pilot aiming took nineteen of twenty. So rung 0 here is
- * not "no handicap", it is "enough speed to finish at all", and every rung
- * after a loss buys more of the same. */
-static const s16 nav_cross_ladder[] = { 48, 80, 112, 144, 176 };
+ * +19% with the shot pilot aiming took nineteen of twenty, in 152 seconds of
+ * the 150 -- and +31% took twenty of twenty in 139. So rung 0 here is not "no
+ * handicap", it is "enough speed to finish at all", and every rung after a
+ * loss buys more of the same. */
+static const s16 nav_cross_ladder[] = { 80, 112, 144, 176, 208 };
 
 static int nav_level_is_cross(int level) { return level >= 12 && level <= 14; }
 
