@@ -28,8 +28,8 @@ G4 = os.path.expanduser("~/Apps/isle-ppc-tools/g4/g4")
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "nightmare_results.csv")
 GOLDEN = os.path.join(HERE, "..", "scripts", "golden")
-FIELDS = ["spec", "level", "char", "board", "boost", "diff", "nmtax", "nmdelay",
-          "nmuse", "nmalt", "place", "finished_before", "frames", "gold", "wall_s"]
+FIELDS = ["spec", "level", "char", "board", "boost", "diff", "pathslot", "nmtax", "nmdelay",
+          "nmuse", "nmalt", "place", "finished_before", "frames", "gold", "wall", "wall_s"]
 
 # Where a trial's save block lives. The sequel keeps the whole campaign in the
 # EEPROM -- which courses the level list offers included -- so a trial that
@@ -75,6 +75,11 @@ def trial(spec, frames=60000, timeout=1500, stall=150, extra=()):
     twenty-five, and a slow course is still allowed to finish."""
     g4("stop")
     g4("ssh", "rm -f %s" % TRIAL_EEPROM)
+    # And empty the log. `g4 run` appends, so a second trial in the same
+    # session sees the *first* one's `sbk-trial: result` line within ten
+    # seconds and records it again -- two identical rows, one race. The
+    # giveaway is a wall_s of about thirty on a race that takes six minutes.
+    g4("ssh", ": > isle-log.txt")
     t0 = time.time()
     # --menutrace costs nothing and is the only way to read a DNF afterwards:
     # without it the log cannot say whether the rider was still racing, sitting
@@ -113,7 +118,9 @@ def trial(spec, frames=60000, timeout=1500, stall=150, extra=()):
         if line.startswith("sbk-trial: result"):
             for kv in line.split()[2:]:
                 k, v = kv.split("=")
-                row[k] = int(v)
+                # wall=a,b,c,d is a per-rider list, not a number: how many
+                # retraces each rider spent scraping a track wall.
+                row[k] = v if "," in v else int(v)
     return row
 
 

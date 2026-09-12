@@ -72,6 +72,8 @@ int sbk_course_trace;
  * player 1's own baseMaxSpeed changes -- the rivals, the items and the course
  * are untouched. */
 int sbk_campaign_boost;
+/* --trial relief=/tax=: the trial owns the rival levers, the ladder does not. */
+int sbk_trial_pins_levers;
 
 /* ------------------------------------------------------------------ anchors */
 
@@ -276,6 +278,16 @@ int sbk_trial_parse(const char *spec) {
             else if (!strcmp(key, "nmuse")) nm_use = val;
             else if (!strcmp(key, "nmalt")) nm_alt = val;
             else if (!strcmp(key, "pathslot")) trial_pathslot = val;
+            /* The two handicap-ladder levers the navigator drives, so a trial
+             * can reproduce a campaign rung exactly instead of approximating
+             * it. Setting them is not enough on its own: nav_level_begin runs
+             * off the course list and writes the ladder's own values over the
+             * top, which is why the first relief=165 trial came back
+             * byte-identical to relief=0 -- the same frames, gold and wall
+             * counts, which is not what a real difference looks like. So a
+             * spec that names either lever pins both against the ladder. */
+            else if (!strcmp(key, "relief")) { sbk_rival_item_relief = val; sbk_trial_pins_levers = 1; }
+            else if (!strcmp(key, "tax")) { sbk_rival_tax = val; sbk_trial_pins_levers = 1; }
         }
         while (*p && *p != ' ' && *p != ',') p++;
         while (*p == ' ' || *p == ',') p++;
@@ -418,6 +430,28 @@ static void retune_arm(Player *p, int boost) {
  * position is doing. That covers the lift (pinned, no progress) and the wall
  * (moving, no progress) with one rule.
  */
+/* How many retraces each rider has spent in contact with a track wall.
+ *
+ * race_main.c:5355 sets animationFlags 0x10 on any frame where
+ * handlePlayerTrackWallCollision moved the rider, so it is the game's own
+ * answer to "am I scraping something", and comparing our rider's count with
+ * the rivals' is how "the CPU rider is off the racing line" stops being a
+ * guess. On Starlight Highway our rider crawled sectors 104-115 at half its
+ * speed cap with 0x10 set on every sample while the rivals sailed past. */
+int sbk_wall_frames[4];
+static void *wall_gs;
+
+static void wall_watch(GameState *gs) {
+    int i;
+    if (wall_gs != (void *)gs) {
+        wall_gs = (void *)gs;
+        for (i = 0; i < 4; i++) sbk_wall_frames[i] = 0;
+    }
+    for (i = 0; i < gs->numPlayers && i < 4; i++) {
+        if (gs->players[i].animationFlags & 0x10) sbk_wall_frames[i]++;
+    }
+}
+
 int sbk_campaign_wedge; /* set here, consumed by menu_nav.c's handicap ladder */
 #define WEDGE_RETRACES 2400
 
@@ -631,10 +665,11 @@ static void trial_tick(GameState *gs, unsigned long retraces) {
         for (i = 1; i < gs->numPlayers; i++) {
             if (gs->players[i].animationFlags & PLAYER_FINISHED_FLAG) ahead++;
         }
-        printf("sbk-trial: result level=%d char=%d board=%d boost=%d diff=%d place=%d finished_before=%d "
-               "frames=%lu gold=%d\n",
-               gs->memoryPoolId, p->characterId, p->snowboardId, trial.boost, p->aiDifficultyIndex,
-               p->finishPosition + 1, ahead, trial_frames, (int)(p->raceGold - trial_gold0));
+        printf("sbk-trial: result level=%d char=%d board=%d boost=%d diff=%d pathslot=%d place=%d "
+               "finished_before=%d frames=%lu gold=%d wall=%d,%d,%d,%d\n",
+               gs->memoryPoolId, p->characterId, p->snowboardId, trial.boost, p->aiDifficultyIndex, trial_pathslot,
+               p->finishPosition + 1, ahead, trial_frames, (int)(p->raceGold - trial_gold0), sbk_wall_frames[0],
+               sbk_wall_frames[1], sbk_wall_frames[2], sbk_wall_frames[3]);
         fflush(stdout);
         if (trial.quit) {
             extern void sbk_request_quit_now(void);
@@ -689,6 +724,7 @@ void sbk_autoplay_tick(unsigned long retraces) {
                 if (gs->players[i].isCpuControlled) gs->players[i].aiDifficultyIndex = RIVAL_ROW;
             }
         }
+        wall_watch(gs);
         race_watchdog(gs, retraces);
         if (sbk_autoplay && p1->isCpuControlled == 0) {
             autoplay_arm(gs, retraces);
@@ -784,11 +820,12 @@ void sbk_race_debug(unsigned long retraces) {
      * frozen byte-identically at the lift with counters[0] == 0 beside it is
      * the wedge, named, rather than inferred from a still position.
      * docs/nightmare-row.md has the chain. */
-    printf("sbk-race: r=%lu level=%d type=%d players=%d/%d lap=%d/%d frame=%u paused=%d intro=%d demo=%d pool=%d,%d,%d,%d "
+    printf("sbk-race: r=%lu level=%d type=%d players=%d/%d lap=%d/%d frame=%u paused=%d intro=%d demo=%d pool=%d,%d,%d,%d wall=%d,%d,%d,%d "
            "rank=",
            retraces, gs->memoryPoolId, gs->raceType, gs->playerCount, gs->numPlayers, gs->players[0].currentLap,
            gs->finalLapNumber, (unsigned)gs->raceFrameCounter, gs->gamePaused, gs->raceIntroState,
-           sbk_race_is_demo(gs), sbk_race_pool(0), sbk_race_pool(1), sbk_race_pool(2), sbk_race_pool(3));
+           sbk_race_is_demo(gs), sbk_race_pool(0), sbk_race_pool(1), sbk_race_pool(2), sbk_race_pool(3),
+           sbk_wall_frames[0], sbk_wall_frames[1], sbk_wall_frames[2], sbk_wall_frames[3]);
     for (i = 0; i < gs->numPlayers && i < 4; i++) printf("%s%d", i ? "," : "", gs->rankOrder[i]);
     printf("\n");
     for (i = 0; i < gs->numPlayers && i < 4; i++) {

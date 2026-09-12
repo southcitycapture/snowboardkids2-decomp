@@ -474,9 +474,46 @@ static void nav_progress(const char *why) {
  * acceleration at the same top speed) is itself a large step up from what
  * every rung below used to race with, so rung 0 is no longer the same rung 0
  * these notes were written about. */
+/* And then the levers were finally *measured*, one course at a time, on the
+ * trial harness -- which turns out to run a whole race in about thirty seconds
+ * of wall clock on the G4, so a sweep is minutes rather than an evening. Every
+ * row below is a real result under campaign conditions (--nightmare, char 0,
+ * SNOWBOARD_STAR):
+ *
+ * | course | boost | tax | relief | result |
+ * | --- | ---: | ---: | ---: | --- |
+ * | 0 Sunny Mountain | 0 | 0 | 0 | **1st**, 14,360 frames |
+ * | 0 | 0 | 60 | 165 | wedged |
+ * | 8 Starlight Highway | 0 | 0 | 0 | 2nd, 21,384 |
+ * | 8 | 14 | 0 | 0 | wedged |
+ * | 8 | 42 | 0 | 0 | wedged |
+ * | 8 | 0 | 0 | 165 | wedged |
+ * | 8 | 0 | 30 | 165 | 4th |
+ * | 8 | 0 | 60 | 165 | **1st**, 20,744 |
+ * | 8 | 0 | 100 | 165 | **1st**, 22,164 |
+ * | 8 | 0 | 160 | 165 | wedged (1,796 frames of wall contact) |
+ * | 10 Ice Land | 0 | 0 | 0 | **1st**, 25,904 |
+ * | 10 | 0 | 60 | 165 | wedged |
+ *
+ * Three things in that table rewrite this ladder.
+ *
+ * **Rung 0 is now a winning rung.** With SNOWBOARD_STAR under it and no
+ * handicap at all, courses 0 and 10 come first. It stays first.
+ *
+ * **Boost is a liability, not a mild one.** +5% wedges course 8 and so does
+ * +16%. It changes the rider's line, not just its pace, and the borrowed path
+ * was authored for the stock line. It drops below the rival levers.
+ *
+ * **Relief and tax only work as a pair.** Relief alone wedges course 8; tax
+ * alone leaves it 2nd; relief 165 with a tax of 60 or 100 wins it twice. That
+ * is the mechanism the earlier notes had half of: relief keeps the task pool
+ * clear, which is what stops the tax buying the chairlift wedge, and the tax
+ * is the only lever that actually creates a margin without touching our rider.
+ * So they are never separated again, and the tax stays modest -- 160 still
+ * wedges, exactly as the old notes warned. */
 static const struct { s16 boost, tax, relief; } nav_ladder[] = {
-    { 0, 0, 0 },    { 0, 0, 100 },  { 0, 0, 165 },  { 28, 0, 165 },
-    { 42, 0, 165 }, { 56, 0, 165 }, { 56, 160, 165 },
+    { 0, 0, 0 },     { 0, 60, 165 }, { 0, 100, 165 },
+    { 28, 0, 0 },    { 28, 60, 165 }, { 56, 100, 165 },
 };
 
 /* A boss race needs a different ladder, because on a boss none of the rival
@@ -547,6 +584,10 @@ static int nav_wedge_relief;
 static void nav_ladder_set(int rung) {
     int boss = nav_level_is_boss(nav_level);
     extern int sbk_boss_supply;
+    extern int sbk_trial_pins_levers;
+    /* A trial that names relief= or tax= is running an experiment on exactly
+     * these variables; the ladder must not write over the experiment. */
+    if (sbk_trial_pins_levers) return;
     if (rung < 0) rung = 0;
     if (rung > NAV_LADDER_TOP(boss)) rung = NAV_LADDER_TOP(boss);
     if (boss) {
