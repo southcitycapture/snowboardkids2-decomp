@@ -167,13 +167,34 @@ int sbk_rival_tax;
  * lever that attacks the cause rather than the symptom, and it is only reached
  * after the watchdog has had to rescue the same course twice. */
 int sbk_item_relief;
+/* Taken off every item's chances on the RIVAL row only -- the handicap that
+ * sbk_item_relief above is not.
+ *
+ * hit_reactions.c reads gAIPlayerParams[player->aiDifficultyIndex][...], i.e.
+ * each rider's *own* row, and this port puts player 1 on NIGHTMARE_ROW and the
+ * rivals on RIVAL_ROW. sbk_item_relief writes both, so it disarms our rider by
+ * exactly as much as theirs: it is a remedy for the task-pool wedge, not a
+ * difficulty lever, and the campaign found that out the hard way. Course 1 at
+ * relief 100 came *third*, worse than the 2nd it managed with no handicap at
+ * all, because a no-items race is a race our rider is worse at.
+ *
+ * This one writes RIVAL_ROW alone. It is the cleanest handicap in the port:
+ * every rider's speed, handling and cornering are untouched, our rider keeps a
+ * full item set, and it lowers total pool pressure rather than raising it --
+ * so unlike the tax it cannot buy the chairlift wedge it is meant to avoid. */
+int sbk_rival_item_relief;
 
 static void nightmare_write_row(void) {
     int i;
     int rival = nm_tax + sbk_rival_tax;
     int use = nm_use - sbk_item_relief;
+    int rival_use, rival_alt;
     if (rival > 255) rival = 255;
     if (use < 40) use = 40;
+    rival_use = use - sbk_rival_item_relief;
+    rival_alt = nm_alt - sbk_rival_item_relief;
+    if (rival_use < 40) rival_use = 40;
+    if (rival_alt < 40) rival_alt = 40;
     gAIPlayerParams[NIGHTMARE_ROW][0].useChance = (u8)nm_tax;
     gAIPlayerParams[NIGHTMARE_ROW][0].delay = (u8)nm_delay;
     gAIPlayerParams[NIGHTMARE_ROW][0].altChance = (u8)nm_alt;
@@ -185,6 +206,8 @@ static void nightmare_write_row(void) {
         gAIPlayerParams[NIGHTMARE_ROW][i].delay = (u8)nm_delay;
         gAIPlayerParams[NIGHTMARE_ROW][i].altChance = (u8)nm_alt;
         gAIPlayerParams[RIVAL_ROW][i] = gAIPlayerParams[NIGHTMARE_ROW][i];
+        gAIPlayerParams[RIVAL_ROW][i].useChance = (u8)rival_use;
+        gAIPlayerParams[RIVAL_ROW][i].altChance = (u8)rival_alt;
     }
     if (!nightmare_written) {
         nightmare_written = 1;

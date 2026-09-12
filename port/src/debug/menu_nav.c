@@ -57,6 +57,7 @@ extern int sbk_campaign_boost;
 extern int sbk_rival_tax;
 extern int sbk_campaign_wedge;
 extern int sbk_item_relief;
+extern int sbk_rival_item_relief;
 
 int sbk_menutrace;
 int sbk_autonav;
@@ -336,18 +337,19 @@ static void nav_progress(const char *why) {
  *
  * A course that loses every rung is a real finding about the rider, not a knob
  * to keep turning, and the last rung says so. */
-/* The third lever: `relief`, taken off every item's useChance on both rows by
- * nightmare_write_row (race_dbg.c). At the searched row's 205 a relief of 165
- * leaves 40, the floor that function clamps to -- the rivals still race, but
- * they almost never throw anything.
+/* The third lever: `relief`, taken off the RIVALS' item chances alone by
+ * nightmare_write_row (race_dbg.c, sbk_rival_item_relief). At the searched
+ * row's 205 a relief of 165 leaves 40, the floor that function clamps to --
+ * the rivals still race, but they almost never throw anything, while our rider
+ * keeps a full item set.
  *
- * The order of these rungs is the whole point of them, and the campaign had to
- * teach it. The ladder used to run boost, then tax, then more tax. On course 1
- * that read:
+ * The order of these rungs is the whole point of them, and course 1 of the
+ * campaign had to teach it twice.
  *
  *   rung 0  no handicap                     2nd
  *   rung 1  boost 28                        2nd
  *   rung 2  boost 28, rivaltax 160          4th, and the rider WEDGED
+ *   rung 2' boost 28, *symmetric* relief    3rd -- worse than no handicap
  *
  * The wedge at rung 2 is not bad luck, it is the ladder biting itself.
  * docs/nightmare-row.md measured `tax=168` applied to the whole field and got a
@@ -358,11 +360,18 @@ static void nav_progress(const char *why) {
  * buys time for exactly the pressure that stops the race ending. So the two
  * highest rungs of the old ladder were the two most likely to hang it.
  *
- * The relief rungs now come first. They are the only lever that is *good* for
- * the pool -- fewer items thrown is less pool pressure, not more -- and they
- * touch no rider's speed, handling or cornering at all. The tax survives only
- * as the last resort, and only on top of a pool that the relief has already
- * emptied. */
+ * Rung 2' is the subtler lesson. The first version of these rungs reached for
+ * sbk_item_relief, which writes *both* rows -- and hit_reactions.c indexes
+ * gAIPlayerParams by each rider's own row, so it disarmed our rider by exactly
+ * as much as the rivals. That is not a handicap, it is a house rule, and our
+ * rider is worse under it: third, from a standing second. The lever had to be
+ * split before the rung could mean anything.
+ *
+ * With that done the relief rungs come first, because rival relief is the only
+ * lever that is *good* for the pool -- fewer items thrown is less pressure on
+ * it, not more -- and it touches no rider's speed, handling or cornering at
+ * all. The tax survives as the last rung only, on top of a pool the relief has
+ * already emptied. */
 static const struct { s16 boost, tax, relief; } nav_ladder[] = {
     { 0, 0, 0 }, { 28, 0, 0 }, { 28, 0, 100 }, { 28, 0, 165 }, { 28, 160, 165 },
 };
@@ -378,7 +387,12 @@ static void nav_ladder_set(int rung) {
     if (rung > NAV_LADDER_TOP) rung = NAV_LADDER_TOP;
     sbk_campaign_boost = nav_ladder[rung].boost;
     sbk_rival_tax = nav_ladder[rung].tax;
-    sbk_item_relief = nav_ladder[rung].relief + nav_wedge_relief;
+    /* The ladder's relief is the rivals' alone; the wedge's is both rows,
+     * because a wedge is a task-pool problem and the pool does not care whose
+     * item it is. Keeping them in separate variables is what stops climbing a
+     * rung from handing the items back to a course that is wedging on them. */
+    sbk_rival_item_relief = nav_ladder[rung].relief;
+    sbk_item_relief = nav_wedge_relief;
 }
 
 /* --startrung N: the rung the first course after boot starts on. See main.c. */
@@ -450,13 +464,13 @@ static void nav_handicap(int level, int place) {
         rung++;
         nav_ladder_set(rung);
         printf("sbk-nav: level %d lost %d time(s); retrying at rung %d (boost=%d +%d%% top speed, rivaltax=%d, "
-               "itemrelief=%d)\n",
+               "rivalrelief=%d)\n",
                level, losses, rung, sbk_campaign_boost, sbk_campaign_boost * 100 / 256, sbk_rival_tax,
-               sbk_item_relief);
+               sbk_rival_item_relief);
     } else {
         printf("sbk-nav: WARNING -- level %d lost %d time(s) at the top of the handicap ladder "
-               "(boost=%d rivaltax=%d itemrelief=%d); the rider cannot win this course\n",
-               level, losses, sbk_campaign_boost, sbk_rival_tax, sbk_item_relief);
+               "(boost=%d rivaltax=%d rivalrelief=%d wedgerelief=%d); the rider cannot win this course\n",
+               level, losses, sbk_campaign_boost, sbk_rival_tax, sbk_rival_item_relief, sbk_item_relief);
     }
     fflush(stdout);
 }
