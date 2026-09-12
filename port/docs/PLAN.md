@@ -811,7 +811,7 @@ to the frame):
 | 8 | 0 | 60 | 165 | **1st**, 20,744 |
 | 8 | 0 | 100 | 165 | **1st**, 22,164 |
 | 8 | 0 | 160 | 165 | wedged, 1,796 frames of wall contact |
-| 9 Haunted House | anything tried | | | wedged, always |
+| 9 Haunted House | anything tried | | | wedged, always -- the CPU low-speed lock-out, see below |
 | 10 Ice Land | 0 | 0 | 0 | **1st**, 25,904 |
 | 10 | 0 | 60 | 165 | wedged |
 
@@ -840,38 +840,153 @@ the retraces each rider spent with `animationFlags & 0x10` set, which
 rider: the game's own answer to "am I scraping something", and the way to tell
 a rider that is off the racing line from one that is merely slow.
 
-### Course 9, the Haunted House, which is the new wall
+### Course 9, the Haunted House: the CPU's own low-speed lock-out
 
-Course 8 is beaten. Course 9 is not, and it is not a handicap problem: it
-wedges under every configuration tried -- rung 0, boost 28, boost 56,
-relief 165, relief 255, tax 100, relief+tax, path slots 0, 2 and 3, the balance
-board instead of the star, and with `--nightmare` off entirely so the rivals
-run the game's own difficulty rows. Thirteen races, thirteen wedges.
+Course 9 wedged under every configuration the ladder could offer -- rung 0,
+boost 28, boost 56, relief 165, relief 255, tax 100, relief+tax, path slots 0,
+2 and 3, the balance board instead of the star, and with `--nightmare` off
+entirely so the rivals run the game's own difficulty rows. Thirteen races,
+thirteen wedges, always at sector 50. That is not a tuning problem, and the
+first guesses in this file -- the ghost around `haunted_house.c` ~300, the
+pendulum's `isPlayerInRangeAndPull` -- were both wrong.
 
-What it looks like, from `--racedbg`:
+#### The instrument
+
+`--racedbg` grew a **pin autopsy**. The first time any rider in a race stops
+improving `currentLap`/`lapProgressRemaining` for 300 retraces, it prints, as
+`sbk-pin:` lines:
+
+* every task on the race scheduler by name (through the navigator's name
+  cache), and for each one every aligned `s32` triple anywhere in its inline
+  payload that lands within 0x400000 of the pinned rider, with the offset it
+  was found at -- so "which placed thing is standing on top of this rider" is
+  answered rather than guessed;
+* all four riders' positions, stored positions and collision radii;
+* the sector graph for thirteen sectors around the pin (next / previous /
+  right / left / length / progress) **and every rider's own path-preference
+  row** for those sectors, so a rider that gets through and one that does not
+  can be compared side by side;
+* then 150 consecutive frames of the pinned rider's whole physical state:
+  position and its per-frame delta, velocity, aiTarget, rotY, steering,
+  hit-reaction state and knockback vector, animation and behaviour flags,
+  behaviour mode/phase/step/counter, track face, surface, slowdown, stun
+  counter, lift flags, speed caps.
+
+Two things that cost a crash each and are worth writing down. `Node.payload`
+(`task_scheduler.h` 0x28) is **not** a pointer -- `scheduleTask` returns
+`&newNode->payload`, so the field *is* the inline storage; reading it as a
+pointer and dereferencing it is a SIGSEGV. And the start-line countdown is four
+riders making no progress on purpose, with `lapProgressRemaining` still 0
+rather than 8192, so the autopsy has to take its baseline again when the intro
+ends or every rider looks pinned from sector 1 on.
+
+#### What it found
+
+Nothing was near the pinned rider but its own `updateSkiTrailTask` and
+`updateDualSnowSprayParticles`. The nearest other rider was 3.8 world units
+away against a collision radius of 0.65. Sectors 44..56 are an unbranched
+chain (`right`/`left` all negative) and every rider's path choice through them
+is 0. The task pool had fifty free nodes. So: not the ghost, not the pendulum,
+not a push zone (Haunted House's two are zones 6 and 7, at y 724M, and the
+rider is at 551M), not player-vs-player, not the chairlift.
+
+The frames say it plainly instead:
 
 ```
-sbk: WEDGE -- player 1 has got nowhere for 2400 retraces on level 9
-     (lap=0 prog=5105 sect=50 pos=201924736,553921596,-51215600
-      anim=00000000 spd=1355415 pool=50)
+beh=1/4/1/1  steer=0  aim=253038898,0,44991337   (frozen, 15 frames apart)
+beh=1/4/2/1  steer=0  aim=253038898,0,44991337
+beh=1/4/3/1  steer=0  aim=253038898,0,44991337
+beh=1/4/4/2  steer=0  aim=253038898,0,44991337
+beh=1/0/0/0  steer=0  aim=253038898,0,44991337
 ```
 
-The two numbers that matter are `pool=50` and the position, which is
-byte-identical frame to frame. **It is not the task-pool wedge** -- there are
-fifty free nodes -- and it is not the wall wedge either, because the position
-does not move at all and `anim` carries no 0x10. The rider's `behaviorStep`
-cycles through 0, 1, 2 and 4 while it sits there, and in
-`knockbackBehaviorStepHandlers` those are `beginKnockbackRecoveryStep`,
-`updateKnockbackRecoveryStep`, `fallToTrackCenterStep` and
-`slideDuringKnockbackRecoveryStep`: **a knockback recovery that keeps
-restarting**, at one fixed spot in sector 50, with the rider pinned. The
-Haunted House's own overlay is the one with the ghosts
-(`updateGhostAnimation`), and `haunted_house.c` ~300 has a ghost that calls
-`spawnStarEffectImmediate` on any rider inside 0x100000 of it whose
-`slowdownLevel` is under 3 -- a hazard at a fixed position that hits a
-stationary rider for ever. That is the standing suspicion and the next thing to
-check; `slowdownLevel` and the behaviour handler's name are what `--racedbg`
-should print next.
+behaviourMode 1, behaviourPhase **4**, cycling steps 1..4 and dropping back to
+phase 0 only to be sent straight back. Phase 4 is
+`dispatchPostTrickLandingStep` -- the ollie. The steering angle never moves and
+the AI target is frozen at a waypoint about eight sectors *behind* the rider.
+
+`updatePlayerNormalDriving` (race_main.c ~1313) is why:
+
+```c
+if (player->isCpuControlled != 0) {
+    player->cpuInputFlags = determineAIPathChoice(player);
+    if (player->cpuInputFlags) { setPlayerBehaviorPhase(player, 4); return 1; }
+    if ((speed <= 0x5FFFF && player->snowboardId < SNOWBOARD_HIGH_TECH) || ...) {
+        if (isPlayerNearLiftEntry(player) == 0) {
+            player->cpuInputFlags = 0;
+            setPlayerBehaviorPhase(player, 4);
+            return 1;                       /* <-- */
+        }
+    }
+} else {
+    if (player->inputButtonsHeld & 0x8000) { setPlayerBehaviorPhase(player, 4); return 1; }
+}
+...
+calculateAITargetPosition(player);          /* never reached on that branch */
+steerTarget = computeAngleToPosition(player->aiTarget.x, ...) - rotY;
+```
+
+**A CPU rider below 0x5FFFF -- about two thirds of top speed -- away from the
+lift entry cannot steer and cannot re-aim.** The hop is meant to be a nudge
+that gravity finishes: hop, roll down the hill, cross the threshold, drive. It
+is a dead end anywhere gravity cannot do that.
+
+On Haunted House it cannot. Measured, one trial, one rider:
+
+| retrace | sector | units/frame | what |
+| ---: | ---: | ---: | --- |
+| 15240 | 47 | 570,190 | racing |
+| 15300 | 47 | 532,193 | `behaviorMode` 2 -- stunned |
+| 15480 | 48 | 1,058 | stopped; x and z byte-identical, only y moving: hopping |
+| 16320 | 50 | 138,063 | best it ever recovers to; still under the threshold |
+| 16500 | 51 | 6,114 | turned round |
+| 17580 | 50 | 0 | byte-identical for ever |
+
+The rider is stunned at sector 47, comes off the drop between 46 and 47 below
+the threshold, spends the whole of 48..51 unable to steer, drifts off the
+racing line onto the bank above it -- at x 183.6M it sits at y 551.12M where
+the previous lap's line through the same x was about y 550.45M -- and settles
+into the dip there. The same course, the same rider, one lap earlier: it was
+also under the threshold from sector 43 (694 units/frame at r=6180, hopping)
+and it *did* get out, because sectors 43..48 run downhill. Sector 50 is where
+the hill runs out.
+
+#### Is it a port bug, and would a human hit it?
+
+No, and no. It is the game's own code on the game's own data, and the human
+branch above is a button test -- a human keeps steering at any speed, so a
+human's own rider is never locked out. What a human *would* see on a real N64
+is a rival hopping in a corner of the Haunted House for the rest of the race,
+which is exactly what the port shows: two of the game's own CPU rivals were
+pinned at sector 50 beside us in the campaign, and one in every trial. Self-play
+hits it because self-play **is** a CPU rider.
+
+#### The fix: a marshal, on the autoplay side only
+
+`marshal_tick` in `port/src/debug/race_dbg.c`. When player 1 has made no
+progress for 240 retraces **and** its velocity magnitude is at or under
+0x5FFFF -- the same threshold that locks it out -- the marshal aims at the
+centre of the end of the sector two ahead and sets the rider's x/z velocity to
+0x68000 along that line, with `rotY` to match. One frame later the rider is
+over the threshold, the game's own phase 0 runs again, and it steers and
+accelerates itself. Above the threshold the marshal does nothing: a rider that
+is moving and getting nowhere is a different wedge and the watchdog owns it.
+
+Only player 1, and only under `--autoplay`. The rivals are left alone on
+purpose -- a rival stuck at sector 50 is a rival we beat -- and no game code is
+patched, so `port/patches.txt` is unchanged.
+
+Two traps in writing it. `calculateAITargetPosition` is the obvious way to ask
+where the line is and the wrong one: it opens with `getCurrentAllocation()`,
+which answers with whatever task the scheduler is *inside*, and the autoplay
+tick is not inside one -- calling it from there exits 138 (SIGBUS). The track
+graph is plain data on the race's own `GameState`, so the marshal reads
+`gameData.sectors[...].endCenterVertexIndex` out of `gameData.vertices`
+directly. And the push has to set `rotY` as well as the velocity, or
+`applyVelocityDeadzone` kills it as sideslip on the next frame.
+
+Measured: `--trial level=9` went from wedged-at-25,322-frames to **finished,
+place 2, 25,322 frames, one push**.
 
 ### The three Cross minigames, which are not races
 
