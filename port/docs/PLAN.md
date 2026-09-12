@@ -561,8 +561,18 @@ So the ladder runs boost, then rival relief, then rival relief plus tax as a
 last resort:
 
 ```c
-{ 0, 0, 0 }, { 28, 0, 0 }, { 28, 0, 100 }, { 28, 0, 165 }, { 28, 160, 165 }
+{ 0, 0, 0 }, { 28, 0, 0 }, { 28, 0, 100 }, { 28, 0, 165 },
+{ 42, 0, 165 }, { 56, 0, 165 }, { 56, 160, 165 }
 ```
+
+The last three rungs were added when course 8 -- Wendy's House -- sat at 2nd
+place through rungs 2 and 3 and then **wedged** on what used to be the top
+rung, the tax rung this section already calls the one most likely to hang a
+race. So the tax rung moved to last and two boost rungs went in front of it, at
+the +16% and +21% the boss ladder wins with. Course 8 is still unbeaten at the
+top of it: +16% came 2nd and +21% came *3rd*, which is the overshoot the boss
+ladder's note predicts past about +20%. It is the one course in the campaign
+that has resisted every lever the port has.
 
 Rival relief is the cleanest handicap in the port: no rider's speed, handling
 or cornering changes, our rider keeps a full item set, and total pool pressure

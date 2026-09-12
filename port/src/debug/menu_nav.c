@@ -411,7 +411,15 @@ static void nav_progress(const char *why) {
  * all. The tax survives as the last rung only, on top of a pool the relief has
  * already emptied. */
 static const struct { s16 boost, tax, relief; } nav_ladder[] = {
-    { 0, 0, 0 }, { 28, 0, 0 }, { 28, 0, 100 }, { 28, 0, 165 }, { 28, 160, 165 },
+    /* Boost past +10% is new, and it is above the relief rather than below it:
+     * course 8 sat at 2nd place through rungs 2 and 3 -- close, and not going to
+     * be closed by taking more items off rivals who were already relieved of
+     * 165 -- and then *wedged* on the old top rung, which is the tax rung the
+     * ladder's own notes call the one most likely to hang a race. So the tax
+     * rung moves to last and two boost rungs go in front of it, at the +16% and
+     * +21% the boss ladder already wins races with. */
+    { 0, 0, 0 },  { 28, 0, 0 },   { 28, 0, 100 },  { 28, 0, 165 },
+    { 42, 0, 165 }, { 56, 0, 165 }, { 56, 160, 165 },
 };
 
 /* A boss race needs a different ladder, because on a boss none of the rival
