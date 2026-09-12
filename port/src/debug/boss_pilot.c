@@ -132,9 +132,18 @@ int sbk_boss_supply_pinned; /* --bosssupply was given: the ladder must not write
  * that plus a margin. */
 /* A ceiling on the handicap. The Ice Land run supplied 66 pans across one long
  * race, which is far more than the course itself holds and more than the
- * mechanic needs -- ten heads is ten hits. Sixteen leaves room for the misses
- * and stops the supply becoming the whole game. */
-int sbk_boss_supply_max = 16;
+ * mechanic needs -- ten heads is ten hits. Sixteen left room for the misses
+ * and stopped the supply becoming the whole game.
+ *
+ * Sixteen is too few for course 11 and the census says so plainly: every
+ * losing race stops at exactly `supplied=16` with a rider that is then
+ * empty-handed for the rest of it, and the one that won threw 74 stars.
+ * Thirteen heads at the hit rate a boss race actually gets -- somewhere near
+ * one in five, because most of the throws are made at the edge of the star's
+ * homing radius at a target that is turning -- needs sixty-odd throws, so the
+ * ceiling is forty. It is still a ceiling, it is still counted, and it is
+ * still printed with the result. --bosssupplymax N. */
+int sbk_boss_supply_max = 40;
 /* How far the pilot will throw, and this is the whole of course 11's answer.
  *
  * The Ice Land boss orbits: the distance between it and the rider swings from
@@ -1201,7 +1210,19 @@ int sbk_boss_pace = 1;
  * anywhere. What must never happen is the *overtake* -- see the governor. */
 int sbk_boss_pace_lo = 0x400000;
 int sbk_boss_pace_hi = 0xC00000;
-#define BOSS_PACE_FLOOR 0x0A0000   /* dropping back, but never under the lock-out */
+/* Dropping back, but never under race_main.c:1319's 0x5FFFF -- a governor that
+ * parks a CPU rider below the lock-out threshold has invented the Haunted
+ * House wedge on purpose. 0x62000 is the smallest number that clears it, and
+ * it has to be small: the whole point of the coast is to fall *behind* a boss
+ * whose own cap the handicap may have taken down to 542,166, and the first
+ * floor here (0xA0000, 655,360) was above that, so the rider overtook while
+ * "coasting" and handed the boss the ceiling. */
+#define BOSS_PACE_FLOOR 0x0A0000
+/* 0x62000 -- the smallest number that clears the lock-out -- was tried and is
+ * worse: the coast is only reached when the rider is already level with the
+ * boss, and dropping to a quarter of the boss's speed there throws away the
+ * window the whole governor exists to hold. 0xA0000 is the value course 11 was
+ * won on. */
 
 int sbk_boss_pace_frames_in_band;
 

@@ -73,7 +73,7 @@ static const char *find_rom(int argc, char **argv) {
         if (argv[i][0] != '-') {
             return argv[i];
         }
-        if (strcmp(argv[i], "--play") == 0 || strcmp(argv[i], "--record") == 0 || strcmp(argv[i], "--drawdistance") == 0 || strcmp(argv[i], "--dumpdl") == 0 || strcmp(argv[i], "--frames") == 0 || strcmp(argv[i], "--wav") == 0 || strcmp(argv[i], "--dumpframes") == 0 || strcmp(argv[i], "--pak") == 0 || strcmp(argv[i], "--eeprom") == 0 || strcmp(argv[i], "--bigtri") == 0 || strcmp(argv[i], "--peek") == 0 || strcmp(argv[i], "--cmds") == 0 || strcmp(argv[i], "--trial") == 0 || strcmp(argv[i], "--plan") == 0 || strcmp(argv[i], "--saveevery") == 0 || strcmp(argv[i], "--startrung") == 0 || strcmp(argv[i], "--bosssupply") == 0 || strcmp(argv[i], "--shotsnap") == 0 || strcmp(argv[i], "--shotrange") == 0 || strcmp(argv[i], "--shotdetour") == 0 || strcmp(argv[i], "--shotcarry") == 0 || strcmp(argv[i], "--trickperiod") == 0 || strcmp(argv[i], "--trickflags") == 0 || strcmp(argv[i], "--tricktarget") == 0 || strcmp(argv[i], "--shotcooldown") == 0 || strcmp(argv[i], "--bossrange") == 0 || strcmp(argv[i], "--bosshold") == 0 || strcmp(argv[i], "--bossslow") == 0 || strcmp(argv[i], "--level") == 0 || strcmp(argv[i], "--bosscooldown") == 0 || strcmp(argv[i], "--bossunstickarm") == 0 || strcmp(argv[i], "--bossunstickpush") == 0 || strcmp(argv[i], "--bosspacelo") == 0 || strcmp(argv[i], "--bosspacehi") == 0 || strcmp(argv[i], "--uiscript") == 0) {
+        if (strcmp(argv[i], "--play") == 0 || strcmp(argv[i], "--record") == 0 || strcmp(argv[i], "--drawdistance") == 0 || strcmp(argv[i], "--dumpdl") == 0 || strcmp(argv[i], "--frames") == 0 || strcmp(argv[i], "--wav") == 0 || strcmp(argv[i], "--dumpframes") == 0 || strcmp(argv[i], "--pak") == 0 || strcmp(argv[i], "--eeprom") == 0 || strcmp(argv[i], "--bigtri") == 0 || strcmp(argv[i], "--peek") == 0 || strcmp(argv[i], "--cmds") == 0 || strcmp(argv[i], "--trial") == 0 || strcmp(argv[i], "--plan") == 0 || strcmp(argv[i], "--saveevery") == 0 || strcmp(argv[i], "--startrung") == 0 || strcmp(argv[i], "--bosssupply") == 0 || strcmp(argv[i], "--shotsnap") == 0 || strcmp(argv[i], "--shotrange") == 0 || strcmp(argv[i], "--shotdetour") == 0 || strcmp(argv[i], "--shotcarry") == 0 || strcmp(argv[i], "--trickperiod") == 0 || strcmp(argv[i], "--trickflags") == 0 || strcmp(argv[i], "--tricktarget") == 0 || strcmp(argv[i], "--shotcooldown") == 0 || strcmp(argv[i], "--bossrange") == 0 || strcmp(argv[i], "--bosshold") == 0 || strcmp(argv[i], "--bossslow") == 0 || strcmp(argv[i], "--bosssupplymax") == 0 || strcmp(argv[i], "--level") == 0 || strcmp(argv[i], "--bosscooldown") == 0 || strcmp(argv[i], "--bossunstickarm") == 0 || strcmp(argv[i], "--bossunstickpush") == 0 || strcmp(argv[i], "--bosspacelo") == 0 || strcmp(argv[i], "--bosspacehi") == 0 || strcmp(argv[i], "--uiscript") == 0) {
             i++; /* option value */
         }
     }
@@ -283,6 +283,9 @@ int main(int argc, char **argv) {
              * screenshot, or to roll the credits again). */
             extern int sbk_nav_target_level;
             sbk_nav_target_level = atoi(argv[++i]);
+        } else if (strcmp(argv[i], "--bosssupplymax") == 0 && i + 1 < argc) {
+            extern int sbk_boss_supply_max;
+            sbk_boss_supply_max = atoi(argv[++i]);
         } else if (strcmp(argv[i], "--bossslow") == 0 && i + 1 < argc) {
             extern int sbk_boss_slow;
             sbk_boss_slow = atoi(argv[++i]);
