@@ -398,31 +398,53 @@ static void nav_ladder_set(int rung) {
 /* --startrung N: the rung the first course after boot starts on. See main.c. */
 int sbk_nav_start_rung;
 
-static void nav_handicap(int level, int place) {
-    static int last_level = -1;
-    static int rung;
-    static int losses, wedges;
+/* The ladder's per-course state. It is file scope rather than nav_handicap's
+ * own statics because the course has to be armed when it is *chosen*, not when
+ * its first race ends: nav_handicap runs off a result screen, so a rung applied
+ * only there always throws the first race of a course away. nav_level_begin is
+ * therefore called from the course list too, and is idempotent. */
+static int nav_level = -1;
+static int nav_rung, nav_losses, nav_wedges;
 
-    if (level != last_level) {
-        last_level = level;
-        rung = sbk_nav_start_rung;
-        sbk_nav_start_rung = 0; /* it is a resume, not a floor: one course only */
-        losses = wedges = 0;
-        nav_wedge_relief = 0;
-        nav_ladder_set(rung);
-        if (rung != 0) {
-            printf("sbk-nav: level %d resumed at rung %d (boost=%d rivaltax=%d rivalrelief=%d)\n", level, rung,
-                   sbk_campaign_boost, sbk_rival_tax, sbk_rival_item_relief);
-            fflush(stdout);
-        }
+static void nav_level_begin(int level) {
+    /* A course the save already records as raced-and-not-won does not deserve
+     * a rung-0 attempt.
+     *
+     * awaitRaceResult writes levelUnlockStatus[level] = 4 for a race that
+     * finished outside first place, so a 4 is the game's own note that this
+     * course has beaten this rider before. Starting it at rung 0 anyway spends
+     * five minutes re-learning what the EEPROM already knows -- and the
+     * campaign did exactly that on course 1, losing at rung 0 and again at rung
+     * 1 before the handicap that finally won it. Rung 1 is as far as this goes:
+     * the boost-only rung, the mildest there is, so a course that was lost
+     * narrowly still gets a nearly-honest race. */
+    int known_lost;
+    if (level < 0 || level == nav_level) return;
+    known_lost = EepromSaveData != NULL && level < 15 && EepromSaveData->levelUnlockStatus[level] == 4;
+    nav_level = level;
+    nav_rung = sbk_nav_start_rung;
+    if (known_lost && nav_rung < 1) nav_rung = 1;
+    sbk_nav_start_rung = 0; /* a resume, not a floor: one course only */
+    nav_losses = nav_wedges = 0;
+    nav_wedge_relief = 0;
+    nav_ladder_set(nav_rung);
+    if (nav_rung != 0) {
+        printf("sbk-nav: level %d starts at rung %d%s (boost=%d rivaltax=%d rivalrelief=%d)\n", level, nav_rung,
+               known_lost ? " -- the save records it as lost before" : "", sbk_campaign_boost, sbk_rival_tax,
+               sbk_rival_item_relief);
+        fflush(stdout);
     }
+}
+
+static void nav_handicap(int level, int place) {
+    nav_level_begin(level);
 
     /* A wedge is not a loss: the rider never finished, so the race says nothing
      * about whether the ladder is high enough. Climbing on one would also climb
      * *towards* the setting that caused it, since the boost is what wedges. */
     if (sbk_campaign_wedge) {
         sbk_campaign_wedge = 0;
-        wedges++;
+        nav_wedges++;
         /* The rung is kept. The first wedge on course 1 came at a rung whose
          * boost had already finished a race, and its signature -- lap 0, a
          * fixed sector, the position byte-identical frame to frame -- is the
@@ -439,38 +461,38 @@ static void nav_handicap(int level, int place) {
          * same world position to the byte, so a second identical race only buys
          * the same wedge again at the cost of six minutes. */
         nav_wedge_relief += 55;
-        nav_ladder_set(rung);
+        nav_ladder_set(nav_rung);
         printf("sbk-nav: level %d wedged (%d so far); not a loss, retrying at rung %d "
                "(boost=%d rivaltax=%d itemrelief=%d)\n",
-               level, wedges, rung, sbk_campaign_boost, sbk_rival_tax, sbk_item_relief);
+               level, nav_wedges, nav_rung, sbk_campaign_boost, sbk_rival_tax, sbk_item_relief);
         fflush(stdout);
         return;
     }
 
     if (place == 0) {
-        if (rung != 0) {
+        if (nav_rung != 0) {
             printf("sbk-nav: level %d won at rung %d (boost=%d rivaltax=%d) after %d loss(es); back to rung 0\n",
-                   level, rung, sbk_campaign_boost, sbk_rival_tax, losses);
+                   level, nav_rung, sbk_campaign_boost, sbk_rival_tax, nav_losses);
         }
-        rung = losses = wedges = 0;
+        nav_rung = nav_losses = nav_wedges = 0;
         nav_wedge_relief = 0;
         nav_ladder_set(0);
         fflush(stdout);
         return;
     }
 
-    losses++;
-    if (rung < NAV_LADDER_TOP) {
-        rung++;
-        nav_ladder_set(rung);
+    nav_losses++;
+    if (nav_rung < NAV_LADDER_TOP) {
+        nav_rung++;
+        nav_ladder_set(nav_rung);
         printf("sbk-nav: level %d lost %d time(s); retrying at rung %d (boost=%d +%d%% top speed, rivaltax=%d, "
                "rivalrelief=%d)\n",
-               level, losses, rung, sbk_campaign_boost, sbk_campaign_boost * 100 / 256, sbk_rival_tax,
+               level, nav_losses, nav_rung, sbk_campaign_boost, sbk_campaign_boost * 100 / 256, sbk_rival_tax,
                sbk_rival_item_relief);
     } else {
         printf("sbk-nav: WARNING -- level %d lost %d time(s) at the top of the handicap ladder "
                "(boost=%d rivaltax=%d rivalrelief=%d wedgerelief=%d); the rider cannot win this course\n",
-               level, losses, sbk_campaign_boost, sbk_rival_tax, sbk_rival_item_relief, sbk_item_relief);
+               level, nav_losses, sbk_campaign_boost, sbk_rival_tax, sbk_rival_item_relief, sbk_item_relief);
     }
     fflush(stdout);
 }
@@ -618,6 +640,12 @@ static void nav_act(unsigned long retraces) {
     if (sbk_menu_on("handleLevelSelectInput")) {
         LevelSelectState *ls = (LevelSelectState *)sbk_menu_alloc("handleLevelSelectInput");
         int want = sbk_nav_target_level >= 0 ? sbk_nav_target_level : nav_next_story_level();
+        /* Arm the ladder for the course being chosen, not for the one whose
+         * result screen last went by. This is the only place the campaign
+         * knows what it is about to race *before* it races it, and a course
+         * the save marks as lost has to start above rung 0 or the first five
+         * minutes are spent proving what the EEPROM already recorded. */
+        nav_level_begin(want);
         if (ls != NULL && want >= 0 && ls->menuState == 0) {
             int i;
             for (i = 0; i < ls->maxLevelCount && i < 12; i++) {
