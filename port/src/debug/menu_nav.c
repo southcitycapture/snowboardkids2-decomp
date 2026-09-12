@@ -365,6 +365,9 @@ static void nav_ladder_set(int rung) {
     sbk_item_relief = nav_ladder[rung].relief + nav_wedge_relief;
 }
 
+/* --startrung N: the rung the first course after boot starts on. See main.c. */
+int sbk_nav_start_rung;
+
 static void nav_handicap(int level, int place) {
     static int last_level = -1;
     static int rung;
@@ -372,9 +375,16 @@ static void nav_handicap(int level, int place) {
 
     if (level != last_level) {
         last_level = level;
-        rung = losses = wedges = 0;
+        rung = sbk_nav_start_rung;
+        sbk_nav_start_rung = 0; /* it is a resume, not a floor: one course only */
+        losses = wedges = 0;
         nav_wedge_relief = 0;
-        nav_ladder_set(0);
+        nav_ladder_set(rung);
+        if (rung != 0) {
+            printf("sbk-nav: level %d resumed at rung %d (boost=%d rivaltax=%d itemrelief=%d)\n", level, rung,
+                   sbk_campaign_boost, sbk_rival_tax, sbk_item_relief);
+            fflush(stdout);
+        }
     }
 
     /* A wedge is not a loss: the rider never finished, so the race says nothing
@@ -710,6 +720,22 @@ void sbk_menu_nav_tick(unsigned long retraces) {
     if (sbk_unlockall) nav_unlockall();
     if (sbk_menutrace) menutrace(retraces);
     if (!sbk_autonav) return;
+    /* The ladder has to be standing before the first race, not just after the
+     * first result: nav_handicap only runs when a race ends, so a --startrung
+     * applied there alone would still lose one race at rung 0 -- exactly the
+     * five minutes the flag exists to save. */
+    {
+        static int armed;
+        if (!armed) {
+            armed = 1;
+            nav_ladder_set(sbk_nav_start_rung);
+            if (sbk_nav_start_rung != 0) {
+                printf("sbk-nav: --startrung %d: boost=%d rivaltax=%d itemrelief=%d before the first race\n",
+                       sbk_nav_start_rung, sbk_campaign_boost, sbk_rival_tax, sbk_item_relief);
+                fflush(stdout);
+            }
+        }
+    }
     nav_watch();
     nav_progress("tick");
     /* Clear the loop guard on the rising edge of a *story* race only. The

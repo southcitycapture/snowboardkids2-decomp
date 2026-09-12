@@ -73,7 +73,7 @@ static const char *find_rom(int argc, char **argv) {
         if (argv[i][0] != '-') {
             return argv[i];
         }
-        if (strcmp(argv[i], "--play") == 0 || strcmp(argv[i], "--record") == 0 || strcmp(argv[i], "--drawdistance") == 0 || strcmp(argv[i], "--dumpdl") == 0 || strcmp(argv[i], "--frames") == 0 || strcmp(argv[i], "--wav") == 0 || strcmp(argv[i], "--dumpframes") == 0 || strcmp(argv[i], "--pak") == 0 || strcmp(argv[i], "--eeprom") == 0 || strcmp(argv[i], "--bigtri") == 0 || strcmp(argv[i], "--peek") == 0 || strcmp(argv[i], "--cmds") == 0 || strcmp(argv[i], "--trial") == 0 || strcmp(argv[i], "--plan") == 0 || strcmp(argv[i], "--saveevery") == 0 || strcmp(argv[i], "--uiscript") == 0) {
+        if (strcmp(argv[i], "--play") == 0 || strcmp(argv[i], "--record") == 0 || strcmp(argv[i], "--drawdistance") == 0 || strcmp(argv[i], "--dumpdl") == 0 || strcmp(argv[i], "--frames") == 0 || strcmp(argv[i], "--wav") == 0 || strcmp(argv[i], "--dumpframes") == 0 || strcmp(argv[i], "--pak") == 0 || strcmp(argv[i], "--eeprom") == 0 || strcmp(argv[i], "--bigtri") == 0 || strcmp(argv[i], "--peek") == 0 || strcmp(argv[i], "--cmds") == 0 || strcmp(argv[i], "--trial") == 0 || strcmp(argv[i], "--plan") == 0 || strcmp(argv[i], "--saveevery") == 0 || strcmp(argv[i], "--startrung") == 0 || strcmp(argv[i], "--uiscript") == 0) {
             i++; /* option value */
         }
     }
@@ -229,6 +229,17 @@ int main(int argc, char **argv) {
             extern int sbk_autonav_every;
             sbk_autonav_every = atoi(argv[++i]);
             saveevery_given = 1;
+        } else if (strcmp(argv[i], "--startrung") == 0 && i + 1 < argc) {
+            /* Which rung of the handicap ladder the *first* course after boot
+             * starts on. The ladder lives in memory, not in the EEPROM, so a
+             * restart in the middle of a course that has already climbed two
+             * rungs would otherwise drop back to rung 0 and re-lose the same
+             * races it has already paid for -- five minutes each. The save
+             * knows the course was lost; it does not know how badly. This is
+             * how the operator hands that back. It applies once: the first win
+             * clears it like any other. */
+            extern int sbk_nav_start_rung;
+            sbk_nav_start_rung = atoi(argv[++i]);
         } else if (strcmp(argv[i], "--menutrace") == 0) {
             extern int sbk_menutrace;
             sbk_menutrace = 1;
