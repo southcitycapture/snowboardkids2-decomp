@@ -540,9 +540,37 @@ static void nav_progress(const char *why) {
  * is the only lever that actually creates a margin without touching our rider.
  * So they are never separated again, and the tax stays modest -- 160 still
  * wedges, exactly as the old notes warned. */
-static const struct { s16 boost, tax, relief; } nav_ladder[] = {
-    { 0, 0, 0 },     { 0, 60, 165 }, { 0, 100, 165 },
-    { 28, 0, 0 },    { 28, 60, 165 }, { 56, 100, 165 },
+/* Three rungs above the old top, and they are the *rider's* stats rather
+ * than the rivals'.
+ *
+ * Course 10 came fourth of four at every one of the six old rungs, including
+ * the top one -- +21% with the rivals taxed 100 and given 165 relief -- and
+ * that is not a rider being narrowly beaten. `sbk-marshal` says what it is:
+ * four low-speed lock-outs a lap, at `phase 12` and `phase 13`, which are
+ * updateLeftForwardFlipTrick and updateLeftBackwardFlipTrick. The rider is
+ * stalling *inside a trick*.
+ *
+ * That is new, and it is the ollie fix's own doing. Before it, a CPU rider on
+ * a normal course asked determineAIPathChoice for a jump, got one, and never
+ * left the ground, so behaviorStep never reached the trick handlers at all.
+ * Now it does -- and updateTrickAirborneVelocity bleeds x and z by a
+ * hundred-and-twenty-eighth a frame for as long as the chain runs, so a chain
+ * longer than the air ends in a rider doing 24,576 units and a crash on
+ * landing (animationFlags 0x1000 -> initStunnedAirborneBehavior).
+ *
+ * X Cross answered exactly this question: acceleration buys the air the chain
+ * needs, because acceleration *is* the ollie. So do handling, cornering and
+ * the deadzone, which took Speed Cross's wall contacts from 30 to 6. */
+static const struct { s16 boost, tax, relief, hand, corner, dead, accel; } nav_ladder[] = {
+    { 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 60, 165, 0, 0, 0, 0 },
+    { 0, 100, 165, 0, 0, 0, 0 },
+    { 28, 0, 0, 0, 0, 0, 0 },
+    { 28, 60, 165, 0, 0, 0, 0 },
+    { 56, 100, 165, 0, 0, 0, 0 },
+    { 56, 100, 165, 128, -128, 512, 1024 },
+    { 84, 100, 165, 160, -160, 768, 1024 },
+    { 128, 100, 165, 192, -192, 1024, 2048 },
 };
 
 /* A boss race needs a different ladder, because on a boss none of the rival
@@ -707,6 +735,12 @@ static void nav_ladder_set(int rung) {
      * rung's. */
     sbk_boost_accel = sbk_boost_hand = sbk_boost_corner = sbk_boost_dead = 0;
     if (rung > NAV_LADDER_TOP(boss)) rung = NAV_LADDER_TOP(boss);
+    if (!boss) {
+        sbk_boost_hand = nav_ladder[rung].hand;
+        sbk_boost_corner = nav_ladder[rung].corner;
+        sbk_boost_dead = nav_ladder[rung].dead;
+        sbk_boost_accel = nav_ladder[rung].accel;
+    }
     if (boss) {
         sbk_campaign_boost = nav_boss_ladder[rung].boost;
         sbk_boss_supply = nav_boss_ladder[rung].supply;
