@@ -469,6 +469,133 @@ still true):
   `numValidSlots` says a file exists -- the sequel's version of the first
   game's "USE THIS SAVE, not START A NEW GAME" trap).
 
+### Knowing that a race has ended, and where it finished
+
+The navigator drives on two facts per race: *it is over*, and *what place we
+came*. Both are harder than they look, and each cost the campaign a stall.
+
+**"It is over" is a set of screen names, and the set is not obvious.** The
+test began as three substrings -- `GameResult`, `ContinuePress`, `AwardGold` --
+which covers every ordinary course and silently cannot see a **boss race**. The
+boss's handlers are `handleBossRaceResult`, `handleBossDefeatResult` and
+`awaitBossResultAndFadeOut`: `BossRaceResult` is a *Race*Result, not a
+*Game*Result. The Jingle Town boss therefore looped -- race, town, race again --
+with no finish counted, no EEPROM write and no climb up the handicap ladder.
+That loop is the one shape the town-exit guard is blind to, because there is a
+genuine race in every lap of it.
+
+Widening the test to the word `Result` fixes the boss and breaks everything
+else, which is the more interesting half:
+
+| name | what it actually is |
+| --- | --- |
+| `awaitRaceResult` (`session_manager.c:131`) | the game state `loadRace` sets **before** `initRace` is queued |
+| `awaitStoryModeRaceResult` (`race_state_machine.c:180`) | ditto, for story mode |
+| `awaitVersusRaceResult` | ditto, for versus |
+| `*SkillGameResultTimerDisplay` | the skill game's **HUD**, running during the race |
+
+The first three are not result screens; they are the state that *waits* for a
+result, and they are up for the whole pre-race cutscene and the whole race. So
+the log read `level list: cursor -> 3` immediately followed by `race 1 finished
+on level 3` -- a race reported finished before it had started -- and then,
+because the funnel stays up until the race really ends, the true result screen
+was no longer a rising edge and the actual finish was never seen at all. A race
+reported finished too early is worse than one never reported, because
+everything downstream believes it. The three funnels are excluded by exact
+name; `TimerDisplay` by substring.
+
+**"What place" cannot be read off the result screen.** A boss race tears its
+`GameState` down before its result handler appears, so `sbk_race_state()`
+returns NULL there and the place reads -1 -- which the handicap ladder can only
+treat as a loss. A boss race that was *won* would therefore climb the ladder as
+though it had been lost, and grind on at ever-higher rungs having already beaten
+the thing. The place is settled much earlier: `race_main.c` writes
+`finishPosition` and then sets the `0x80000` finished bit in `animationFlags`
+the moment the rider crosses the line, with the race still on screen. The
+navigator latches it there, clears the latch on the rising edge of each race so
+a stale place cannot be attributed to the next one, and keeps the live read as
+the preferred source -- the latch only answers when the race is already gone.
+
+### The handicap ladder, and why its order is the whole design
+
+Only `finishPosition == 0` marks a course won, and an unattended campaign that
+re-races a lost course with identical settings loses it again for ever. So each
+retry gets a handicap, one rung at a time, reset by a win. There are three
+levers and they are **not** interchangeable:
+
+| lever | what it touches | effect on the task pool |
+| --- | --- | --- |
+| `boost` | player 1's own top speed, via `trial_retune` | neutral |
+| `rivaltax` | the rivals' row-0 speed tax (`RIVAL_ROW`) | **bad** |
+| `rivalrelief` | the rivals' item chances (`RIVAL_ROW` only) | **good** |
+
+The ordering was learned the hard way on course 1:
+
+```
+rung 0  no handicap                     2nd
+rung 1  boost 28                        2nd
+rung 2  boost 28, rivaltax 160          4th, and the rider WEDGED
+rung 2' boost 28, symmetric relief 100  3rd -- worse than no handicap at all
+rung 2" boost 28, rival-only relief 100 1st
+```
+
+Two traps in that table.
+
+* **A heavy rival tax buys the chairlift wedge.** `docs/nightmare-row.md`
+  measured `tax=168` across the whole field into a DNF, and the mechanism
+  survives intact when only the rivals pay: a slower field means a longer race,
+  every item in flight is a scheduled task, and `spawnChairliftEffect` -- the
+  only way out of the lift wait that wraps a lap -- is a `scheduleTask` that
+  returns NULL once the pool is full. The two highest rungs of the original
+  ladder were therefore the two most likely to hang it, which is a poor thing
+  for a ladder to keep for last.
+* **Item relief was not a handicap.** `sbk_item_relief` writes *both* rows, and
+  `hit_reactions.c` indexes `gAIPlayerParams` by each rider's **own** row, with
+  player 1 on `NIGHTMARE_ROW` and the rivals on `RIVAL_ROW`. Taking the items
+  off "the row" took them off ours by exactly as much: a house rule, not a
+  handicap, and our rider is worse under it. The variable was only ever the
+  wedge remedy; the ladder had borrowed it for a job it could not do. It is now
+  split, and `sbk_rival_item_relief` writes `RIVAL_ROW` alone.
+
+So the ladder runs boost, then rival relief, then rival relief plus tax as a
+last resort:
+
+```c
+{ 0, 0, 0 }, { 28, 0, 0 }, { 28, 0, 100 }, { 28, 0, 165 }, { 28, 160, 165 }
+```
+
+Rival relief is the cleanest handicap in the port: no rider's speed, handling
+or cornering changes, our rider keeps a full item set, and total pool pressure
+goes *down*, so unlike the tax it cannot buy the wedge it exists to avoid.
+
+**A course the save already calls lost does not start at rung 0.**
+`awaitRaceResult` writes `levelUnlockStatus[level] = 4` for a race finished
+outside first place, which is the game's own note that this course has beaten
+this rider before. Opening it at rung 0 anyway spends five minutes
+re-discovering what the EEPROM already records. Such a course starts at rung 1,
+the mildest rung, so one lost narrowly still gets a nearly-honest race. Making
+that work meant moving the ladder's per-course state out of `nav_handicap`'s
+statics into a `nav_level_begin()` the **course list** also calls:
+`nav_handicap` only ever runs off a result screen, which is one race too late
+to choose a handicap.
+
+**`--startrung N`** hands the ladder back across a restart. It lives in memory,
+so redeploying a binary mid-course would otherwise drop a course that had
+climbed two rungs back to rung 0 and re-lose the same races at five minutes
+each. It applies to the first course after boot and is consumed by it.
+
+### The loop guard, which had latched on
+
+`nav_town_exits` counts town exits since a race last *started*, and is cleared
+on the rising edge of a non-demo race. The edge test used to live inside the
+`if (racing)` branch, so `was_racing` was only ever assigned while a race was on
+screen: it stuck at 1 when the first story race ended, no later race was ever a
+rising edge, and the counter was never reset again. `exit #2, since race 2` --
+where the second race should have put it back to `#1` -- is the whole bug in one
+line. It would have accused a perfectly healthy campaign of looping about six
+courses later, and a guard that cries wolf on a good run is worse than no guard,
+because the next person to read the log believes it.
+
 ### The trial harness
 
 `port/tools/nightmare_search.py` is the sweep/record/regress/campaign loop.
