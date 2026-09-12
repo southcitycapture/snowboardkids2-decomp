@@ -1087,6 +1087,15 @@ static void marshal_tick(GameState *gs, unsigned long retraces) {
     if (retraces - pushing_since >= MARSHAL_LIFT) {
         TrackData *td = &gs->gameData;
         int sec = (int)p->sectorIndex;
+        /* The end of the rider's *own* sector is not far enough: carried
+         * there at level 9 sector 115 it slid straight back and
+         * lapProgressRemaining never left 55, twice. Carry it to the end of
+         * the next sector instead, which is past the boundary, so the carry
+         * is progress by the game's own measure and the stall clock clears. */
+        if (sec >= 0 && sec < (int)td->sectorCount) {
+            int nxt = (int)td->sectors[sec].nextSectorIndex;
+            if (nxt >= 0 && nxt < (int)td->sectorCount) sec = nxt;
+        }
         if (sec >= 0 && sec < (int)td->sectorCount) {
             const Vec3s *v = &td->vertices[td->sectors[sec].endCenterVertexIndex];
             p->worldPos.x = (s32)v->x << 16;
