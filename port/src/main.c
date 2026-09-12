@@ -315,6 +315,11 @@ int main(int argc, char **argv) {
         } else if (strcmp(argv[i], "--nobosspilot") == 0) {
             extern int sbk_boss_pilot;
             sbk_boss_pilot = 0;
+        } else if (strcmp(argv[i], "--noshotpilot") == 0) {
+            /* Shot Cross has one rider, so findPrimaryItemTarget never returns
+             * a target and the CPU never fires. See boss_pilot.c. */
+            extern int sbk_shot_pilot;
+            sbk_shot_pilot = 0;
         } else if (strcmp(argv[i], "--bosssupply") == 0 && i + 1 < argc) {
             /* Retraces between the stars the boss pilot hands our rider while it
              * is empty-handed; 0 (the default) is pick-ups only. The navigator's
@@ -329,7 +334,7 @@ int main(int argc, char **argv) {
     }
 
     if (sbk_rom_load(rom) != 0) {
-        fprintf(stderr, "usage: %s [--fullscreen[=WxH]|--fullscreen-desktop|--windowed] [--wide] [--novsync] [--trace] [--play SCRIPT|MOVIE.m64] [--record MOVIE.m64] [--frames N] [--hashframe] [--perf] [--autoplay] [--soak] [--nightmare] [--trial SPEC] [--plan C:CH:B:BO,..] [--pak FILE|--nopak] [--eeprom FILE] [--unlockall] [--nopad] [--nobosspilot] [--bosssupply N] [--status] [--coursetrace] [--turbo] [--headless] [--mute] [--wav OUT.wav] [snowboardkids2.z64]\n", argv[0]);
+        fprintf(stderr, "usage: %s [--fullscreen[=WxH]|--fullscreen-desktop|--windowed] [--wide] [--novsync] [--trace] [--play SCRIPT|MOVIE.m64] [--record MOVIE.m64] [--frames N] [--hashframe] [--perf] [--autoplay] [--soak] [--nightmare] [--trial SPEC] [--plan C:CH:B:BO,..] [--pak FILE|--nopak] [--eeprom FILE] [--unlockall] [--nopad] [--nobosspilot] [--noshotpilot] [--bosssupply N] [--status] [--coursetrace] [--turbo] [--headless] [--mute] [--wav OUT.wav] [snowboardkids2.z64]\n", argv[0]);
         return 1;
     }
     printf("sbk: ROM %s (%lu bytes)\n", rom, (unsigned long)sbk_rom_size);

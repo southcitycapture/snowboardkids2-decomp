@@ -77,6 +77,7 @@
 #define RACE_TYPE_BOSS_JUNGLE 1
 #define RACE_TYPE_BOSS_JINGLE 2
 #define RACE_TYPE_BOSS_ICE 3
+#define RACE_TYPE_SHOOT_CROSS 5
 #define BOSS_DEFEATED_FLAG 0x100000
 #define PLAYER_FINISHED_FLAG 0x80000
 #define STAR_ITEM_ID 5 /* spawnAttackProjectile type 4: the only boss-damaging throw */
@@ -105,6 +106,87 @@ static unsigned long last_throw, last_supply;
 static void *pilot_gs;               /* the race this run's counters belong to */
 static u32 last_frame;
 static int n_thrown, n_supplied, n_pans, n_picked, hp_seen, last_ammo, reported;
+
+/* ------------------------------------------------------------ the Shot Cross
+ *
+ * Shot Cross (level 0xD, RACE_TYPE_SHOOT_CROSS) is the same shape of problem as
+ * a boss, arrived at from the other side. `initRace` gives it totalRacers = 1,
+ * so findPrimaryItemTarget's scan over the other riders finds nobody, returns
+ * -1, and the CPU rider never fires. The course is twenty targets that all have
+ * to be hit -- `handleShotCrossGameResult` gives gRaceResultCode 5 only for
+ * `shootCrossTargetsHit == 0x14`, and nineteen still records a loss -- so a
+ * rider that never fires cannot pass it, and slot 10 (the last two courses, and
+ * so the credits) never opens.
+ *
+ * The item is primaryItemId 7: spawnAttackProjectile type 6,
+ * spawnGhostTargetProjectileTask. Aiming is not the problem here the way it was
+ * at a boss. launchGhostTargetProjectile ignores the targeting mode entirely and
+ * throws the projectile straight out along the rider's own model transform;
+ * checkProjectileTargetHit forgives 0x1C0000 around a target and is run on every
+ * frame of the flight; and the course steers for us --
+ * activateShootCrossTargets calls checkPositionPlayerCollisionWithPull on all
+ * twenty, which pulls the rider towards them.
+ *
+ * So the pilot's whole job is to hold the trigger down at a sensible rate, and
+ * the rate is the interesting part: every shot is a scheduleTask on node type
+ * (playerIndex + 4), and firing every frame would empty that pool and leave
+ * nothing for the shot that actually lands -- the same pool arithmetic that
+ * wedges a rider at a chairlift. */
+int sbk_shot_pilot = 1;     /* --noshotpilot */
+int sbk_shot_cooldown = 12; /* retraces between shots */
+int sbk_shot_supply = 30;   /* retraces between refills while empty-handed; 0 = pick-ups only */
+#define SHOT_CROSS_ITEM_ID 7
+
+extern int sbk_race_pool(int);
+
+static int shot_fired, shot_supplied, shot_seen, shot_reported;
+static void *shot_gs;
+static u32 shot_frame;
+
+static s32 shot_cross_item(GameState *gs, Player *p, s32 result) {
+    if (!sbk_shot_pilot) return result;
+
+    if (shot_gs != (void *)gs || gs->raceFrameCounter < shot_frame) {
+        shot_gs = (void *)gs;
+        shot_fired = shot_supplied = 0;
+        shot_seen = (int)gs->shootCrossTargetsHit;
+        shot_reported = 0;
+        last_throw = last_supply = pilot_now;
+        printf("sbk: shotpilot: armed on level %d (cooldown=%d supply=%d)\n", gs->memoryPoolId, sbk_shot_cooldown,
+               sbk_shot_supply);
+        fflush(stdout);
+    }
+    shot_frame = gs->raceFrameCounter;
+
+    if ((int)gs->shootCrossTargetsHit != shot_seen) {
+        shot_seen = (int)gs->shootCrossTargetsHit;
+        printf("sbk: shotpilot: target %d of 20 down (fired=%d supplied=%d)\n", shot_seen, shot_fired, shot_supplied);
+        fflush(stdout);
+    }
+
+    /* The refill. The course's own item boxes hand out three shots at a time
+     * (processItemTriggers), which is nowhere near twenty even before a miss,
+     * and the borrowed CPU path does not steer to a box. Counted and logged
+     * like the boss supply, so a pass always says how much of it was ours. */
+    if (sbk_shot_supply > 0 && p->primaryItemAmmo == 0 &&
+        pilot_now - last_supply >= (unsigned long)sbk_shot_supply) {
+        p->primaryItemId = SHOT_CROSS_ITEM_ID;
+        p->primaryItemAmmo = 3;
+        p->itemHudNotificationFlags |= 1;
+        last_supply = pilot_now;
+        shot_supplied++;
+    }
+
+    if (result >= 0) return result;
+    if (p->primaryItemAmmo == 0 || p->primaryItemId != SHOT_CROSS_ITEM_ID) return result;
+    if (pilot_now - last_throw < (unsigned long)sbk_shot_cooldown) return result;
+    /* Leave the pool something to work with. */
+    if (sbk_race_pool((int)p->playerIndex + 4) <= 1) return result;
+
+    last_throw = pilot_now;
+    shot_fired++;
+    return 0;
+}
 
 /* Won by taking the boss's health to 0 (race_main.c ~5188 reads 0x100000).
  * Course 3 is one of these. */
@@ -156,10 +238,16 @@ s32 sbk_boss_pilot_item(GameState *gs, Player *p, s32 result) {
     s32 dx, dz, dist, err, tol;
     s32 mode;
 
-    if (!sbk_boss_pilot || !sbk_autoplay || gs == NULL || p == NULL) return result;
-    if (!sbk_is_boss_race(gs->raceType)) return result;
+    if (!sbk_autoplay || gs == NULL || p == NULL) return result;
     if (p != &gs->players[0] || !p->isCpuControlled) return result;
     if (p->animationFlags & PLAYER_FINISHED_FLAG) return result;
+    /* One hook, two pilots. Shot Cross needs the same answer to the same
+     * question -- findPrimaryItemTarget cannot see a target when the rider is
+     * alone on the course -- so it is served from here rather than from a
+     * second entry in patches.txt. */
+    if (gs->raceType == RACE_TYPE_SHOOT_CROSS) return shot_cross_item(gs, p, result);
+    if (!sbk_boss_pilot) return result;
+    if (!sbk_is_boss_race(gs->raceType)) return result;
 
     boss = sbk_boss_rider(gs);
     if (boss == NULL) return result;
@@ -276,6 +364,13 @@ s32 sbk_boss_pilot_item(GameState *gs, Player *p, s32 result) {
 void sbk_boss_pilot_tick(GameState *gs, unsigned long retraces) {
     Player *boss;
     pilot_now = retraces;
+    if (gs != NULL && shot_gs == (void *)gs && gs->raceType == RACE_TYPE_SHOOT_CROSS && !shot_reported &&
+        (gs->players[0].animationFlags & PLAYER_FINISHED_FLAG)) {
+        shot_reported = 1;
+        printf("sbk: shotpilot: race over -- %d of 20 targets, %d shots fired (%d refills), lost=%d\n",
+               (int)gs->shootCrossTargetsHit, shot_fired, shot_supplied, (int)gs->playerLost);
+        fflush(stdout);
+    }
     if (gs == NULL || pilot_gs != (void *)gs || !sbk_is_boss_race(gs->raceType)) return;
     boss = sbk_boss_rider(gs);
     if (boss == NULL) return;
