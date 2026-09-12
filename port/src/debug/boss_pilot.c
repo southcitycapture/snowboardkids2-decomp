@@ -13,7 +13,8 @@
  * levers are top speed and the rivals' item rate, and neither can reach an
  * outcome that is decided by 0x100000.
  *
- * 0x100000 is set by src/levels/jingle_town_boss.c (and its Ice Land twin) when
+ * 0x100000 is set by src/levels/jingle_town_boss.c (the Ice Land boss is close
+ * but not identical -- see the section on course 11 below) when
  * bossHealth reaches 0 -- the ten snowman heads along the bottom of the screen,
  * initialised to 0xA in initJingleTownBoss. Health only ever falls in the hover
  * phases, and the hover phases are only entered from updateJingleTownBoss's
@@ -63,10 +64,44 @@
  * the rider actually collected, so a run's log always says how much of the win
  * was the game's and how much was ours.
  *
- * The Crazy Jungle boss (RACE_TYPE_BOSS_JUNGLE, course 0xB) is a different
- * animal: it has no bossHealth at all and race_main.c decides it on who reaches
- * the line first. The pilot leaves it alone -- there the speed ladder is the
- * right lever.
+ * The Crazy Jungle boss (RACE_TYPE_BOSS_JUNGLE) is a different animal: it has
+ * no bossHealth at all and race_main.c decides it on who reaches the line
+ * first. Hitting it is still worth doing -- a hover phase zeroes its velocity
+ * -- but the speed ladder is what wins it.
+ *
+ * ---------------------------------------------------- the Ice Land boss (11)
+ *
+ * Course 11 is RACE_TYPE_BOSS_ICE and it is *not* the Jingle Town boss with a
+ * different model. Four differences, each of which cost the campaign a loop:
+ *
+ * 1. It takes the star and only the star. jingle_town_boss.c ~154 and
+ *    crazy_jungle_boss.c ~147 branch on 0x3D and 0x3E alike; ice_land_boss.c
+ *    ~166 has one test, `hitReactionState == ICE_BOSS_TRIGGER_ATTACK` (0x3D),
+ *    and 0x3E appears nowhere in the file. The frying pan -- the pilot's first
+ *    choice everywhere else because it cannot miss -- does nothing at all
+ *    here. The campaign's stalled loop is that one fact: fifteen supplied
+ *    pans, boss hp 10 -> 9.
+ *
+ * 2. It has two health bars, thirteen heads. initIceLandBoss writes 0xA; when
+ *    the ground bar reaches zero iceLandBossGroundProjectileAttackPhase (~687)
+ *    sheds thirty projectiles, calls setIceBossFlyingMode and writes
+ *    bossHealth = 3. The last three are taken from a boss in the air, and only
+ *    iceLandBossHoverAttackPhase's `animationFlags |= 0x100000` ends the race.
+ *
+ * 3. Health falls on *entry* to an attack phase, and the attack phase writes
+ *    behaviorFlags = 0x200 for as long as its animation runs. 0x200 meets
+ *    setPlayerStarHitState's 0x218 gate, so the boss is invulnerable for the
+ *    whole of the reaction its last head bought. A pilot on a flat cooldown
+ *    throws most of its stars into that window and they are discarded without
+ *    a sound. boss_vulnerable() is the answer.
+ *
+ * 4. Its collision node is 0x150000, not the Jingle Town boss's 0x1EC000, so
+ *    the firing window worked out from the geometry has to read the radius off
+ *    the boss the race built rather than a constant.
+ *
+ * And the aim lead for a moving boss is not a predicted intercept: the star
+ * homes (updateStarProjectile -> getHomingAngleToTarget) inside 0x1800000, so
+ * the lead is simply "get inside the homing radius before you throw".
  */
 #include "../ultra/ultra.h"
 #include <stdio.h>
@@ -102,13 +137,42 @@ int sbk_boss_supply_max = 16;
 int sbk_boss_range = 0x2000000;
 int sbk_boss_cooldown = 10;
 
+/* The star homes. updateStarProjectile calls getHomingAngleToTarget with a
+ * search radius of 0x1800000 and a forward cone of a quarter turn, and inside
+ * that radius the projectile steers itself onto the nearest collision node.
+ * *That* is the aim lead for a boss that is moving: not a predicted intercept
+ * point, but firing from close enough that the game's own homing has something
+ * to home with. Beyond 0x1800000 the star is a dumb ballistic throw at a
+ * target that is turning, which is what threw 13 stars for 2 heads at Ice
+ * Land. The pilot's range is clamped to it. */
+#define BOSS_STAR_HOMING_RANGE 0x1800000
+/* checkStarProjectileHit's own search radius, added to the boss's collision
+ * node radius to make the window the geometry below is worked out from. */
+#define BOSS_STAR_HIT_RADIUS 0xC0000
+/* The star's muzzle speed, for the flight-time cooldown. */
+#define BOSS_STAR_SPEED 0x1B8000
+/* setPlayerStarHitState refuses a rider whose behaviorFlags meet this mask,
+ * and every boss's damage phase writes one of its bits: 0x200 in both Ice Land
+ * attack phases and in the Jingle Town hover, 0x10 in the Jingle Town ground
+ * phase. So a boss that is *already* reacting to a hit cannot be hit again. */
+#define BOSS_HIT_BLOCK_FLAGS 0x218
+/* setPlayerStarHitState also wants hitReactionState < 0x3C, and
+ * findVulnerablePlayerNearPositionWithDelta skips any rider with an
+ * invincibilityTimer -- the star never even sees it. */
+#define BOSS_HIT_STATE_CEIL 0x3C
+
 extern int sbk_autoplay;
 
 static unsigned long pilot_now;      /* fed by the host loop, see sbk_boss_pilot_tick */
 static unsigned long last_throw, last_supply;
+static unsigned long throw_hold;     /* retraces the last throw is still in flight for */
 static void *pilot_gs;               /* the race this run's counters belong to */
 static u32 last_frame;
 static int n_thrown, n_supplied, n_pans, n_picked, hp_seen, last_ammo, reported;
+/* The census: why the pilot did not fire, counted rather than guessed at. */
+static int n_held_invuln, n_held_flags, n_held_state, n_held_flight, n_held_range, n_held_aim;
+static int n_vuln_frames, n_race_frames, n_hp_drops;
+static int census_stage2;            /* the Ice Land boss's second bar has been seen */
 
 /* ------------------------------------------------------------ the Shot Cross
  *
@@ -913,6 +977,51 @@ int sbk_is_boss_race(int raceType) {
     return raceType == RACE_TYPE_BOSS_JUNGLE || sbk_is_hp_boss_race(raceType);
 }
 
+/* Which hit state a given boss actually reads, which is not the same question
+ * for all three of them and is the whole reason course 11 stalled.
+ *
+ * jingle_town_boss.c ~154 and crazy_jungle_boss.c ~147 both branch on 0x3D
+ * *and* 0x3E: a star or a frying pan, one head either way. But
+ * ice_land_boss.c ~166 has a single test,
+ *
+ *      if (boss->hitReactionState == ICE_BOSS_TRIGGER_ATTACK)   // 0x3D
+ *
+ * and nothing else. 0x3E is not in the file. So the pan -- the pilot's first
+ * choice everywhere else, because the pan cannot miss -- is a complete no-op
+ * on the Ice Land boss, and the campaign's course 11 loop proved it the
+ * expensive way: fifteen supplied pans, boss hp 10 -> 9, and the one head that
+ * did fall fell to a star the rider had picked up. The supply now asks the
+ * boss what it takes. */
+static int boss_takes_pan(int raceType) {
+    return raceType != RACE_TYPE_BOSS_ICE;
+}
+
+/* Can a star that lands right now take a head off? Three separate gates, all
+ * of them in the game's own code, and none of them visible from the pilot's
+ * old "throw on a cooldown" rule:
+ *
+ *   - findVulnerablePlayerNearPositionWithDelta (track_collision.c ~1303)
+ *     skips any rider whose invincibilityTimer is non-zero, so the projectile
+ *     passes straight through;
+ *   - setPlayerStarHitState (hit_reactions.c ~121) refuses a rider whose
+ *     behaviorFlags meet 0x218, and every boss writes 0x200 (or 0x10) for the
+ *     whole length of the damage animation it plays *because* it was hit;
+ *   - the same function wants hitReactionState < 0x3C, so a second star in the
+ *     same frame is thrown away.
+ *
+ * The middle one is the expensive one. A hit puts the Ice Land boss into
+ * ICE_BOSS_MODE_ATTACK with behaviorFlags = 0x200 for as long as
+ * advancePlayerLeanAnimation(boss, 4) takes, and every star the pilot threw
+ * during that window was silently discarded. Firing only when this returns
+ * true is worth more than any amount of extra supply. */
+static int boss_vulnerable(Player *boss) {
+    if (boss->animationFlags & BOSS_DEFEATED_FLAG) return 0;
+    if (boss->invincibilityTimer != 0) return 0;
+    if (boss->behaviorFlags & BOSS_HIT_BLOCK_FLAGS) return 0;
+    if (boss->hitReactionState >= BOSS_HIT_STATE_CEIL) return 0;
+    return 1;
+}
+
 /* rider 1 is the boss in every boss race the game builds, but look for the flag
  * rather than trust the index. */
 Player *sbk_boss_rider(GameState *gs) {
@@ -927,13 +1036,18 @@ Player *sbk_boss_rider(GameState *gs) {
 static void pilot_reset(GameState *gs, Player *boss) {
     pilot_gs = (void *)gs;
     last_throw = last_supply = pilot_now;
+    throw_hold = 0;
     n_thrown = n_supplied = n_pans = n_picked = 0;
+    n_held_invuln = n_held_flags = n_held_state = n_held_flight = n_held_range = n_held_aim = 0;
+    n_vuln_frames = n_race_frames = n_hp_drops = 0;
+    census_stage2 = 0;
     last_ammo = 0;
     reported = 0;
     last_frame = 0;
     hp_seen = boss != NULL ? (int)boss->bossHealth : -1;
-    printf("sbk: bosspilot: armed on level %d type=%d (boss hp=%d, supply=%d, range=%d)\n", gs->memoryPoolId,
-           gs->raceType, hp_seen, sbk_boss_supply, sbk_boss_range);
+    printf("sbk: bosspilot: armed on level %d type=%d (boss hp=%d, supply=%d, range=%d, weapon=%s)\n",
+           gs->memoryPoolId, gs->raceType, hp_seen, sbk_boss_supply, sbk_boss_range,
+           boss_takes_pan(gs->raceType) ? "pan+star" : "star only (0x3E is a no-op here)");
     fflush(stdout);
 }
 
@@ -944,6 +1058,7 @@ static void pilot_reset(GameState *gs, Player *boss) {
 s32 sbk_boss_pilot_item(GameState *gs, Player *p, s32 result) {
     Player *boss;
     s32 dx, dz, dist, err, tol;
+    s32 range, hit_radius;
     s32 mode;
 
     if (!sbk_autoplay || gs == NULL || p == NULL) return result;
@@ -969,7 +1084,19 @@ s32 sbk_boss_pilot_item(GameState *gs, Player *p, s32 result) {
 
     /* The heads, watched from the one place that is called every frame with the
      * race's own allocation in hand. A drop is a hit that landed. */
+    n_race_frames++;
+    if (boss_vulnerable(boss)) n_vuln_frames++;
     if ((int)boss->bossHealth != hp_seen) {
+        if ((int)boss->bossHealth < hp_seen) n_hp_drops++;
+        /* The Ice Land boss is two bars, not one: when the ground bar reaches
+         * zero (ice_land_boss.c ~687) it sheds thirty projectiles, calls
+         * setIceBossFlyingMode and writes bossHealth = 3. Thirteen hits, not
+         * ten, and the second three are taken from a boss that is flying. */
+        if ((int)boss->bossHealth > hp_seen && !census_stage2) {
+            census_stage2 = 1;
+            printf("sbk: bosspilot: boss went airborne -- second bar of %d (flags=%08x)\n", (int)boss->bossHealth,
+                   (unsigned)boss->animationFlags);
+        }
         printf("sbk: bosspilot: boss hp %d -> %d (thrown=%d supplied=%d picked=%d)\n", hp_seen,
                (int)boss->bossHealth, n_thrown, n_supplied, n_picked);
         fflush(stdout);
@@ -1000,7 +1127,7 @@ s32 sbk_boss_pilot_item(GameState *gs, Player *p, s32 result) {
      * fill the gaps while a pan is in flight. */
     if (sbk_boss_supply > 0 && n_supplied + n_pans < sbk_boss_supply_max &&
         pilot_now - last_supply >= (unsigned long)sbk_boss_supply) {
-        if (p->secondaryItemId == SECONDARY_ITEM_NONE) {
+        if (boss_takes_pan(gs->raceType) && p->secondaryItemId == SECONDARY_ITEM_NONE) {
             p->secondaryItemId = SECONDARY_ITEM_PAN;
             p->itemHudNotificationFlags |= 2;
             last_supply = pilot_now;
@@ -1022,7 +1149,24 @@ s32 sbk_boss_pilot_item(GameState *gs, Player *p, s32 result) {
     if (result >= 0) return result;                          /* the AI is already throwing */
     if (p->primaryItemAmmo == 0) return result;
     if (p->primaryItemId != STAR_ITEM_ID) return result;     /* nothing else marks the boss */
+
+    /* Do not throw at a boss that cannot be hit. This is the fix, and it is
+     * worth more than the supply: a landed hit makes the boss invulnerable for
+     * the whole length of the animation the hit starts, so a pilot on a flat
+     * ten-retrace cooldown spends most of its ammunition on a target the
+     * game has already stopped listening to. See boss_vulnerable(). */
+    if (boss->invincibilityTimer != 0) { n_held_invuln++; return result; }
+    if (boss->behaviorFlags & BOSS_HIT_BLOCK_FLAGS) { n_held_flags++; return result; }
+    if (boss->hitReactionState >= BOSS_HIT_STATE_CEIL) { n_held_state++; return result; }
+
+    /* And do not throw a second star while the first is still on its way to a
+     * boss that is still vulnerable: the first one will land, the boss will go
+     * invulnerable, and the second is thrown away. The hold is the flight time
+     * the geometry asks for -- distance over the star's 0x1B8000 a frame --
+     * rather than a constant, because the distance varies by a factor of ten
+     * across a boss race. */
     if (pilot_now - last_throw < (unsigned long)sbk_boss_cooldown) return result;
+    if (pilot_now - last_throw < throw_hold) { n_held_flight++; return result; }
 
     /* The firing window, in the game's own terms (findPrimaryItemTarget): the
      * angle is measured from the boss *back* to us, so "in front" is an error
@@ -1032,7 +1176,15 @@ s32 sbk_boss_pilot_item(GameState *gs, Player *p, s32 result) {
     dx = boss->worldPos.x - p->worldPos.x;
     dz = boss->worldPos.z - p->worldPos.z;
     dist = distance_2d(dx, dz);
-    if (dist > sbk_boss_range) return result;
+
+    /* Never further than the star's own homing radius. Inside it the
+     * projectile steers itself onto the boss's collision node every frame and
+     * a moving target is no longer a problem; outside it the throw is a
+     * ballistic guess that dies on the first wall
+     * (updateStarProjectile -> resolveTrackWallCollision). */
+    range = sbk_boss_range;
+    if (range > BOSS_STAR_HOMING_RANGE) range = BOSS_STAR_HOMING_RANGE;
+    if (dist > range) { n_held_range++; return result; }
 
     err = (s32)((atan2Fixed(-dx, -dz) - (u16)p->rotY) & 0x1FFF);
     if (err >= 0x1000) err -= 0x2000;
@@ -1044,7 +1196,13 @@ s32 sbk_boss_pilot_item(GameState *gs, Player *p, s32 result) {
      * 0xC0000. A full turn is 0x2000, so a radian is 0x2000/2pi = 1303 units.
      * Firing outside that window is how the first Jingle Town run threw 21
      * stars from as far as 0x27C0000 and landed only five. */
-    tol = (s32)((1303LL * (0x1EC000 + 0xC0000)) / (dist > 0 ? dist : 1));
+    /* The radius is read off the boss the race actually built rather than
+     * hard-coded: the Jingle Town boss's collision node is 0x1EC000 and the
+     * Ice Land boss's is 0x150000 (initIceLandBoss), so the old constant made
+     * the window a third too wide on course 11 and let the pilot fire at
+     * headings a star could not cover. */
+    hit_radius = (s32)boss->collisionListNode.radius + BOSS_STAR_HIT_RADIUS;
+    tol = (s32)((1303LL * hit_radius) / (dist > 0 ? dist : 1));
     if (tol > 0x200) tol = 0x200;
     if (tol < 0x40) tol = 0x40;
 
@@ -1053,13 +1211,17 @@ s32 sbk_boss_pilot_item(GameState *gs, Player *p, s32 result) {
     } else if (err > 0x1000 - tol || err < -(0x1000 - tol)) {
         mode = 1;
     } else {
+        n_held_aim++;
         return result;
     }
 
     last_throw = pilot_now;
+    throw_hold = (unsigned long)(dist / BOSS_STAR_SPEED) + 8;
     n_thrown++;
-    printf("sbk: bosspilot: throw #%d mode=%d dist=%d err=%d tol=%d ammo=%d boss hp=%d\n", n_thrown, (int)mode,
-           (int)dist, (int)err, (int)tol, (int)p->primaryItemAmmo, hp_seen);
+    printf("sbk: bosspilot: throw #%d mode=%d dist=%d err=%d tol=%d hold=%lu ammo=%d boss hp=%d "
+           "(boss mode=%d/%d flags=%03x)\n",
+           n_thrown, (int)mode, (int)dist, (int)err, (int)tol, throw_hold, (int)p->primaryItemAmmo, hp_seen,
+           (int)boss->behaviorMode, (int)boss->behaviorPhase, (unsigned)boss->behaviorFlags);
     fflush(stdout);
     return mode;
 }
@@ -1095,5 +1257,13 @@ void sbk_boss_pilot_tick(GameState *gs, unsigned long retraces) {
     printf("sbk: bosspilot: race over -- boss hp=%d defeated=%d, stars thrown=%d (supplied=%d, pans=%d, picked up=%d)\n",
            (int)boss->bossHealth, (boss->animationFlags & BOSS_DEFEATED_FLAG) ? 1 : 0, n_thrown, n_supplied, n_pans,
            n_picked);
+    /* The census: how much of the race the boss could be hit at all, how many
+     * throws landed, and what held the trigger the rest of the time. A pilot
+     * that throws a lot and lands little is answering one of these lines. */
+    printf("sbk: bosspilot: census -- %d hp drops from %d throws; boss vulnerable %d of %d frames (%d%%); "
+           "held: invuln=%d busy=%d state=%d inflight=%d range=%d aim=%d\n",
+           n_hp_drops, n_thrown, n_vuln_frames, n_race_frames,
+           n_race_frames > 0 ? (100 * n_vuln_frames) / n_race_frames : 0, n_held_invuln, n_held_flags, n_held_state,
+           n_held_flight, n_held_range, n_held_aim);
     fflush(stdout);
 }
