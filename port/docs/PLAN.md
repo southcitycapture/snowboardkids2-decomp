@@ -784,6 +784,135 @@ everywhere else.
 it on who reaches the line first, so it stays on the ordinary ladder where boost
 is the lever that works.
 
+## Course 11: the Ice Land boss, in full
+
+Course 11 is `RACE_TYPE_BOSS_ICE` (`type=3`) and its update function is
+`updateIceLandBoss` in `src/levels/ice_land_boss.c`. It looks like the Jingle
+Town boss and it is not one. Four differences, and the campaign paid for every
+one of them by looping the course.
+
+### What damages it
+
+**The star, and only the star.** `jingle_town_boss.c` ~154 and
+`crazy_jungle_boss.c` ~147 both branch on `hitReactionState` 0x3D *and* 0x3E.
+`ice_land_boss.c` ~166 has a single test:
+
+```c
+if (boss->hitReactionState == ICE_BOSS_TRIGGER_ATTACK)   /* 0x3D */
+```
+
+and 0x3E does not appear anywhere in the file. 0x3E is
+`setPlayerBouncedBackState`, which is the frying pan -- the pilot's first
+choice on every other boss, because a pan cannot miss. Here it is a complete
+no-op, and that single fact is the whole of the stalled campaign loop this
+session inherited: **fifteen supplied pans, boss hp 10 -> 9**, and the one
+head that did fall fell to a star the rider had picked up off the course. The
+supply now asks the boss which of the two it takes.
+
+### Thirteen heads, not ten
+
+`initIceLandBoss` writes `bossHealth = 0xA`. When the ground bar reaches zero,
+`iceLandBossGroundProjectileAttackPhase` (~687) sheds thirty homing
+projectiles, calls `setIceBossFlyingMode` -- which swaps in the flying model,
+drops the collision spheres to one and sets `animationFlags |= 0x400000` --
+and writes `bossHealth = 3`. Only `iceLandBossHoverAttackPhase`'s
+`animationFlags |= 0x100000`, at the end of a hover with the second bar at
+zero, ends the race.
+
+### When it can be hit
+
+Health falls **on entry to an attack phase**, once per accepted hit:
+`iceLandBossGroundProjectileAttackPhase` and `iceLandBossHoverAttackPhase`
+both decrement at `behaviorStep == 0`. Both then write
+`behaviorFlags = 0x200` for as long as their animation runs -- and 0x200 meets
+`setPlayerStarHitState`'s gate:
+
+```c
+if (player->hitReactionState < 0x3C)
+    if (!(player->behaviorFlags & 0x218))
+        player->hitReactionState = 0x3D;
+```
+
+so **the boss is invulnerable for the whole of the reaction its own last head
+bought**. There are two more gates above that one:
+`findVulnerablePlayerNearPositionWithDelta` (`track_collision.c` ~1303) skips
+any rider with a non-zero `invincibilityTimer`, so the projectile passes
+straight through; and `hitReactionState >= 0x3C` throws away a second star in
+the same frame. `boss_vulnerable()` in the pilot is those three tests, and the
+pilot holds fire unless all three pass. (Measured, the boss is vulnerable for
+99% of a race -- the invulnerability is real but it is not the bottleneck.)
+
+### Where it is, and why the accuracy was poor
+
+The star **homes**: `updateStarProjectile` calls `getHomingAngleToTarget` with
+a search radius of 0x1800000 and a forward cone of a quarter turn, and inside
+that radius it steers itself onto the boss's collision node every frame. So
+the aim lead for a boss that is moving is not a predicted intercept point, it
+is *being close enough that the game's own homing has something to home with*
+-- and the firing window can be much wider in there than the ballistic
+geometry allows. The pilot's tolerance is now wide inside 0x1800000 and the
+strict `1303 * (radius + 0xC0000) / dist` outside it.
+
+Two more corrections fell out of reading the boss the race actually built
+rather than the one the pilot remembered:
+
+* its collision node is **0x150000**, not the Jingle Town boss's 0x1EC000, so
+  the old constant made the window a third too wide;
+* `checkStarProjectileHit`'s own search radius is 0xC0000, and the hit is
+  tested against `collisionListNode` -- the node whose `localPos` is the
+  flying/ground collision offset -- not against `worldPos`.
+
+### What still stands between course 11 and the credits
+
+Not the pilot. The census says so in one line:
+
+```
+census -- 4 hp drops from 13 throws; boss vulnerable 3372 of 3436 frames (98%);
+          held: invuln=0 busy=61 state=3 inflight=67 range=2972 aim=257
+census -- closest approach 3994949, 11 armed frames inside the star's homing
+          radius (25165824)
+```
+
+**`range` is 2,972 of 3,436 armed frames.** The rider has a star in its hand
+almost the whole race and the boss is simply not there. Plotting the two
+riders' positions out of `--racedbg` shows why: the gap swings from about
+140,000,000 units down to 15,000,000 and back, roughly every 500 frames, seven
+times in a race, and only the bottom of each swing is a shot. The swing is
+geometry, not speed -- both riders hold a constant speed the whole time (the
+rider 1,532,104, the boss 1,072,168) and the boss never once enters either of
+the branches `updateIceLandBoss` keeps for a rider that is very close
+(`SPEED_LEVEL_3 + 0x18000` inside 0xE00000) or very far away
+(`0x70000` beyond 0x8C00000).
+
+Three firing configurations were measured, one race each, on the user's save:
+
+| range | cooldown | in-flight hold | throws | heads |
+| --- | ---: | --- | ---: | ---: |
+| 0x4000000 | 10 | flight time | 13 | **4** |
+| 0x4000000 | 5 | capped at 10 | 13 | 1 |
+| 0x1900000 (homing only) | 5 | capped at 10 | 7 | 1 |
+
+Firing faster spends the stars on the long half of the swing and leaves the
+rider empty when the boss finally arrives; firing only inside the homing
+radius throws away the shoulders of the approach, where a star still has 200
+million units of life left to close the gap. The first row is kept.
+
+So four heads a race, against the ten-plus-three the race needs, and the
+remaining factor is **time inside the homing radius**, which is about fifty
+frames a race. Two ways to buy more of it, neither tried yet:
+
+1. **The crawl branch.** `updateIceLandBoss` caps the boss at `0x70000` -- one
+   seventh of the rider's speed -- whenever the rider is more than 0x8C00000
+   (146,800,640) behind. The measured swing peaks at about 141,000,000, just
+   under it. A rider that deliberately fell a little further back would have
+   the boss wait for it, and could then reel it in and hold station. The
+   marshal (`race_dbg.c`) already has the machinery to move a rider that is
+   not going where it should.
+2. **Track progress rather than distance.** The rider is 43% faster and still
+   finishes second, so it is losing the ground back somewhere the speed model
+   does not show -- the same question `pool=`/`wall=` were added for on course
+   8. `--pintrace` on a boss race has not been run.
+
 ### What the levers actually do, measured
 
 The trial harness runs a whole race in about **thirty seconds of wall clock**
@@ -1485,13 +1614,11 @@ so a rider that wedges itself costs a minute instead of a quarter of an hour.
 * ~~**Course 10 has not been reached.**~~ **Won on the user's own save** at
   rung 6, first attempt, `place=1` -- see "Course 10, and the ollie's bill".
   `progress [111111111115] won=11`.
-* **Course 11, the last one, is not won yet.** It is a health boss (`type=3`,
-  ten heads, `rider 1: boss=1 top=0`) and it belongs to `nav_boss_ladder`.
-  Four attempts took the boss to 8, 9 and 8 heads; the ladder was on rung 3
-  of 4 (`supply=60`) when this session ended. The shape of the answer is
-  ammunition, but thirteen stars for two heads is a hit rate worth a census
-  of its own -- Jingle Town's boss got one and it was worth a day -- before
-  the supply is simply turned up again.
+* **Course 11, the last one, is not won yet** -- but it is no longer a
+  mystery. It got its census; see "Course 11: the Ice Land boss, in full"
+  below. The pilot's four bugs are fixed and the boss now loses four heads a
+  race instead of one; what stands between four and thirteen is not the
+  pilot.
 * **The credits have not rolled.** They are one course away.
 * `nightmare_search.py sweep` -- the *per-course rider ladder*, which is a
   different search from `nm` -- still has not been run. Only `nm`, the
@@ -1517,3 +1644,71 @@ so a rider that wedges itself costs a minute instead of a quarter of an hour.
 * Registering the sequel in the first game's launcher (`src/settings.c` there
   lists the games) — a small separate change in the other repo, once this one
   plays a race.
+
+## The audit for the ollie bug's siblings
+
+The ollie bug -- three file-scope globals punned as a `Vec3i` that the Mach-O
+linker laid out *descending* -- is the kind of bug that is never alone, so the
+rest of the source was swept for the same shape: every construct that can read
+outside one global. `(&g)[n]`, `&g +/- n`, a cast of `&g` to a wider pointer,
+`&g[i]` with a stride, `&g` handed to something that reads a `Vec3i` or a
+`Transform3D`, a `memcpy` whose length crosses a boundary, and the escaping
+case -- `p = &g;` followed by arithmetic on `p` -- checked against all 1,477
+file-scope globals in `src/`, with every candidate's real layout read back out
+of the binary with `nm`.
+
+**The finding that makes the audit cheap is that pinning already protects
+almost all of it.** A pinned global keeps its N64 address in the emulated
+RDRAM (`port/tools/gen_pins.py`) and the code reads it through that absolute
+symbol, so its neighbours are still its N64 neighbours and reading across the
+boundary works exactly as it did on the console. Only the **248 unpinned**
+globals are exposed to the Mach-O linker's ordering.
+
+That distinction is easy to get wrong, and this audit got it wrong first.
+Four candidates looked alarming because `nm` showed their `__sbk_unpinned`
+twins in descending order:
+
+| candidate | what reads across | verdict |
+| --- | --- | --- |
+| `gSteppedMatrixTranslations` | `(&g)[stepIndex * 2]` walks into `gSteppedMatrixAngles` -- the two are one interleaved `{angle, translation}` table | **pinned, fine** |
+| `D_80090E4C_91A4C` | `addr = &g; rotateVectorY(addr - 2, ...)` reads the three words ending at it, which start inside `D_80090E40_91A40` | **pinned, fine** |
+| `D_8008D7FC_8E3FC` | externed as a `0x14`-stride array and indexed by `storyMapLocationIndex`: it is the head of the town's location-label table, `PaintShopLabel` and the nine after it | **pinned, fine** |
+| `gCharacterEffectSpawnPointsBoard` | four `transformVector` calls read 24 `s16` out of an `s16[16]` | **unpinned -- broken** |
+
+The `__sbk_unpinned` twins are dead copies that nothing reads; their addresses
+say nothing at all about what the game sees. Check for the **absolute**
+symbol -- `nm | grep ' A _name$'` -- before believing a layout.
+
+Two unpinned globals are read across, and one of them was already known:
+
+* `D_800BAB3C_AA9EC` and its two neighbours: the ollie, fixed earlier.
+* **`gCharacterEffectSpawnPointsBoard`**, which is the four corners of a
+  snowboard and is declared half a corner short. `updateSlotAnimation` loops
+  `i = 0..3` calling
+  `transformVector(&gCharacterEffectSpawnPointsBoard[i * 6], ...)`, and
+  `transformVector` reads a whole `Vec3i`, so the four calls read 24 `s16` out
+  of an array of 16. On the N64 the eight that follow are the first sixteen
+  bytes of `gShortcutChanceByMemoryPool`, and read as `s32` they are exactly
+  `(-6, 0, 28)` and `(-6, 0, -28)`: the two back corners, in 16.16. In the
+  port `gShortcutChanceByMemoryPool` sits 0x10 *below* the array and
+  `gCharacterEffectSpawnPoints` immediately above it, so two of the four spark
+  points come out somewhere else. It is one `s16[24]` now, and the shortcut
+  table is left where it is -- nothing writes either, so the eight
+  overlapping `s16` are simply written out twice.
+
+And one more of the same family that the address scan found on its own,
+without any pointer arithmetic to give it away:
+
+* **`gFirstCutsceneCategoryIndex`**. `getNextCategorySkipping`
+  (`cutscene_commands.c` ~231) reads the cutscene category count as one
+  big-endian `u16` across two adjacent `u8`s -- the decomp's own comment says
+  so. Neither is pinned, and worse, one is a zero initialiser in BSS
+  (0x101bb554) and the other is in data (0x1019acac): 132 KB apart, in
+  different *sections*, which no linker was ever going to keep together. The
+  count reads 0, so every category is sent back to 0. The two become one
+  two-byte object.
+
+Both fixes are the ollie's: make the run one object and `#define` the old
+names onto its members, so the adjacency is the compiler's problem instead of
+the linker's. They are in `port/patches.txt`; no upstream file is touched.
+

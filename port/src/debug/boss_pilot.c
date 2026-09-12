@@ -122,6 +122,7 @@
 
 int sbk_boss_pilot = 1;   /* --nobosspilot turns the whole thing off */
 int sbk_boss_supply;      /* retraces between conjured stars while empty; 0 = pick-ups only */
+int sbk_boss_supply_pinned; /* --bosssupply was given: the ladder must not write over it */
 /* How far away the pilot will throw. The star is ballistic -- it leaves at
  * 0x1B8000 a frame, drops 0x40000 a frame and lives 240 frames -- so a long
  * throw at a boss that is turning is a wasted one: the first run at Jingle Town
@@ -134,7 +135,44 @@ int sbk_boss_supply;      /* retraces between conjured stars while empty; 0 = pi
  * mechanic needs -- ten heads is ten hits. Sixteen leaves room for the misses
  * and stops the supply becoming the whole game. */
 int sbk_boss_supply_max = 16;
-int sbk_boss_range = 0x2000000;
+/* How far the pilot will throw, and this is the whole of course 11's answer.
+ *
+ * The Ice Land boss orbits: the distance between it and the rider swings from
+ * 140 million units down to about 15 and back, every 500 frames or so, seven
+ * times in a race. Only the bottom of that swing is a shot -- inside
+ * 0x1800000 the star steers itself onto the boss's collision node, outside it
+ * the star is a ballistic guess on a switchback mountain and dies on the
+ * first wall (updateStarProjectile -> resolveTrackWallCollision).
+ *
+ * A range of 0x4000000 looked generous and was the opposite. It let the pilot
+ * empty its hands into the long half of every swing -- thirteen throws, one
+ * head, 432 of them turned away on aim alone -- so that when the boss finally
+ * came inside the homing radius the rider had nothing left: ten armed frames
+ * in there across a whole race. The ammunition was never the constraint; the
+ * spending of it was. Holding fire until the star can actually see the boss
+ * puts every star into the part of the swing where it can land -- except
+ * that it does not, because the boss is inside that radius for only about
+ * fifty of the three and a half thousand armed frames in a race. Three
+ * configurations, one race each on the user's save:
+ *
+ *   range      cooldown  hold        throws  heads
+ *   0x4000000  10        flight time  13      4     <- best
+ *   0x4000000   5        capped 10    13      1
+ *   0x1900000   5        capped 10     7      1
+ *
+ * So the wide window and the slower trigger are kept. The real constraint is
+ * not the pilot at all: see PLAN.md, "What still stands between course 11 and
+ * the credits". */
+int sbk_boss_range = 0x4000000;
+/* Retraces between throws. Measured on course 11: the boss comes back within
+ * range about every 500 frames and stays there for roughly 180, which is 460
+ * armed-and-in-range frames in a race -- and at a cooldown of 10 plus a full
+ * flight-time hold the pilot spent them on thirteen throws and four heads.
+ * Thirteen heads needs three times that, and the ammunition is not the
+ * constraint (two supplies and two pick-ups is twenty-four stars for thirteen
+ * throws). So the trigger is faster and the in-flight hold is capped: a star
+ * that misses is worth nothing held back, and the boss's own invulnerability
+ * window already stops the pilot wasting them on a boss that is reacting. */
 int sbk_boss_cooldown = 10;
 
 /* The star homes. updateStarProjectile calls getHomingAngleToTarget with a

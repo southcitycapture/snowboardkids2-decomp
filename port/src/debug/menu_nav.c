@@ -705,7 +705,17 @@ static int nav_level_is_boss(int level) {
     extern int sbk_is_boss_race(int);
     int t = (level >= 0 && level < 16) ? sbk_level_race_type[level] : -1;
     if (t >= 0) return sbk_is_boss_race(t);
-    return level == 3;
+    /* Before the first race of a course this boot, the race type has not been
+     * observed yet -- and the ladder is armed *before* the race, which is the
+     * whole point of nav_level_begin. So the fallback has to name the three
+     * boss courses rather than only the first one: with just `level == 3`,
+     * every fresh boot ran course 11 on the ordinary ladder, at boost 28 with
+     * a rival tax, and with the boss supply switched off. One whole race of
+     * the campaign was thrown away to that on every restart. The order is
+     * Sunny Mountain, Turtle Island, Jingle Town, *Jingle Town boss*, Wendy's
+     * House, Linda's Castle, Crazy Jungle, *Crazy Jungle boss*, Starlight
+     * Highway, Haunted House, Ice Land, *Ice Land boss*. */
+    return level == 3 || level == 7 || level == 11;
 }
 
 #define NAV_LADDER_TOP(boss)                                                                                       \
@@ -724,7 +734,7 @@ static int nav_wedge_relief;
 
 static void nav_ladder_set(int rung) {
     int boss = nav_level_is_boss(nav_level);
-    extern int sbk_boss_supply;
+    extern int sbk_boss_supply, sbk_boss_supply_pinned;
     extern int sbk_boost_accel, sbk_boost_hand, sbk_boost_corner, sbk_boost_dead;
     extern int sbk_trial_pins_levers;
     /* A trial that names relief= or tax= is running an experiment on exactly
@@ -734,7 +744,7 @@ static void nav_ladder_set(int rung) {
     if (nav_level_is_cross(nav_level)) {
         const NavCrossRung *row;
         if (rung > NAV_CROSS_LADDER_TOP) rung = NAV_CROSS_LADDER_TOP;
-        sbk_boss_supply = 0;
+        if (!sbk_boss_supply_pinned) sbk_boss_supply = 0;
         row = &nav_cross_ladder_for(nav_level)[rung];
         sbk_campaign_boost = row->boost;
         sbk_boost_accel = row->accel;
@@ -759,13 +769,13 @@ static void nav_ladder_set(int rung) {
     }
     if (boss) {
         sbk_campaign_boost = nav_boss_ladder[rung].boost;
-        sbk_boss_supply = nav_boss_ladder[rung].supply;
+        if (!sbk_boss_supply_pinned) sbk_boss_supply = nav_boss_ladder[rung].supply;
         sbk_rival_tax = 0;
         sbk_rival_item_relief = 0;
         sbk_item_relief = nav_wedge_relief;
         return;
     }
-    sbk_boss_supply = 0;
+    if (!sbk_boss_supply_pinned) sbk_boss_supply = 0;
     sbk_campaign_boost = nav_ladder[rung].boost;
     sbk_rival_tax = nav_ladder[rung].tax;
     /* The ladder's relief is the rivals' alone; the wedge's is both rows,

@@ -334,8 +334,14 @@ int main(int argc, char **argv) {
             /* Retraces between the stars the boss pilot hands our rider while it
              * is empty-handed; 0 (the default) is pick-ups only. The navigator's
              * boss ladder sets this itself after a loss. */
-            extern int sbk_boss_supply;
+            /* Naming it on the command line pins it: nav_ladder_set writes
+             * sbk_boss_supply on every course begin, so without this a
+             * --bosssupply given to a trial was silently replaced by rung 0's
+             * zero before the race started -- the same trap --trial relief=
+             * and tax= already carry sbk_trial_pins_levers for. */
+            extern int sbk_boss_supply, sbk_boss_supply_pinned;
             sbk_boss_supply = atoi(argv[++i]);
+            sbk_boss_supply_pinned = 1;
         } else if (strcmp(argv[i], "--shotdbg") == 0) {
             /* The Shot Cross target table at the start of the race and a line a
              * second of where the aim is. */
