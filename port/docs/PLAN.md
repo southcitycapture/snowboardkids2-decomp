@@ -2012,20 +2012,70 @@ IA), so the ring was opaque. Caught on the attract demo, where port retrace
 1560 lines up with the emulator's VI frame 2160 and the two frames are
 otherwise the same picture to within edge antialiasing.
 
+### The near rider is not black -- Slash's hair is
+
+Closed, 2026-09-12, and closed as *not a bug*.  The open item read "the near
+rider draws at RGB (1,1,1) to (7,6,8) -- not dark, **zero** -- while the
+distant riders and the whole course are right".  It was written from
+`g4-shots/sbk2-autoplay-race.png`, a shot from before the four-light fix, and
+from a `--dumpdl` that landed on a neighbouring task.  Both are now answered.
+
+**The emulator draws the same near-black.** The attract demo needs no input at
+all, so it is the cheapest frame-exact pair there is: port retrace 1444 and
+mupen64plus VI 2000 are the same moment, Slash seen from behind on the same
+stretch of course.  The dark pixels inside the rider's bounding box:
+
+| | most common values |
+|---|---|
+| port (`g4-shots/sbk2-attract-1444.png`) | (5,5,5) (6,6,6) (2,2,2) (4,4,4) (10,10,10) |
+| mupen64plus, VI 2000 | (5,5,5) (7,7,7) (6,6,6) (1,1,1) (8,8,8) |
+
+The same histogram, in the same shapes.  The rider's hair and the back of his
+jacket really are that dark on hardware -- an RGBA5551 texel whose colour
+components are 1, which is 8 in eight bits.  RGB (1..7) is what "black hair"
+looks like once the viewport's shade has multiplied it; it was the four-light
+bug that made the *whole* rider look like that, and that is fixed.
+
+**And the race viewport's lights are right.** With the dumper repaired (below),
+`--dumpdlat 10500` on a Sunny Mountain race dumps the eight tasks of that frame
+-- 40,297 commands in the 3D one -- and the lighting in it is exactly what the
+port's model expects:
+
+    db020000 00000018   G_MW_NUMLIGHT  0x18 = 24  -> numLights 1, +1 ambient = 2
+    dc......0a x2       G_MV_LIGHT     light 0 and light 1 loaded
+    db0a0000 88a8ff00   G_MW_LIGHTCOL  aLIGHT_1 = (136,168,255)   the directional
+    db0a0004 88a8ff00   G_MW_LIGHTCOL  bLIGHT_1
+    db0a0018 6848f000   G_MW_LIGHTCOL  aLIGHT_2 = (104, 72,240)   the ambient
+    db0a001c 6848f000   G_MW_LIGHTCOL  bLIGHT_2
+
+and `--dumptris` shows every unlit face of that frame carrying shade
+`6848f0` -- the ambient, to the byte -- and every fully lit one `ffffff`
+(136+104, 168+72, 255+240 clamped).  Not one rider triangle in the frame has a
+shade below 40/765.  Lighting, `G_MW_NUMLIGHT`, `G_MW_LIGHTCOL` and the
+ambient index all check out on the path that was suspected.
+
+### The display-list dumper no longer walks off RDRAM
+
+`--dumpdl` on a race task died with SIGSEGV, which is what stopped the previous
+attempt.  `dump_addr_ok` vetted the **unresolved** command word: anything below
+`0x10000000` was assumed segmented and let through whatever the segment base
+happened to hold, and anything at or above it was dereferenced as a native
+pointer.  A dump follows branches the RSP never takes, so it is handed nonsense
+by design -- a race frame has enough stale words in reused buffers to find both
+holes.  It now resolves first and then checks: `size` bytes inside the emulated
+RDRAM, 8-byte aligned as the RSP's own DMA requires, with the walk of a nested
+list clamped to the room left before the end of memory.  The dumper also keeps
+its **own** copy of the segment table now; it used to write into `gfx_pc`'s, so
+a branch the RSP skipped could leave a segment base behind for the real run of
+the same list.
+
+`--dumpdlat R[:N]` came with it: arm the dump at a *retrace* and take the next
+N gfx tasks (8 by default, one per viewport group).  `--dumpdl` counts gfx
+tasks from boot, which is no way to find the list that drew one moment of a
+race -- that is how the audit's dump landed on the HUD.
+
 ### Still open
 
-* **The near rider is black under the overhead camera.** On Sunny Mountain's
-  top-down section the player model draws at RGB (1,1,1) to (7,6,8) -- not
-  "dark", *zero* -- while the distant riders and the whole course are right
-  (`g4-shots/sbk2-autoplay-race.png` is the same thing from an earlier
-  session). The four-light fix above did not remove it, so it is a second,
-  narrower failure: either that camera's viewport sets up lights the port
-  still mishandles, or the model is reached through a draw path whose shade
-  never gets written. The way in is a `--dumpdl` taken *at that retrace* --
-  the audit's dump landed on a neighbouring task and only caught HUD quads
-  (which legitimately carry shade 0 and take their colour from env/prim).
-  Note that `--dumpdl` on a race task crashed the dumper (exit 139) walking a
-  list `dump_addr_ok` let through; that needs fixing before the next attempt.
 * **The attract demo runs shorter in the port than on hardware.** The port
   reaches the title at retrace ~2460 and leaves it for the demo race at
   ~4260; the emulator reaches the title at ~3210 and is still on it at 5910.
@@ -2034,6 +2084,30 @@ otherwise the same picture to within edge antialiasing.
 * Point-sampled text looks sharper in the port than in mupen64plus. That is
   the reference being wrong, not the port: the Rice plugin filters magnified
   textures, and `gfx_pc` honours `G_TF_POINT` as the RDP does.
+
+### gSPPopMatrix has to recalculate the light directions
+
+Found while reading the lighting path for the black rider, and fixed with it.
+`calculate_normal_dir` caches each light's direction in the **modelview's**
+space, and `rsp.lights_changed` is what says the cache is stale.  `gSPMatrix`
+set it; `gSPPopMatrix` did not, so the first lit vertex after a pop was shaded
+with the *pushed* object's light directions.  sm64-port never noticed -- SM64's
+geo layout pops and immediately loads -- but the sequel's model renderer pops
+back to the viewport matrix and keeps drawing.  The attract-demo reference frame
+is byte-identical before and after (0 of 76,800 sampled pixels differ at retrace
+1444), so nothing the audit looked at depended on it; it is a hole closed rather
+than a picture changed.
+
+### The reference tooling is in the tree now
+
+`port/tools/input_m64.c`, `port/tools/mkm64.py` and `port/docs/reference-frames.md`,
+in both repos -- how to write an input script, compile it to a `.m64`, run it in
+the port with `--shotat` and in mupen64plus with `--testshots`, and subtract the
+two.  Two traps worth repeating here: `--input <path>` on its own makes
+mupen64plus look for *every* plugin next to that path, so it finds no video
+plugin and dies inside `osd_init`, and the fix is to pass `--plugindir` as
+well; and the emulator stops emulating at the **last** `--testshots` entry
+without capturing it, so the list wants a sentinel frame on the end.
 
 Both games' goldens were re-run after the shared `gfx_pc.c` changes:
 Snowboard Kids 1 `regress` 8/8 PASS, Snowboard Kids 2 `regress` 1/1 PASS
