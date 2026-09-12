@@ -468,6 +468,65 @@ static void retune_arm(Player *p, int boost) {
     retune_accel = p->baseAcceleration;
 }
 
+
+/* -------------------------------------------------- the boss-race lead gauge
+ *
+ * This was written as a *brake*, on the reading that the rider kept
+ * overtaking the Ice Land boss and sailing out of the star's reach. It never
+ * fired once, and the gauge it printed while not firing is the most useful
+ * thing to come out of course 11.
+ *
+ *   sbk-brake: r=900  lead=-341 (p prog 6623 sect 26 | boss prog 6282 sect 30)
+ *   sbk-brake: r=1800 lead=-492 (p prog 4745 sect 52 | boss prog 4253 sect 59)
+ *   sbk-brake: r=3600 lead=-652 (p prog 2069 sect 99 | boss prog 1417 sect 112)
+ *
+ * The boss is ahead on every single sample and the gap **grows all race**,
+ * from 150 units of lapProgressRemaining to 650. The rider never overtakes
+ * anything. (The earlier reading of "neck and neck, the lead changing hands
+ * six or seven times" was lap-wrapped samples from two different laps lined
+ * up against each other -- see docs/PLAN.md, which now says so.)
+ *
+ * And the rider is 43% faster in a straight line while it loses that ground:
+ * 1,532,104 against the boss's 1,072,168, with `wall=14,0,0,0` -- fourteen
+ * wall contacts to the boss's none. The boss drives a scripted path and
+ * spends the race shooting guided stars at us
+ * (iceLandBossChaseAttackPhase -> spawnPlayerGuidedStarProjectile). So the
+ * thing standing between four heads and thirteen is not the pilot's aim, not
+ * its ammunition and not its trigger: it is that our rider takes a worse line
+ * than the boss and gets knocked off it, and no amount of top speed has ever
+ * fixed that on this port -- courses 8, 9 and 10 all said the same.
+ *
+ * The action is gone and the gauge is kept, behind --racedbg, because the
+ * next attempt at this course needs the number and not the guess.
+ */
+int sbk_boss_lead_gauge = 1;
+
+static void boss_brake_tick(GameState *gs, Player *p) {
+    extern int sbk_is_hp_boss_race(int);
+    extern Player *sbk_boss_rider(GameState *);
+    Player *boss;
+    int lead;
+
+    if (!sbk_boss_lead_gauge || !sbk_race_debug_enabled) return;
+    if (gs == NULL || p == NULL || !sbk_is_hp_boss_race(gs->raceType)) return;
+    boss = sbk_boss_rider(gs);
+    if (boss == NULL || (boss->animationFlags & 0x100000)) return;
+    if (p->animationFlags & 0x80000) return;
+    if ((gs->raceFrameCounter % 300) != 0) return;
+
+    /* lapProgressRemaining counts down, so the rider with less of it is in
+     * front; a positive lead would mean the rider is ahead of the boss.
+     * Across a lap boundary the two numbers are not comparable at all. */
+    lead = (p->currentLap != boss->currentLap)
+               ? 0
+               : (int)boss->lapProgressRemaining - (int)p->lapProgressRemaining;
+    printf("sbk-bosslead: r=%d lead=%d (p lap %d prog %d sect %d | boss lap %d prog %d sect %d)\n",
+           (int)gs->raceFrameCounter, lead, (int)p->currentLap, (int)p->lapProgressRemaining,
+           (int)p->sectorIndex, (int)boss->currentLap, (int)boss->lapProgressRemaining,
+           (int)boss->sectorIndex);
+    fflush(stdout);
+}
+
 /* ----------------------------------------------------------- the race watchdog
  *
  * A standard race ends when every *human* slot's rider has the finished flag
@@ -1293,6 +1352,7 @@ void sbk_autoplay_tick(unsigned long retraces) {
         if (sbk_pin_trace) pin_watch(gs, retraces);
         race_watchdog(gs, retraces);
         marshal_tick(gs, retraces);
+        boss_brake_tick(gs, p1);
         if (sbk_autoplay && p1->isCpuControlled == 0) {
             autoplay_arm(gs, retraces);
         } else if (sbk_autoplay) {

@@ -322,6 +322,9 @@ int main(int argc, char **argv) {
         } else if (strcmp(argv[i], "--perf") == 0) {
             sbk_perf_enabled = 1;
             sbk_settings.perf = 1;
+        } else if (strcmp(argv[i], "--nobossbrake") == 0) {
+            extern int sbk_boss_lead_gauge;
+            sbk_boss_lead_gauge = 0;
         } else if (strcmp(argv[i], "--nobosspilot") == 0) {
             extern int sbk_boss_pilot;
             sbk_boss_pilot = 0;

@@ -900,46 +900,47 @@ million units of life left to close the gap. The first row is kept.
 So four heads a race against the thirteen the race needs, and the remaining
 factor is **time inside the homing radius**, which is about fifty frames.
 
-### Why: the course is bigger than the weapon
+### Why: the rider takes a worse line than the boss
 
-The 140-million-unit swing is not the boss running away. Reading `prog` and
-`sect` out of the same log instead of positions says the opposite -- the two
-riders are **neck and neck the whole race**:
+The first answer this file gave to that question was wrong and is worth
+keeping wrong, because it took an hour to disprove and the way it was
+disproved is the method. Reading `prog`/`sect` out of `--racedbg` by hand
+looked like two riders neck and neck with the lead changing hands six or seven
+times -- so the plan became a *brake*, to stop the rider overtaking the boss
+and sailing out of the star's reach. The samples had been lined up across a
+lap boundary, where `lapProgressRemaining` jumps by the whole course.
+
+The brake was written, and it never fired once. What it printed while not
+firing is the real number:
 
 ```
-retrace   p0 (prog, sect)   boss (prog, sect)   sector deficit
-   480    (5521,  45)       (5692,  42)          -3
-  5280    (5709,  23)       (5350,  26)          +3
- 10080    (5350,  26)       (6264,  18)          -8
- 11880    (2611,  50)       (1904,  58)          +8
- 16680    (2374,  52)       (2865,  48)          -4
+sbk-bosslead: r=900  lead=-341 (p prog 6623 sect 26 | boss prog 6282 sect 30)
+sbk-bosslead: r=1800 lead=-492 (p prog 4745 sect 52 | boss prog 4253 sect 59)
+sbk-bosslead: r=2400 lead=-238 (p prog 3454 sect 74 | boss prog 3216 sect 79)
+sbk-bosslead: r=3300 lead=-650 (p prog 2223 sect 94 | boss prog 1573 sect 110)
+sbk-bosslead: r=3600 lead=-652 (p prog 2069 sect 99 | boss prog 1417 sect 112)
 ```
 
-The lead changes hands six or seven times, the deficit never leaves +/-8 of a
-78-sector lap, and they cross the lap line together. **Three sectors of Ice
-Land is about 140,000,000 units**, and `getHomingAngleToTarget`'s radius is
-0x1800000 -- 25,165,824, call it half a sector. So the star can only reach a
-boss the rider is almost exactly level with, and the rider is only level with
-it while the deficit is passing through zero: six brief crossings a race,
-fifty frames in total, and the pilot converts them at about one head each.
+**The boss is ahead on every sample and the gap grows all race**, from 150
+units to 650. The rider never overtakes anything, and the "swing from
+140,000,000 units to 15 and back" is one lap boundary read as seven.
 
-That is the whole of it, and it says what the next attempt has to be. Not more
-supply, not a faster trigger, not a wider window -- all three were measured
-and two made it worse. **The rider has to stop overtaking the boss and pace
-it.** It is already the same speed on average; what it does is sail past,
-lose it over the next two sectors, and come back round. Holding station
-within half a sector for even a few hundred frames would turn fifty frames of
-opportunity into a thousand, and thirteen heads is then a formality. The
-marshal in `race_dbg.c` already has the machinery to move player 1 along the
-track graph; what a boss race wants from it is the opposite of a push -- a
-brake, aimed at the boss's own `sectorIndex`.
+And the rider is **43% faster in a straight line while it loses that ground**
+-- 1,532,104 against the boss's 1,072,168 -- with `wall=14,0,0,0`: fourteen
+wall contacts to the boss's none. The boss drives a scripted path and spends
+the race shooting guided stars at us
+(`iceLandBossChaseAttackPhase` -> `spawnPlayerGuidedStarProjectile`, every
+thirty to ninety frames, closer than 0xDFFFFF).
 
-(The two guesses this section made before the sector numbers were read are
-both dead, and are recorded so nobody spends the afternoon again.
-`updateIceLandBoss`'s crawl branch -- `0x70000` beyond 0x8C00000 -- never
-fires: the boss's speed is a flat 1,072,168 for every frame of every race, so
-it never leaves the one branch it starts in. And the rider is not losing
-ground to the boss's projectiles either; it is not losing ground at all.)
+So what stands between four heads and thirteen is not the pilot's aim, its
+ammunition or its trigger -- all three were measured, and two of the three
+changes made it worse. It is that **our rider takes a worse line than the boss
+and is knocked off it**, which is the same wall courses 8, 9 and 10 each hit
+in their own way, and which top speed has never once fixed on this port. The
+next attempt starts there: `--pintrace` on a boss race, and `wall=` as the
+gauge, exactly as course 8 was taken apart. The brake's action is gone; its
+gauge is kept as `sbk-bosslead:` under `--racedbg`, because the next attempt
+needs the number rather than the guess.
 
 ### What the levers actually do, measured
 
