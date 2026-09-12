@@ -1482,6 +1482,17 @@ so a rider that wedges itself costs a minute instead of a quarter of an hour.
   recorded before it diverges the first time anyone leaves the ground.
   `regress` has to be re-recorded, and that is the correct outcome: the
   recording was of a game whose jumps were wrong.
+* ~~**Course 10 has not been reached.**~~ **Won on the user's own save** at
+  rung 6, first attempt, `place=1` -- see "Course 10, and the ollie's bill".
+  `progress [111111111115] won=11`.
+* **Course 11, the last one, is not won yet.** It is a health boss (`type=3`,
+  ten heads, `rider 1: boss=1 top=0`) and it belongs to `nav_boss_ladder`.
+  Four attempts took the boss to 8, 9 and 8 heads; the ladder was on rung 3
+  of 4 (`supply=60`) when this session ended. The shape of the answer is
+  ammunition, but thirteen stars for two heads is a hit rate worth a census
+  of its own -- Jingle Town's boss got one and it was worth a day -- before
+  the supply is simply turned up again.
+* **The credits have not rolled.** They are one course away.
 * `nightmare_search.py sweep` -- the *per-course rider ladder*, which is a
   different search from `nm` -- still has not been run. Only `nm`, the
   Nightmare row itself, has, and only one course (0) has a golden movie. The
