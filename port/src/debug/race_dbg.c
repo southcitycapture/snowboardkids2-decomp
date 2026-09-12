@@ -321,6 +321,53 @@ static void trial_retune(Player *p, int boost) {
     p->baseAcceleration = (s->acceleration << 17) / 100 + 0x28000;
 }
 
+/* ...and the retune has to be *held*, because the game undoes it.
+ *
+ * `initPlayer` (race_main.c ~1061) ends with its own call to
+ * applyCharacterSnowboardStats, and initPlayer runs from
+ * waitForFadeAndInitPlayers -- which is queued by initRace *after* the
+ * setRenderContext(0x37) the autoplay handoff hangs off. So the six fields
+ * autoplay_arm writes are recomputed from the stats table a second or two
+ * later, with no boost in them, every single race.
+ *
+ * The boost lever therefore never reached a race. The handicap ladder spent
+ * six attempts on course 8 climbing rungs 1..5 -- +11%, +16%, +21% -- and the
+ * rider raced every one of them at exactly the same speed, which is why the
+ * places came back 4th, 3rd, 2nd, 2nd, 3rd, 2nd with no trend: they were six
+ * samples of one experiment. The log said so all along and nobody read it
+ * against the race: `sbk: autoplay: rider 0: ... top=1394607` at the handoff,
+ * and `spd=.../1257111` a minute later in --racedbg -- 1257111 * (1 + 28/256)
+ * = 1394608, the boost exactly undone.
+ *
+ * Nothing else writes baseMaxSpeed (race_main.c:802 only copies it into
+ * maxSpeedCap each frame; the two boss levels derive their own from it), so
+ * holding it is a one-line test per tick: if the field is not what the retune
+ * left, the game has recomputed it, and it is recomputed again. Held rather
+ * than hooked because the write is inside a game source file, and everything
+ * that changes game behaviour is supposed to be one line in patches.txt or
+ * nothing at all. */
+static int retune_boost = -1;   /* the boost the current race was armed with */
+static s32 retune_top;          /* what baseMaxSpeed should read all race */
+
+static void retune_hold(Player *p) {
+    s32 was;
+    if (retune_boost < 0 || p->baseMaxSpeed == retune_top) return;
+    was = p->baseMaxSpeed;
+    trial_retune(p, retune_boost);
+    printf("sbk: autoplay: the game recomputed the rider's stats; retune re-applied "
+           "(top %d -> %d, boost=%d = +%d%%)\n",
+           (int)was, (int)p->baseMaxSpeed, retune_boost, retune_boost * 100 / 256);
+    fflush(stdout);
+}
+
+/* Remember what the retune left, so retune_hold can tell "the game undid it"
+ * from "nobody has armed a race yet". */
+static void retune_arm(Player *p, int boost) {
+    trial_retune(p, boost);
+    retune_boost = boost;
+    retune_top = p->baseMaxSpeed;
+}
+
 /* ----------------------------------------------------------- the race watchdog
  *
  * A standard race ends when every *human* slot's rider has the finished flag
@@ -462,7 +509,7 @@ static void autoplay_arm(GameState *gs, unsigned long retraces) {
         if (trial.chr >= 0) p->characterId = (u8)trial.chr;
         if (trial.board >= 0) p->snowboardId = (u8)trial.board;
         if (trial.nm >= 0) p->aiDifficultyIndex = (u8)(trial.nm ? NIGHTMARE_ROW : 0);
-        trial_retune(p, trial.boost);
+        retune_arm(p, trial.boost);
         if (trial.gold >= 0) p->raceGold = trial.gold;
         trial_start = retraces ? retraces : 1;
         trial_gold0 = p->raceGold;
@@ -471,12 +518,41 @@ static void autoplay_arm(GameState *gs, unsigned long retraces) {
                gs->memoryPoolId, gs->raceType, p->characterId, p->snowboardId, (int)p->baseMaxSpeed,
                p->aiDifficultyIndex);
     } else if (sbk_nightmare) {
-        /* Amazing, not just aggressive: the top board on the rider's own
-         * character, and the speed tax taken off. */
-        p->snowboardId = SNOWBOARD_SPEED_LEVEL_3;
-        trial_retune(p, sbk_campaign_boost);
+        /* Amazing, not just aggressive: the best board in the game on the
+         * rider's own character, and the speed tax taken off.
+         *
+         * This used to be SNOWBOARD_SPEED_LEVEL_3, described here as "the
+         * fastest board that has no drawback". It is not. Read
+         * gSnowboardStatsTable for Slash and the two boards sit like this:
+         *
+         *   board            spd  han  cor  dz  grv  acc
+         *   SPEED_LEVEL_3     83   35   50  37   75   40
+         *   STAR              83   60   40  65   75   70
+         *
+         * -- the same top speed, and STAR is better on every other axis. The
+         * three that matter are the three the racing line is made of:
+         * `handling` is the turn rate (race_main.c:1392,
+         * `steeringAngle/2 * handling / 125`), `cornering` is the *drag* a turn
+         * costs (1401, `cornering * turnRate^2 / turnRate`, so lower is
+         * faster), and `lateralDeadzone` is how much sideways velocity is
+         * killed each frame (applyVelocityDeadzone, 3170), so higher is less
+         * sideslip. On SPEED_LEVEL_3 the rider had the *worst* handling and
+         * the worst deadzone of any level-3 board -- and then the ladder put
+         * up to +21% on top of its top speed. That is the overshoot course 8
+         * kept showing: more boost, worse place, because the rider was leaving
+         * the line rather than running out of speed.
+         *
+         * STAR is not a cheat board either: race_session.c:575 and :615 hand
+         * it to the game's own riders, and nothing in hit_reactions.c or
+         * particle_items.c gives it a special behaviour the way DRAGON,
+         * HIGH_TECH, NINJA, RICH and POVERTY get one. It is pure stats. The
+         * only thing >= SNOWBOARD_STAR changes is that race_main.c:6070 loads
+         * no palette for it (segment3 = NULL), which is what the star board's
+         * own texture expects. */
+        p->snowboardId = SNOWBOARD_STAR;
+        retune_arm(p, sbk_campaign_boost);
     } else if (sbk_campaign_boost != 0) {
-        trial_retune(p, sbk_campaign_boost);
+        retune_arm(p, sbk_campaign_boost);
     }
     printf("sbk: autoplay: player 1 handed to the CPU rider (level=%d type=%d diff=%d boost=%d top=%d path=%p)\n",
            gs->memoryPoolId, gs->raceType, p->aiDifficultyIndex, sbk_campaign_boost, (int)p->baseMaxSpeed,
@@ -574,6 +650,10 @@ void sbk_autoplay_tick(unsigned long retraces) {
         race_watchdog(gs, retraces);
         if (sbk_autoplay && p1->isCpuControlled == 0) {
             autoplay_arm(gs, retraces);
+        } else if (sbk_autoplay) {
+            /* initPlayer's own applyCharacterSnowboardStats lands a second or
+             * two after the handoff and wipes the boost. Put it back. */
+            retune_hold(p1);
         }
         /* The path table only exists once the level's assets have landed, which
          * is after the handoff; keep trying until it does. */

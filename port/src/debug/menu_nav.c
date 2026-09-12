@@ -43,6 +43,12 @@
 #include "ui/save_data.h"
 #include "../platform/input.h"
 
+/* race/race_session.h drags in half the graphics headers, so the three enum
+ * values this file needs are copied instead (enum RaceType there). */
+#define RACE_TYPE_SPEED_CROSS 4
+#define RACE_TYPE_SHOOT_CROSS 5
+#define RACE_TYPE_X_CROSS 6
+
 extern TaskScheduler gSchedulerListSentinel;
 extern GameSessionContext *gGameSessionContext;
 /* src/common_bss.c: which entry of storyMapLocationHandlers[] the map will run
@@ -242,6 +248,41 @@ static int nav_credits_seen;
  * question the game asks. Without this a *won* boss race would be recorded as a
  * loss and the campaign would grind it for ever at ever-higher rungs. */
 #define BOSS_DEFEATED_FLAG 0x100000
+/* ...and on a Cross minigame it is not a place either, because there is nobody
+ * to come first ahead of: totalRacers is 1 (race_session.c initRace). The three
+ * of them each have their own pass mark, written where the result handler reads
+ * it, and every one of them is on the GameState the race is still holding:
+ *
+ *   RACE_TYPE_SPEED_CROSS  handleSkillGameResult      playerLost == 0
+ *   RACE_TYPE_SHOOT_CROSS  handleShotCrossGameResult  playerLost == 0 and all
+ *                          twenty targets hit (shootCrossTargetsHit == 0x14);
+ *                          anything less takes the *win* branch of the state
+ *                          machine and still sets gRaceResultCode 6
+ *   RACE_TYPE_X_CROSS      handleMeterGameResult      playerLost == 0 and
+ *                          players[0].skillPoints >= 0x12C (300)
+ *
+ * Only gRaceResultCode 5 (or 3) turns a slot's levelUnlockStatus into the 1
+ * that opens the next gate, so reading finishPosition here -- which is 0 for a
+ * lone rider whether it passed or failed -- would file every attempt as a win,
+ * never climb the ladder, and leave the campaign waiting for a slot 10 that
+ * the save is never going to open. */
+static int nav_cross_place(GameState *gs) {
+    if (gs->playerLost != 0) return 1;
+    switch (gs->raceType) {
+        case RACE_TYPE_SHOOT_CROSS:
+            return gs->shootCrossTargetsHit >= 0x14 ? 0 : 1;
+        case RACE_TYPE_X_CROSS:
+            return gs->players[0].skillPoints >= 0x12C ? 0 : 1;
+        default:
+            return 0;
+    }
+}
+
+static int nav_is_cross_race(int raceType) {
+    return raceType == RACE_TYPE_SPEED_CROSS || raceType == RACE_TYPE_SHOOT_CROSS ||
+           raceType == RACE_TYPE_X_CROSS;
+}
+
 static int nav_place_of(GameState *gs) {
     extern int sbk_is_hp_boss_race(int);
     extern Player *sbk_boss_rider(GameState *);
@@ -250,11 +291,13 @@ static int nav_place_of(GameState *gs) {
     if (sbk_is_hp_boss_race(gs->raceType) && (boss = sbk_boss_rider(gs)) != NULL) {
         return (boss->animationFlags & BOSS_DEFEATED_FLAG) ? 0 : 1;
     }
+    if (nav_is_cross_race(gs->raceType)) return nav_cross_place(gs);
     return (int)gs->players[0].finishPosition;
 }
 
 static int nav_latched_place = -1;
 static int nav_latched_level = -1;
+static int nav_cross_said;
 
 static void nav_press(const char *line) { sbk_input_play_add(line); }
 
@@ -1000,12 +1043,26 @@ void sbk_menu_nav_tick(unsigned long retraces) {
             if (racing && (gs->players[0].animationFlags & PLAYER_FINISHED_FLAG)) {
                 nav_latched_place = nav_place_of(gs);
                 nav_latched_level = gGameSessionContext ? gGameSessionContext->currentLevel : -1;
+                /* A Cross game's pass mark is a number, and a campaign that
+                 * keeps failing one needs to see how far short it fell -- 19
+                 * targets out of 20 is a different problem from 3. Printed
+                 * once, on the edge, because the GameState is gone by the time
+                 * the result screen comes up. */
+                if (nav_is_cross_race(gs->raceType) && !nav_cross_said) {
+                    nav_cross_said = 1;
+                    printf("sbk-nav: cross game level %d type=%d: lost=%d targets=%d/20 skill=%d/300 -> %s\n",
+                           nav_latched_level, gs->raceType, (int)gs->playerLost,
+                           (int)gs->shootCrossTargetsHit, (int)gs->players[0].skillPoints,
+                           nav_latched_place == 0 ? "PASS" : "fail");
+                    fflush(stdout);
+                }
             }
         }
         if (racing && !was_racing) {
             nav_town_exits = 0;
             nav_loop_warned = 0;
             nav_latched_place = nav_latched_level = -1;
+            nav_cross_said = 0;
         }
         was_racing = racing;
     }
