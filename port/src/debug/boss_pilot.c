@@ -172,6 +172,8 @@ static int n_thrown, n_supplied, n_pans, n_picked, hp_seen, last_ammo, reported;
 /* The census: why the pilot did not fire, counted rather than guessed at. */
 static int n_held_invuln, n_held_flags, n_held_state, n_held_flight, n_held_range, n_held_aim;
 static int n_vuln_frames, n_race_frames, n_hp_drops;
+static int n_in_homing;              /* armed frames with the boss inside the star's homing radius */
+static s32 min_dist;                 /* the closest the boss ever came while we were armed */
 static int census_stage2;            /* the Ice Land boss's second bar has been seen */
 
 /* ------------------------------------------------------------ the Shot Cross
@@ -1040,6 +1042,8 @@ static void pilot_reset(GameState *gs, Player *boss) {
     n_thrown = n_supplied = n_pans = n_picked = 0;
     n_held_invuln = n_held_flags = n_held_state = n_held_flight = n_held_range = n_held_aim = 0;
     n_vuln_frames = n_race_frames = n_hp_drops = 0;
+    n_in_homing = 0;
+    min_dist = 0;
     census_stage2 = 0;
     last_ammo = 0;
     reported = 0;
@@ -1177,13 +1181,19 @@ s32 sbk_boss_pilot_item(GameState *gs, Player *p, s32 result) {
     dz = boss->worldPos.z - p->worldPos.z;
     dist = distance_2d(dx, dz);
 
-    /* Never further than the star's own homing radius. Inside it the
-     * projectile steers itself onto the boss's collision node every frame and
-     * a moving target is no longer a problem; outside it the throw is a
-     * ballistic guess that dies on the first wall
-     * (updateStarProjectile -> resolveTrackWallCollision). */
+    /* How close the boss ever gets, measured rather than assumed: the first
+     * census on course 11 held every one of 1,495 armed frames on range,
+     * because the Ice Land boss runs a long way ahead and the pilot's window
+     * had been clamped to the star's homing radius. It should not be: the
+     * star lives 240 frames at 0x1B8000 and so carries about 415,000,000
+     * units, which is ten times the range this pilot will ever fire at. The
+     * homing radius is not how far a star can go, it is how far it can *see*,
+     * and that is a reason to widen the aim inside it, not to hold fire
+     * outside it. */
+    if (dist < min_dist || min_dist == 0) min_dist = dist;
+    if (dist <= BOSS_STAR_HOMING_RANGE) n_in_homing++;
+
     range = sbk_boss_range;
-    if (range > BOSS_STAR_HOMING_RANGE) range = BOSS_STAR_HOMING_RANGE;
     if (dist > range) { n_held_range++; return result; }
 
     err = (s32)((atan2Fixed(-dx, -dz) - (u16)p->rotY) & 0x1FFF);
@@ -1203,7 +1213,14 @@ s32 sbk_boss_pilot_item(GameState *gs, Player *p, s32 result) {
      * headings a star could not cover. */
     hit_radius = (s32)boss->collisionListNode.radius + BOSS_STAR_HIT_RADIUS;
     tol = (s32)((1303LL * hit_radius) / (dist > 0 ? dist : 1));
-    if (tol > 0x200) tol = 0x200;
+    /* Inside the homing radius the star steers itself onto the boss's
+     * collision node every frame, so the heading only has to put the boss in
+     * the quarter-turn cone getHomingAngleToTarget searches -- the geometry
+     * above is the window for a *dumb* throw, and applying it to a homing one
+     * throws away most of the chances a boss race offers. That is the aim
+     * lead for a target that is moving: the game's own. */
+    if (dist <= BOSS_STAR_HOMING_RANGE && tol < 0x600) tol = 0x600;
+    if (tol > 0x200 && dist > BOSS_STAR_HOMING_RANGE) tol = 0x200;
     if (tol < 0x40) tol = 0x40;
 
     if (err > -tol && err < tol) {
@@ -1265,5 +1282,7 @@ void sbk_boss_pilot_tick(GameState *gs, unsigned long retraces) {
            n_hp_drops, n_thrown, n_vuln_frames, n_race_frames,
            n_race_frames > 0 ? (100 * n_vuln_frames) / n_race_frames : 0, n_held_invuln, n_held_flags, n_held_state,
            n_held_flight, n_held_range, n_held_aim);
+    printf("sbk: bosspilot: census -- closest approach %d, %d armed frames inside the star's homing radius (%d)\n",
+           (int)min_dist, n_in_homing, BOSS_STAR_HOMING_RANGE);
     fflush(stdout);
 }

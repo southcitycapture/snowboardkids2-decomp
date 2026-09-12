@@ -73,3 +73,42 @@ src/race/race_main.c	        player->cpuInputFlags = determineAIPathChoice(playe
 src/race/race_main.c	s32 D_800BAB3C_AA9EC = 0;	s32 sbk_ollie_vec[3];\n#define D_800BAB3C_AA9EC sbk_ollie_vec[0]
 src/race/race_main.c	s32 D_800BAB40_AA9F0 = 0;	#define D_800BAB40_AA9F0 sbk_ollie_vec[1]
 src/race/race_main.c	s32 D_800BAB44_AA9F4 = 0;	#define D_800BAB44_AA9F4 sbk_ollie_vec[2]
+
+
+# ---------------------------------------------------------------------------
+# The rest of the ollie bug: the audit. See port/docs/PLAN.md, "The audit for
+# the ollie bug's siblings", for the method and the full result.
+#
+# The short version: the pun only breaks where the globals are UNPINNED. A
+# pinned global keeps its N64 address in the emulated RDRAM (port/tools/
+# gen_pins.py) and the code reads it through that absolute symbol, so its
+# neighbours are still its N64 neighbours and any amount of reading across the
+# boundary works exactly as the original did. It is the 248 unpinned globals
+# -- the overlay range and what the pin list does not cover -- that the Mach-O
+# linker is free to reorder, and it did: descending, in run after run.
+#
+# Two of them are read across, and this is the second one.
+
+# gCharacterEffectSpawnPointsBoard is the four corners of a snowboard, and the
+# decomp has it as s16[16] -- half a corner short. updateSlotAnimation loops
+# i = 0..3 calling transformVector(&gCharacterEffectSpawnPointsBoard[i * 6]),
+# and transformVector reads a whole Vec3i, so the four calls read 24 s16 out
+# of an array of 16. On the N64 the eight that follow are
+# gShortcutChanceByMemoryPool's first sixteen bytes, and read as s32 they are
+# exactly (-6, 0, 28) and (-6, 0, -28): the two back corners. In the port
+# gShortcutChanceByMemoryPool is 0x10 *below* the array and
+# gCharacterEffectSpawnPoints is immediately above it, so two of the four
+# spark points come out at the wrong place. The shortcut table itself is left
+# where it is -- nothing writes either, so the eight overlapping s16 are
+# simply written out twice.
+src/animation/slot_animation.c	s16 gCharacterEffectSpawnPointsBoard[16] = {	s16 sbk_effect_spawn_block[24] = {\n    6, 0, 0, 0, 28, 0, 6, 0, 0, 0, -28, 0, -6, 0, 0, 0,\n    /* the two corners the N64 read out of gShortcutChanceByMemoryPool: */\n    28, 0, -6, 0, 0, 0, -28, 0,\n};\n#define gCharacterEffectSpawnPointsBoard sbk_effect_spawn_block\ns16 sbk_effect_spawn_board_orig[] = {
+
+# getNextCategorySkipping (cutscene_commands.c ~231) reads two adjacent u8s as
+# one big-endian u16 to get the category count -- `*(u16 *)&
+# gFirstCutsceneCategoryIndex`, and the decomp's own comment says so. Neither
+# u8 is pinned, and worse, one is a zero initialiser in BSS (0x101bb554) while
+# the other is in data (0x1019acac): 132 KB apart and in different sections,
+# so the count reads 0 and every category is sent back to 0. The two become
+# one two-byte object.
+src/cutscene/cutscene_commands.c	u8 gFirstCutsceneCategoryIndex = 0;	u8 sbk_cutscene_category_pair[2] = { 0, 9 };\n#define gFirstCutsceneCategoryIndex sbk_cutscene_category_pair[0]\n#define gCutsceneCategoryCount sbk_cutscene_category_pair[1]
+src/cutscene/cutscene_commands.c	u8 gCutsceneCategoryCount = 9;	/* folded into sbk_cutscene_category_pair[1] */
