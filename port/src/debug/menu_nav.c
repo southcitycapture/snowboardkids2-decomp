@@ -558,9 +558,25 @@ static void nav_progress(const char *why) {
  * longer than the air ends in a rider doing 24,576 units and a crash on
  * landing (animationFlags 0x1000 -> initStunnedAirborneBehavior).
  *
- * X Cross answered exactly this question: acceleration buys the air the chain
- * needs, because acceleration *is* the ollie. So do handling, cornering and
- * the deadzone, which took Speed Cross's wall contacts from 30 to 6. */
+ * X Cross's answer -- more acceleration, to buy the air the chain needs --
+ * is exactly the wrong one here, and the harness said so in three races on
+ * course 10, same row but for the acceleration:
+ *
+ *     accel +2048  ->  4th, 25,920 frames
+ *     accel     0  ->  2nd, 21,316 frames
+ *     accel  -192  ->  **1st**, 20,604 frames
+ *
+ * The ollie is `unkB8C + baseAcceleration` and unkB8C is a fixed 0x10000, so
+ * on the stock board the launch is already about a fifth of the game's whole
+ * speed ceiling. Multiply the acceleration by nine and the rider is thrown
+ * off the course; a *smaller* ollie is what a three-lap race wants. X Cross
+ * wanted the opposite because X Cross is scored on the air itself.
+ *
+ * The line levers are what actually win it, and the ollie only has to stop
+ * getting in their way: `boost=56 tax=100 relief=165` with handling +50%,
+ * cornering -50%, three times the deadzone and accel -192 comes home first
+ * in 20,128 frames with **no wall contacts at all**, where the same row
+ * without the line levers is fourth with seventy-two. */
 static const struct { s16 boost, tax, relief, hand, corner, dead, accel; } nav_ladder[] = {
     { 0, 0, 0, 0, 0, 0, 0 },
     { 0, 60, 165, 0, 0, 0, 0 },
@@ -568,9 +584,9 @@ static const struct { s16 boost, tax, relief, hand, corner, dead, accel; } nav_l
     { 28, 0, 0, 0, 0, 0, 0 },
     { 28, 60, 165, 0, 0, 0, 0 },
     { 56, 100, 165, 0, 0, 0, 0 },
-    { 56, 100, 165, 128, -128, 512, 1024 },
-    { 84, 100, 165, 160, -160, 768, 1024 },
-    { 128, 100, 165, 192, -192, 1024, 2048 },
+    { 56, 100, 165, 128, -128, 512, -192 },
+    { 84, 100, 165, 160, -160, 768, -192 },
+    { 128, 100, 165, 192, -192, 1024, -192 },
 };
 
 /* A boss race needs a different ladder, because on a boss none of the rival

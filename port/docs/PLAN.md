@@ -1076,6 +1076,54 @@ That is only true because the ladder is armed at the handoff now: the earlier
 run of the same build lost both at a "rung 0" that was still carrying the
 previous course's levers, and then climbed straight past the row that passes.
 
+#### Course 10, and the ollie's bill
+
+The ollie fix is not free, and course 10 is where it presented the bill. The
+rider came **fourth of four at every one of the six rungs the ladder had**,
+top rung included, and `sbk-marshal` named it: four low-speed lock-outs a lap,
+at `phase 12` and `phase 13` -- `updateLeftForwardFlipTrick` and
+`updateLeftBackwardFlipTrick`. The rider was stalling *inside a trick*.
+
+That is new and it is the fix's own doing. Before it, a CPU rider on a normal
+course asked `determineAIPathChoice` for a jump, got one, and never left the
+ground, so `behaviorStep` never reached the trick handlers at all. Now it
+does -- and `updateTrickAirborneVelocity` bleeds x and z by a
+hundred-and-twenty-eighth a frame for as long as the chain runs, so a chain
+longer than the air ends with a rider doing 24,576 units and a crash on
+landing.
+
+The first guess was X Cross's answer -- more acceleration, to buy the air the
+chain needs -- and it was exactly backwards. Three harness races, same row
+but for the acceleration:
+
+| accel | place | frames |
+| ---: | ---: | ---: |
+| +2048 | 4th | 25,920 |
+| 0 | 2nd | 21,316 |
+| **-192** | **1st** | **20,604** |
+
+The ollie is `unkB8C + baseAcceleration` and `unkB8C` is a fixed 0x10000, so
+on the stock board the launch is already about a fifth of the game's whole
+0x180000 speed ceiling. Multiply the acceleration by nine and the rider is
+thrown off the course. X Cross wanted the opposite only because X Cross is
+scored on the air itself.
+
+What actually wins course 10 is the line, with the ollie merely told to stop
+getting in the way: `boost=56 tax=100 relief=165` plus handling +50%,
+cornering -50%, three times the deadzone and `accel=-192` comes home **first
+in 20,128 frames with no wall contacts at all**, where the same row without
+the line levers is fourth with seventy-two. That is rung 6.
+
+#### Course 11 is a boss race
+
+Measured at the handoff: `level=11 type=3`, two riders, `rider 1: boss=1
+top=0`. It is the third of the health bosses, ten heads, and no rival lever
+reaches a boss whose speed is scripted -- which is what `nav_boss_ladder` and
+its `supply` column are for, and what won courses 3 and 7. A first pass with
+no supply at all took the boss from ten heads to seven with eighteen stars,
+three of them picked up off the course, so the shape of the answer is ammunition
+rather than speed.
+
 ### Shoot Cross: 1/20, then 19/20, then 20/20
 
 Slots 10 and 11 -- the last two courses, and so the credits -- are opened by
