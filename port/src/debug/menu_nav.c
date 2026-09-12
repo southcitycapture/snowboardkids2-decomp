@@ -535,10 +535,33 @@ static void nav_handicap(int level, int place) {
  * those run *during* the race. A rule keyed on the word alone would call a
  * race finished the moment it started. */
 static int menu_is_result(void) {
-    int i;
+    /* Two kinds of name carry "Result" and are not a result screen.
+     *
+     * The funnels are the dangerous ones. loadRace and loadStoryModeRace set
+     * awaitRaceResult / awaitStoryModeRaceResult as the game state *before*
+     * initRace is even queued (session_manager.c:131, race_state_machine.c:180),
+     * so those two are up for the whole race and the whole cutscene ahead of
+     * it. Counting them cost this campaign a lap: the navigator announced
+     * "race finished" the instant the course list was confirmed, and then --
+     * because the funnel stays up until the race really ends -- the true
+     * result screen was never a fresh rising edge, so the actual finish went
+     * unseen. A race that is reported finished before it starts is worse than
+     * one that is never reported at all.
+     *
+     * The other kind is the skill game's HUD: init/update/cleanup of
+     * SkillGameResultTimerDisplay run *during* the race. */
+    static const char *const not_a_result[] = {
+        "awaitRaceResult", "awaitStoryModeRaceResult", "awaitVersusRaceResult", NULL,
+    };
+    int i, j;
     for (i = 0; i < cur_count; i++) {
         const char *n = sbk_fn_name((void *)cur_fn[i]);
+        int skip = 0;
         if (strstr(n, "TimerDisplay") != NULL) continue;
+        for (j = 0; not_a_result[j] != NULL; j++) {
+            if (strcmp(n, not_a_result[j]) == 0) { skip = 1; break; }
+        }
+        if (skip) continue;
         if (strstr(n, "Result") != NULL || strstr(n, "ContinuePress") != NULL || strstr(n, "AwardGold") != NULL)
             return 1;
     }
