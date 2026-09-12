@@ -319,7 +319,7 @@ static void trial_retune(Player *p, int boost) {
  * finishPosition that happened to be 0 would write the course down as won.
  */
 int sbk_campaign_wedge; /* set here, consumed by menu_nav.c's handicap ladder */
-#define WEDGE_RETRACES 3600
+#define WEDGE_RETRACES 2400
 
 static void race_watchdog(GameState *gs, unsigned long retraces) {
     static unsigned long since;

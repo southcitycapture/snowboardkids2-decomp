@@ -318,7 +318,7 @@ static void nav_progress(const char *why) {
  * A course that loses every rung is a real finding about the rider, not a knob
  * to keep turning, and the last rung says so. */
 static const struct { s16 boost, tax; } nav_ladder[] = {
-    { 0, 0 }, { 28, 0 }, { 28, 96 }, { 28, 160 }, { 28, 220 }, { 28, 255 },
+    { 0, 0 }, { 28, 0 }, { 28, 160 }, { 28, 255 },
 };
 #define NAV_LADDER_TOP ((int)(sizeof(nav_ladder) / sizeof(nav_ladder[0])) - 1)
 
@@ -356,8 +356,13 @@ static void nav_handicap(int level, int place) {
          *
          * From the second wedge on the same course the item chance comes down
          * instead, which is the documented cause: the way out of the lift wait
-         * is a scheduleTask, and item spam is what fills the pool it needs. */
-        if (wedges >= 2) sbk_item_relief += 55;
+         * is a scheduleTask, and item spam is what fills the pool it needs.
+         *
+         * The relief starts on the *first* wedge, not the second: course 1
+         * wedged at three different rungs, twice at the same sector and the
+         * same world position to the byte, so a second identical race only buys
+         * the same wedge again at the cost of six minutes. */
+        sbk_item_relief += 55;
         printf("sbk-nav: level %d wedged (%d so far); not a loss, retrying at rung %d "
                "(boost=%d rivaltax=%d itemrelief=%d)\n",
                level, wedges, rung, sbk_campaign_boost, sbk_rival_tax, sbk_item_relief);
