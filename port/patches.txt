@@ -33,3 +33,12 @@ src/system/rom_loader.c	    if (bssEnd != bssStart) {	    { extern void sbk_over
 # boss target for a CPU rider -- so self-play needs one different answer to one
 # question. Everything downstream is the game's own item code.
 src/race/hit_reactions.c	    result = findPrimaryItemTarget(player);	    result = findPrimaryItemTarget(player);\n    { extern s32 sbk_boss_pilot_item(GameState *, Player *, s32); result = sbk_boss_pilot_item(gs, player, result); }
+
+# The trick pilot (port/src/debug/boss_pilot.c). X Cross wants 300 skill points
+# and a CPU rider on a one-rider course scores none: a trick starts at
+# race_main.c:1314, where phase 0 jumps only if `cpuInputFlags` came back
+# non-zero from determineAIPathChoice -- and that function's first act is to
+# read player->aiPathData, which a solo race never gives player 1. So the
+# pilot answers that one question differently, exactly as the boss pilot does
+# for the item choice, and every trick after it is the game's own.
+src/race/race_main.c	        player->cpuInputFlags = determineAIPathChoice(player);	        player->cpuInputFlags = determineAIPathChoice(player);\n        { extern s32 sbk_trick_pilot_path(GameState *, Player *, s32); player->cpuInputFlags = (u8)sbk_trick_pilot_path(gameState, player, player->cpuInputFlags); }

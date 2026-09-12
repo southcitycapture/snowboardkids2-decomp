@@ -731,6 +731,129 @@ static void shot_dbg_tick(GameState *gs, unsigned long retraces) {
     fflush(stdout);
 }
 
+/* ------------------------------------------------------------- the X Cross
+ *
+ * X Cross (level 0xE, RACE_TYPE_X_CROSS) wants 300 skill points inside its own
+ * ninety-second countdown -- initShotCrossCountdownTimerTask gives it 0xA8C
+ * thirtieths against Shoot and Speed Cross's 0x1194 -- and the campaign's
+ * first run of it scored exactly zero. Not nearly: zero.
+ *
+ * Skill points on this course come from one place. race_main.c ~2156, in the
+ * landing step, adds player->trickPoints to the rider's skillPoints when the
+ * race type is X_CROSS, and trickPoints is filled by addTrickScore and
+ * addSpinTrickScore during the air. The air is entered at race_main.c:1314:
+ *
+ *     player->cpuInputFlags = determineAIPathChoice(player);
+ *     if (player->cpuInputFlags) { setPlayerBehaviorPhase(player, 4); ... }
+ *
+ * -- and determineAIPathChoice (ai_pathfinding.c ~408) opens by reading
+ * `player->aiPathData`, the course's path-preference table. race_dbg's
+ * path_table_attach borrows that table off rider 2, and on a Cross game there
+ * is no rider 2: `gs->numPlayers < 2` and it returns without attaching. So a
+ * CPU rider alone on the trick course never jumps, and a rider that never
+ * jumps never tricks.
+ *
+ * The pilot therefore answers that one question differently for our rider on
+ * X Cross, through the same shape of hook the boss pilot uses for the item
+ * choice (port/patches.txt), and every part of the trick after it -- the
+ * launch, the rotation, the landing, the score -- is the game's own.
+ *
+ * The value it answers with is 7, and that is not arbitrary. getTrickType
+ * (track_height.c ~307) turns a CPU rider's `cpuInputFlags & 7` into a trick
+ * by indexing gSpecialTrickTypeTable at (flags << 3) + trickCount, one row of
+ * eight per value, and the rows are mostly -1 -- "no trick":
+ *
+ *     1: -1 -1 -1 -1 -1 -1 -1 -1      5: 01 01 01 -1 -1 -1 -1 -1
+ *     2: 00 -1 -1 -1 -1 -1 -1 -1      6: 06 02 04 -1 -1 -1 -1 -1
+ *     3: 02 02 -1 -1 -1 -1 -1 -1      7: 00 05 03 07 01 -1 -1 -1
+ *     4: 01 07 -1 -1 -1 -1 -1 -1
+ *
+ * Row 7 is the only one that chains five tricks in a single air, and the
+ * chain is where the points are: trickBonusTable is 10, 15, 20, 25, 35 for
+ * the first five, and addTrickScore adds another 10 each time the trick is one
+ * this air has not done yet. Row 1 would have jumped and scored nothing.
+ */
+#define RACE_TYPE_X_CROSS 6
+int sbk_trick_pilot = 1;     /* --notrickpilot */
+int sbk_trick_period = 45;   /* retraces between jumps */
+
+static void *trick_gs;
+static u32 trick_frame;
+static unsigned long last_trick;
+static int trick_jumps, trick_seen, trick_reported;
+
+s32 sbk_trick_pilot_path(GameState *gs, Player *p, s32 choice) {
+    if (!sbk_autoplay || !sbk_trick_pilot || gs == NULL || p == NULL) return choice;
+    if (p != &gs->players[0] || !p->isCpuControlled) return choice;
+    if (gs->raceType != RACE_TYPE_X_CROSS) return choice;
+
+    if (trick_gs != (void *)gs || gs->raceFrameCounter < trick_frame) {
+        trick_gs = (void *)gs;
+        trick_jumps = 0;
+        trick_seen = 0;
+        trick_reported = 0;
+        last_trick = pilot_now;
+        printf("sbk: trickpilot: armed on level %d (period=%d)\n", gs->memoryPoolId, sbk_trick_period);
+        fflush(stdout);
+    }
+    trick_frame = gs->raceFrameCounter;
+
+    if (p->skillPoints != trick_seen) {
+        trick_seen = p->skillPoints;
+        printf("sbk: trickpilot: skill %d/300 after %d jumps\n", trick_seen, trick_jumps);
+        fflush(stdout);
+    }
+
+    if (p->animationFlags & PLAYER_FINISHED_FLAG) return choice;
+    if (gs->raceIntroState != 0) return choice;
+    if (choice != 0) return choice;                       /* the AI wants the air itself */
+    if (pilot_now - last_trick < (unsigned long)sbk_trick_period) return choice;
+    /* Only into rising ground.
+     *
+     * updatePostTrickDescentStep is the gate and it is a narrow one: the
+     * launch sets behaviorCounter = 3, the step takes one off it for every
+     * airborne frame, and at zero the rider is put back into phase 0 with no
+     * trick at all. The trick only starts on the branch that sees
+     * `animationFlags & 1` -- the landing -- while the counter is still above
+     * zero. So a trick is a *pop*, not a jump: the rider has to be back on the
+     * ground within two frames of leaving it. Two hundred and twenty-eight
+     * jumps down a hill scored nothing for that reason -- on a descent the
+     * ground falls away and the counter always runs out first. Popping only
+     * while the rider is already being lifted (velocity.y positive: a ramp, a
+     * lip, a rise) is the same jump into ground that is coming up to meet
+     * it. Popping only on a rise was tried and is worse, not better: it fires
+     * three times in a whole race and still scores nothing, so the gate is
+     * left out and the finding is left here. X Cross is NOT passed. */
+
+    last_trick = pilot_now;
+    trick_jumps++;
+    return 7;
+}
+
+void sbk_trick_dbg(GameState *gs, unsigned long retraces) {
+    Player *p;
+    extern int sbk_shot_dbg;
+    if (!sbk_shot_dbg || gs == NULL || gs->raceType != RACE_TYPE_X_CROSS) return;
+    if (trick_gs != (void *)gs || retraces % 15 != 0) return;
+    p = &gs->players[0];
+    printf("sbk-trick: r=%lu skill=%d pts=%d score=%d cnt=%d mode=%d phase=%d step=%d flags=%08x cpuin=%d "
+           "vy=%d spin=%02x mask=%02x\n",
+           retraces, (int)p->skillPoints, (int)p->trickPoints, (int)p->trickScore, (int)p->trickCount,
+           (int)p->behaviorMode, (int)p->behaviorPhase, (int)p->behaviorStep, (unsigned)p->animationFlags,
+           (int)p->cpuInputFlags, (int)p->velocity.y, (unsigned)p->spinsPerformedMask,
+           (unsigned)p->tricksPerformedMask);
+    fflush(stdout);
+}
+
+void sbk_trick_pilot_report(GameState *gs) {
+    if (gs == NULL || trick_gs != (void *)gs || gs->raceType != RACE_TYPE_X_CROSS) return;
+    if (trick_reported || !(gs->players[0].animationFlags & PLAYER_FINISHED_FLAG)) return;
+    trick_reported = 1;
+    printf("sbk: trickpilot: race over -- %d skill points of 300 from %d jumps, lost=%d\n",
+           (int)gs->players[0].skillPoints, trick_jumps, (int)gs->playerLost);
+    fflush(stdout);
+}
+
 /* Won by taking the boss's health to 0 (race_main.c ~5188 reads 0x100000).
  * Course 3 is one of these. */
 int sbk_is_hp_boss_race(int raceType) {
@@ -909,6 +1032,8 @@ void sbk_boss_pilot_tick(GameState *gs, unsigned long retraces) {
     pilot_now = retraces;
     shot_aim_tick(gs, retraces);
     shot_dbg_tick(gs, retraces);
+    sbk_trick_pilot_report(gs);
+    sbk_trick_dbg(gs, retraces);
     if (gs != NULL && shot_gs == (void *)gs && gs->raceType == RACE_TYPE_SHOOT_CROSS && !shot_reported &&
         (gs->players[0].animationFlags & PLAYER_FINISHED_FLAG)) {
         shot_reported = 1;

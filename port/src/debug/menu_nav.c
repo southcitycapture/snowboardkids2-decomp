@@ -354,15 +354,29 @@ static int nav_next_story_level(void) {
  * -- the last two courses, and so the credits -- when slots 0..9 are all 1 *and*
  * slots 12..14 are all 1 as well, and a slot still at 0 is never offered by the
  * course list at all. Returns the location id to walk into, or -1. */
+static int nav_cross_tries[15];
+
 static int nav_next_cross(void) {
     static const struct { u8 slot, location; } cross[3] = { { 13, 2 }, { 14, 5 }, { 12, 8 } };
-    int i;
+    int i, best = -1, best_tries = 0;
     if (EepromSaveData == NULL) return -1;
+    /* The least-tried of the ones still outstanding, not the first of them.
+     *
+     * Taking the first meant that one Cross game the campaign could not pass
+     * hid the other two behind it for ever -- and they are not the same
+     * problem: Shoot Cross was a shooting problem, Speed Cross is a race, and
+     * X Cross is a trick mechanic that is still open. Rotating means a night
+     * of running wins whatever is winnable and leaves exactly what is not. */
     for (i = 0; i < 3; i++) {
         u8 st = EepromSaveData->levelUnlockStatus[cross[i].slot];
-        if (st != 0 && st != 1) return cross[i].location;
+        int tries;
+        if (st == 0 || st == 1) continue;
+        tries = nav_cross_tries[cross[i].slot];
+        if (best >= 0 && tries >= best_tries) continue;
+        best = cross[i].location;
+        best_tries = tries;
     }
-    return -1;
+    return best;
 }
 
 /* `--trial level=12|13|14`: a Cross minigame asked for by name. The course
@@ -1160,6 +1174,8 @@ void sbk_menu_nav_tick(unsigned long retraces) {
                            (int)gs->shootCrossTargetsHit, (int)gs->players[0].skillPoints,
                            nav_latched_place == 0 ? "PASS" : "fail");
                     fflush(stdout);
+                    if (nav_latched_place != 0 && nav_latched_level >= 0 && nav_latched_level < 15)
+                        nav_cross_tries[nav_latched_level]++;
                 }
             }
         }

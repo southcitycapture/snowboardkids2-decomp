@@ -73,7 +73,7 @@ static const char *find_rom(int argc, char **argv) {
         if (argv[i][0] != '-') {
             return argv[i];
         }
-        if (strcmp(argv[i], "--play") == 0 || strcmp(argv[i], "--record") == 0 || strcmp(argv[i], "--drawdistance") == 0 || strcmp(argv[i], "--dumpdl") == 0 || strcmp(argv[i], "--frames") == 0 || strcmp(argv[i], "--wav") == 0 || strcmp(argv[i], "--dumpframes") == 0 || strcmp(argv[i], "--pak") == 0 || strcmp(argv[i], "--eeprom") == 0 || strcmp(argv[i], "--bigtri") == 0 || strcmp(argv[i], "--peek") == 0 || strcmp(argv[i], "--cmds") == 0 || strcmp(argv[i], "--trial") == 0 || strcmp(argv[i], "--plan") == 0 || strcmp(argv[i], "--saveevery") == 0 || strcmp(argv[i], "--startrung") == 0 || strcmp(argv[i], "--bosssupply") == 0 || strcmp(argv[i], "--shotsnap") == 0 || strcmp(argv[i], "--shotrange") == 0 || strcmp(argv[i], "--shotdetour") == 0 || strcmp(argv[i], "--shotcarry") == 0 || strcmp(argv[i], "--shotcooldown") == 0 || strcmp(argv[i], "--uiscript") == 0) {
+        if (strcmp(argv[i], "--play") == 0 || strcmp(argv[i], "--record") == 0 || strcmp(argv[i], "--drawdistance") == 0 || strcmp(argv[i], "--dumpdl") == 0 || strcmp(argv[i], "--frames") == 0 || strcmp(argv[i], "--wav") == 0 || strcmp(argv[i], "--dumpframes") == 0 || strcmp(argv[i], "--pak") == 0 || strcmp(argv[i], "--eeprom") == 0 || strcmp(argv[i], "--bigtri") == 0 || strcmp(argv[i], "--peek") == 0 || strcmp(argv[i], "--cmds") == 0 || strcmp(argv[i], "--trial") == 0 || strcmp(argv[i], "--plan") == 0 || strcmp(argv[i], "--saveevery") == 0 || strcmp(argv[i], "--startrung") == 0 || strcmp(argv[i], "--bosssupply") == 0 || strcmp(argv[i], "--shotsnap") == 0 || strcmp(argv[i], "--shotrange") == 0 || strcmp(argv[i], "--shotdetour") == 0 || strcmp(argv[i], "--shotcarry") == 0 || strcmp(argv[i], "--trickperiod") == 0 || strcmp(argv[i], "--shotcooldown") == 0 || strcmp(argv[i], "--uiscript") == 0) {
             i++; /* option value */
         }
     }
@@ -338,6 +338,12 @@ int main(int argc, char **argv) {
         } else if (strcmp(argv[i], "--shotsnap") == 0 && i + 1 < argc) {
             extern int sbk_shot_snap;
             sbk_shot_snap = atoi(argv[++i]);
+        } else if (strcmp(argv[i], "--notrickpilot") == 0) {
+            extern int sbk_trick_pilot;
+            sbk_trick_pilot = 0;
+        } else if (strcmp(argv[i], "--trickperiod") == 0 && i + 1 < argc) {
+            extern int sbk_trick_period;
+            sbk_trick_period = atoi(argv[++i]);
         } else if (strcmp(argv[i], "--shotcarry") == 0 && i + 1 < argc) {
             extern int sbk_shot_carry;
             sbk_shot_carry = atoi(argv[++i]);
@@ -358,7 +364,7 @@ int main(int argc, char **argv) {
     }
 
     if (sbk_rom_load(rom) != 0) {
-        fprintf(stderr, "usage: %s [--fullscreen[=WxH]|--fullscreen-desktop|--windowed] [--wide] [--novsync] [--trace] [--play SCRIPT|MOVIE.m64] [--record MOVIE.m64] [--frames N] [--hashframe] [--perf] [--pintrace] [--autoplay] [--soak] [--nightmare] [--trial SPEC] [--plan C:CH:B:BO,..] [--pak FILE|--nopak] [--eeprom FILE] [--unlockall] [--nopad] [--nobosspilot] [--noshotpilot] [--bosssupply N] [--shotdbg] [--shotsnap N] [--shotrange N] [--shotdetour N] [--shotcarry N] [--shotcooldown N] [--status] [--coursetrace] [--turbo] [--headless] [--mute] [--wav OUT.wav] [snowboardkids2.z64]\n", argv[0]);
+        fprintf(stderr, "usage: %s [--fullscreen[=WxH]|--fullscreen-desktop|--windowed] [--wide] [--novsync] [--trace] [--play SCRIPT|MOVIE.m64] [--record MOVIE.m64] [--frames N] [--hashframe] [--perf] [--pintrace] [--autoplay] [--soak] [--nightmare] [--trial SPEC] [--plan C:CH:B:BO,..] [--pak FILE|--nopak] [--eeprom FILE] [--unlockall] [--nopad] [--nobosspilot] [--noshotpilot] [--bosssupply N] [--shotdbg] [--shotsnap N] [--shotrange N] [--shotdetour N] [--shotcarry N] [--notrickpilot] [--trickperiod N] [--shotcooldown N] [--status] [--coursetrace] [--turbo] [--headless] [--mute] [--wav OUT.wav] [snowboardkids2.z64]\n", argv[0]);
         return 1;
     }
     printf("sbk: ROM %s (%lu bytes)\n", rom, (unsigned long)sbk_rom_size);
