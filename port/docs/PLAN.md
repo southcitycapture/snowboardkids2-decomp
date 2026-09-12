@@ -1034,6 +1034,47 @@ With all of that in, course 9 finishes every time -- one carry, at the lift,
 on the final lap -- and it is a tuning problem again rather than a wedge: the
 first two attempts came second, and the ladder went to rung 2.
 
+#### Course 9 is won, and the campaign table
+
+On the user's own save, 2026-09-12, `--fullscreen --autonav --autoplay
+--nightmare --perf --saveevery 1 --drawdistance 4 --racedbg --startrung 1`:
+
+| # | course | rung | place | result | gold after | save |
+| ---: | --- | ---: | ---: | --- | ---: | ---: |
+| 1 | 9 Haunted House | 1 | 3 | lost (finished; first time ever) | 426,800 | #1 |
+| 2 | 9 | 2 | 3 | wedged at the lift -- the marshal's own doing | 434,800 | #2 |
+| 3 | 9 | 1 | 2 | wedged at `sect=115` (the goal) | 449,400 | #1 |
+| 4 | 9 | 1 | 2 | wedged at `sect=115` | 464,000 | #1 |
+| 5 | 9 | 1 | 2 | wedged at `sect=115` | 478,600 | #1 |
+| 6 | 9 | 1 | 2 | lost (carried to the lift, finished) | 493,200 | #1 |
+| 7 | 9 | 1 | 2 | lost | 507,800 | #1 |
+| 8 | 9 | 1 | 2 | lost | 522,400 | #1 |
+| 9 | 9 | 1 | **1** | **WON** -- four pushes, no carry | 584,500 | #1 |
+| 10 | 13 Shoot Cross | 0 | 2 | fail, 11/20 targets | 587,800 | #2 |
+| 11 | 13 | 1 | 2 | fail, 11/20 targets | 591,100 | #3 |
+
+`progress [111111111100] won=10` -- **courses 0 to 9 are all won on the user's
+own save.** The ladder never needed a boost or a bigger tax for course 9 once
+the rider could steer: rung 1, relief 165 + tax 60, the same rung that won
+course 8.
+
+### The new wall: Shoot Cross scores 11 out of 20
+
+Slots 10 and 11 -- the last two courses, and so the credits -- are opened by
+`updateStorySlotUnlockStatus` only when 0..9 are all 1 **and** 12..14 are too,
+and the campaign now stands at exactly that gate. `next=-1` from the navigator
+means the course list has nothing left to offer; it goes to the Cross games
+instead, and Shoot Cross (level 13, type 5) comes back
+`targets=11/20 skill=0/300 -> fail` on every attempt.
+
+This is not a wedge and not the marshal's problem. The race runs, ends, and
+saves; the pass mark is a *score*, and none of the handicap ladder's levers --
+a rival speed tax, item relief, our own top speed -- move a target count. The
+shot pilot (`port/src/debug/boss_pilot.c`) is what has to get better, and 11 of
+20 with no skill points at all says it is firing but not hitting: that is the
+next piece of work, and it is a different kind of problem from every wedge in
+this file.
+
 ### The three Cross minigames, which are not races
 
 Slot 10 -- the last two courses, and so the credits -- is opened by
