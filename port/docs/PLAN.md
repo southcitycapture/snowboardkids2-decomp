@@ -1125,7 +1125,11 @@ things on the way:
 
 With both in, `--bossslow 40`: races 1, 2, 3 gave hp 3, hp 7 and then
 `boss hp=0 defeated=1, 41 stars` -- won, credits, four minutes of staff roll,
-post-credits save.
+post-credits save. Race 5 of the same loop won it again. Left to loop
+unattended, the row wins roughly one race in four; the ladder's higher rungs
+shorten the supply so that an unattended campaign keeps improving its odds
+rather than repeating one experiment, which is the whole reason the ladder
+exists.
 
 
 ### What the levers actually do, measured
