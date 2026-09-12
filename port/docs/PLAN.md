@@ -862,85 +862,236 @@ rather than the one the pilot remembered:
   tested against `collisionListNode` -- the node whose `localPos` is the
   flying/ground collision offset -- not against `worldPos`.
 
-### What still stands between course 11 and the credits
+### What stood between course 11 and the credits, and what it was not
 
-Not the pilot. The census says so in one line:
+The census that opened this section said:
 
 ```
 census -- 4 hp drops from 13 throws; boss vulnerable 3372 of 3436 frames (98%);
           held: invuln=0 busy=61 state=3 inflight=67 range=2972 aim=257
-census -- closest approach 3994949, 11 armed frames inside the star's homing
-          radius (25165824)
 ```
 
 **`range` is 2,972 of 3,436 armed frames.** The rider has a star in its hand
-almost the whole race and the boss is simply not there. Plotting the two
-riders' positions out of `--racedbg` shows why: the gap swings from about
-140,000,000 units down to 15,000,000 and back, roughly every 500 frames, seven
-times in a race, and only the bottom of each swing is a shot. The swing is
-geometry, not speed -- both riders hold a constant speed the whole time (the
-rider 1,532,104, the boss 1,072,168) and the boss never once enters either of
-the branches `updateIceLandBoss` keeps for a rider that is very close
-(`SPEED_LEVEL_3 + 0x18000` inside 0xE00000) or very far away
-(`0x70000` beyond 0x8C00000).
+almost the whole race and the boss is simply not there. That number never
+moved. Ten races, and four heads of thirteen in every one of them: range
+0x1900000, 0x2000000, 0x4000000 and 0x8000000; cooldown 10, 5 and 4; the
+in-flight hold at 8 and at 2; the supply off, at 60, at 30 and at 6; the boost
+at 0, +21%, +25% and +78%; course 10's whole line row; the ollie declined; a
+lock-out breaker; a pace band at 17-22 million units and at 4-12. Throws went
+from 9 to 34 and the heads did not move once.
 
-Three firing configurations were measured, one race each, on the user's save:
+#### The first answer was wrong, and the second one was too
 
-| range | cooldown | in-flight hold | throws | heads |
-| --- | ---: | --- | ---: | ---: |
-| 0x4000000 | 10 | flight time | 13 | **4** |
-| 0x4000000 | 5 | capped at 10 | 13 | 1 |
-| 0x1900000 (homing only) | 5 | capped at 10 | 7 | 1 |
-
-Firing faster spends the stars on the long half of the swing and leaves the
-rider empty when the boss finally arrives; firing only inside the homing
-radius throws away the shoulders of the approach, where a star still has 200
-million units of life left to close the gap. The first row is kept.
-
-So four heads a race against the thirteen the race needs, and the remaining
-factor is **time inside the homing radius**, which is about fifty frames.
-
-### Why: the rider takes a worse line than the boss
-
-The first answer this file gave to that question was wrong and is worth
-keeping wrong, because it took an hour to disprove and the way it was
-disproved is the method. Reading `prog`/`sect` out of `--racedbg` by hand
-looked like two riders neck and neck with the lead changing hands six or seven
-times -- so the plan became a *brake*, to stop the rider overtaking the boss
-and sailing out of the star's reach. The samples had been lined up across a
-lap boundary, where `lapProgressRemaining` jumps by the whole course.
-
-The brake was written, and it never fired once. What it printed while not
-firing is the real number:
+The first answer this file gave was a *brake*: reading `prog`/`sect` out of
+`--racedbg` by hand looked like two riders neck and neck with the lead changing
+hands six or seven times, so the plan was to stop the rider overtaking the boss
+and sailing out of the star's reach. The samples had been lined up across a lap
+boundary. The brake was written, it never fired once, and what it printed while
+not firing was the real number:
 
 ```
 sbk-bosslead: r=900  lead=-341 (p prog 6623 sect 26 | boss prog 6282 sect 30)
-sbk-bosslead: r=1800 lead=-492 (p prog 4745 sect 52 | boss prog 4253 sect 59)
-sbk-bosslead: r=2400 lead=-238 (p prog 3454 sect 74 | boss prog 3216 sect 79)
-sbk-bosslead: r=3300 lead=-650 (p prog 2223 sect 94 | boss prog 1573 sect 110)
 sbk-bosslead: r=3600 lead=-652 (p prog 2069 sect 99 | boss prog 1417 sect 112)
 ```
 
-**The boss is ahead on every sample and the gap grows all race**, from 150
-units to 650. The rider never overtakes anything, and the "swing from
-140,000,000 units to 15 and back" is one lap boundary read as seven.
+The boss is ahead on every sample and the gap grows all race. So the second
+answer was **the line**: the rider is 43% faster in a straight line and shows
+`wall=14,0,0,0` -- fourteen wall contacts to the boss's none -- therefore it
+must be taking a worse line and being knocked off it, the same wall courses 8,
+9 and 10 each hit.
 
-And the rider is **43% faster in a straight line while it loses that ground**
--- 1,532,104 against the boss's 1,072,168 -- with `wall=14,0,0,0`: fourteen
-wall contacts to the boss's none. The boss drives a scripted path and spends
-the race shooting guided stars at us
-(`iceLandBossChaseAttackPhase` -> `spawnPlayerGuidedStarProjectile`, every
-thirty to ninety frames, closer than 0xDFFFFF).
+That is wrong too, and it is wrong in a way worth keeping, because both
+numbers in it are misread. `spd=1532104/1072168` prints **`smoothedSpeedCap`**,
+which is a cap and not a speed. And fourteen wall retraces in a race of nine
+and a half thousand cannot cost a rider two thirds of a lap; it is noise being
+read as a cause because it was the only gauge pointing the right way.
 
-So what stands between four heads and thirteen is not the pilot's aim, its
-ammunition or its trigger -- all three were measured, and two of the three
-changes made it worse. It is that **our rider takes a worse line than the boss
-and is knocked off it**, which is the same wall courses 8, 9 and 10 each hit
-in their own way, and which top speed has never once fixed on this port. The
-next attempt starts there: `--pintrace` on a boss race, and `wall=` as the
-gauge, exactly as course 8 was taken apart. The brake's action is gone; its
-gauge is kept as `sbk-bosslead:` under `--racedbg`, because the next attempt
-needs the number rather than the guess.
+#### The instrument that settled it: a per-sector census
+
+`--sectorlog` prints one line per rider per sector transition -- frames spent,
+distance actually moved, mean velocity magnitude, and retraces spent in wall
+contact, in `slowdownLevel`, in behaviour phase 4 (the ollie) and in behaviour
+mode 2 (stunned). Two riders on the same piece of track, side by side, is the
+only thing that can say where the ground goes. One Ice Land boss race:
+
+```
+p0 (us):   129 sectors, 4769 frames, wall=22, hop=938, stun=1808
+p1 (boss): 137 sectors, 4783 frames, wall=0,  hop=0,   stun=0
+```
+
+**Nineteen per cent of the race stunned and ten per cent hopping**, against a
+boss that never touches a wall, never hops and is never stunned. And it is not
+spread out: it is six or seven blocks of 146 to 326 retraces, and the sector
+table shows exactly what they cost.
+
+| sect | p0 frames | p0 vel | hop | stun | boss frames | boss vel |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 39 | 783,921 | 64 | 0 | 24 | 1,227,634 |
+| 5 | 80 | 665,827 | 70 | 146 | 24 | 2,120,159 |
+| 6 | 42 | 905,313 | 70 | 0 | 18 | 2,125,000 |
+| 12 | 56 | 1,193,993 | 0 | 0 | 31 | 2,144,336 |
+| 40 | 17 | 3,064,208 | 0 | 0 | 26 | 2,144,336 |
+| 86 | 119 | 302,856 | 104 | 192 | 39 | 2,162,664 |
+| 91 | 175 | 437,507 | 42 | 232 | 19 | 1,626,074 |
+| 112 | 59 | 2,554,912 | 0 | 0 | 164 | 917,503 |
+
+Sectors 17 to 85 the rider is *faster* than the boss and gains five to ten
+frames a sector. Sectors 0 to 16 and 86 to 104 it loses everything, and every
+loss has a stun or a hop against it. Over the whole 129 sectors the totals are
+4,258 frames to the boss's 4,345 -- the rider is not slower, it is *stopped*,
+about once every five hundred frames.
+
+#### What stops it: the boss shoots, and a CPU rider cannot get up
+
+A ring of the rider's state, dumped on the rising edge of every stall block,
+names the cause a frame before it happens:
+
+```
+block 6  [1/0/0 hit=3 ...] [1/0/0 hit=3 ...] [2/2/0 hit=0 anim=10000 beh=1 ...]
+block 11 [1/0/0 hit=52 ...] [1/0/0 hit=52 ...] [2/14/1 hit=0 anim=1 beh=20 ...]
+```
+
+`hitReactionState` 3 and 0x34 -- the boss's own guided stars and its random
+effect projectiles, which `iceLandBossChaseAttackPhase` throws every thirty to
+ninety frames, close range and far. Then the tail: the knockback drops the
+rider under `race_main.c:1319`'s 0x5FFFF, and under that threshold **a CPU
+rider cannot steer and cannot re-aim** -- it ollies and waits for gravity. That
+is the Haunted House lock-out, met for the third time on this port, in the one
+place where the game is *aiming* at putting the rider there.
+
+A human takes the same hits and loses a second to each of them, because the
+human branch above the lock-out is a button test and a human keeps steering.
+Self-play is a CPU rider, so being shot costs it three times what it costs a
+person. That is the whole of course 11's difficulty, and it is a port-shaped
+difficulty rather than a game-shaped one.
+
+#### Three fixes, and two of them measured nothing
+
+* **The lock-out breaker** (`boss_unstick_tick`, race_dbg.c). The marshal
+  already fixes exactly this and could not reach it: it arms on 240 retraces of
+  *no lap progress*, and a rider hopping down a hill is still making progress,
+  slowly, which is the whole problem. So a health-boss race gets its own arming
+  condition -- below the threshold, in the ollie phase, not stunned, not at the
+  lift -- and the marshal's own push. Arming it on twelve retraces measured
+  precisely the oscillation it was meant to damp (the push clears the
+  threshold, the counter resets, the rider falls back under, twelve more
+  retraces go by); one retrace and a push of 0xC0000 rather than the marshal's
+  "shade over" 0x68000 is what works. It does **not** touch behaviourMode 2:
+  tried, and the run came back byte-identical, because a knockback's motion is
+  scripted and a velocity the game overwrites before it integrates is no use.
+* **The ollie declined on a boss course.** Byte-identical.
+  `determineAIPathChoice` never asks for the air here, so there was nothing to
+  decline. Kept, because it is right, and because it is one `if`.
+* **A pace governor and a boss speed handicap**, both writing `maxSpeedCap`
+  from the host tick. Byte-identical, three runs in a row -- and the reason is
+  the most useful thing in this section. `race_main.c:802` rewrites the
+  rider's `maxSpeedCap` from `baseMaxSpeed` every frame, and
+  `updateIceLandBoss` rewrites the boss's from its distance branch every frame,
+  both **before** the clamp that consumes it. The one place the number is used
+  is `clampPlayerVelocityToMaxSpeed` (`track_height.c:61`,
+  `maxMagnitude = player->maxSpeedCap`), so that is where `patches.txt` hooks,
+  one line, and it is the port's only honest way to govern a rider's speed at
+  the moment it takes effect.
+
+And two levers that had never reached a race at all: `--trial hand=`,
+`corner=`, `dead=` and `accel=` are ladder state as well as trial state, and
+`nav_ladder_set` zeroes all four on every course begin -- which the course list
+runs in a trial too. Course 10's whole line row on course 11 therefore came
+back byte-identical with the stock `cor=85/41` printed beside a boost that had
+plainly arrived. That is the third disconnected lever this port has measured,
+and the tell has been the same every time: **a run that does not move at all.**
+
+#### The boss is a rubber band, not a script
+
+`updateIceLandBoss` opens with the whole shape of the course and this file had
+it wrong twice ("the boss drives a scripted path"; "the crawl branch never
+fires"):
+
+```c
+if ((boss->finishPosition == 0) & (distanceToPlayer > 0xE00000)) {
+    if (flying)                cap = TRICK_LEVEL_2 - 0x8000;
+    else if (d > 0x8C00000)    cap = 0x70000;
+    else                       cap = BALANCE_LEVEL_1 - 0x8000;   /* 1,072,168 */
+} else {
+    cap = SPEED_LEVEL_3 + 0x18000;                               /* 0x180000 */
+}
+```
+
+While the boss leads and we are more than 0xE00000 away it cruises at
+1,072,168; inside that it winds up to the game's own 0x180000 ceiling, which is
+the same number `race_main.c:854` clamps *our* rider to. And the wind-up is
+one-way in practice: `speedDelta` is clamped to +0x1000 a frame going up and
+**-0x80 going down**, so the boss reaches the ceiling in 122 frames and takes
+3,911 to come off it -- longer than the race. The same trigger fires on
+`boss->finishPosition == 0`, so **overtaking it once hands it the ceiling for
+good**. Measured: the row at 50% came home *first* and took three fewer heads
+off than the row at 60% that stayed behind. The governor refuses to lead.
+
+(The crawl branch does fire -- the sector table's boss velocity of 917,503
+through sectors 105 to 128 is it, decaying at -0x80 a frame after the rider
+fell more than 0x8C00000 behind. It is far too slow a decay to be a catch-up
+mechanism.)
+
+#### The handicap, declared
+
+`--bossslow N` holds the boss's `maxSpeedCap` at N per cent of what
+`updateIceLandBoss` just asked for, through the `clampPlayerVelocityToMaxSpeed`
+hook. **Nothing else changes**: thirteen heads are still thirteen, the star is
+still the only thing that takes one, the invulnerability window is still the
+game's, the pilot still has to be in range and aimed, the supply is still
+counted and printed, and the race still ends when the boss crosses the line. It
+prints one line at the start of every race it applies to:
+
+```
+sbk: bosspilot: HANDICAP -- the boss's speed cap is held at 48% of its own
+     (1355415 -> 650599) on course 11. Nothing else is changed: thirteen heads,
+     the star only, the game's own invulnerability window. See PLAN.md.
+```
+
+It is off by default and it is off for every other course in the game. The
+measured row, star board, char 0, Nightmare, `boost=56`, supply every 6
+retraces, throw range 0x2000000, cooldown 4, hold 2:
+
+| `--bossslow` | heads | throws | result |
+| ---: | ---: | ---: | --- |
+| off | 4 | 31 | boss hp 6 |
+| 60 | 10 | 79 | boss hp 3 -- the ground bar cleared, flying mode reached |
+| 55 | 12 | 93 | boss hp 1 |
+| 50 | 7 | 53 | overtook the boss and gave it the ceiling |
+| **48** | **13** | **74** | **`boss hp=0 defeated=1`** |
+
+#### Course 11 is won, and the credits roll
+
+On the user's own save, 2026-09-12, `--fullscreen --autonav --autoplay
+--nightmare --perf --saveevery 1 --drawdistance 4 --racedbg --bossslow 48`:
+
+| # | course | rung | place | result | gold | save |
+| ---: | --- | ---: | ---: | --- | ---: | ---: |
+| 1 | 11 Ice Land boss | 1 | 1 | **WON** -- boss hp 0, 13 heads, 74 stars (16 supplied, 5 picked up) | 737,350 | #1 |
+
+```
+sbk-nav: race 1 finished on level 11, place=1 (WON), gold=737350, want=SAVE
+sbk-nav: progress [111111111111] won=12 next=-1 gold=737350
+sbk-nav: saved slot 0, gold=737350 (save #1)
+sbk-nav: ***** CREDITS ***** the campaign is finished after 1 races, gold=737350
+```
+
+**`progress [111111111111]` -- every course in Snowboard Kids 2 is won on the
+user's own save**, and the port has been played from the title screen to the
+credits by its own self-play. The completion save is
+`~/eeprom.sav.COMPLETE-2026-09-12` on the G4.
+
+One last bug, found by the credits themselves: `nav_act`'s "stuck on a screen
+the navigator does not understand" guard sat *above* the credits branch, so the
+first credits this port ever reached were cut off at exactly 3,600 retraces by
+a B press and the rider was put back in the town. The end of the game is not a
+screen the navigator failed to understand; the guard skips it now.
+
+A boss race is not deterministic the way a trial is, and the retry that was run
+to re-photograph the credits took two heads where the campaign's took thirteen
+on the same row. The handicap sets the odds, not the outcome; the ladder's
+higher rungs shorten the supply for exactly that reason.
+
 
 ### What the levers actually do, measured
 
@@ -989,6 +1140,14 @@ to the frame):
 * **A handicap that wins one course loses another.** Relief+tax wedges courses
   0 and 10, which rung 0 wins outright. There is no single setting for the
   campaign, which is what the ladder is for.
+
+`--sectorlog` is the gauge that settled course 11 and it belongs here with the
+rest: one line per rider per sector transition, with the frames, the distance
+actually moved, the mean velocity magnitude, and the retraces spent in wall
+contact, in `slowdownLevel`, in the ollie phase and in behaviour mode 2. About
+240 lines a boss race, off by default. Two riders on the same piece of track
+compared sector by sector is the only instrument this port has that can say
+*where* a race is lost rather than *that* it was.
 
 `--racedbg` gained two gauges for this work. `pool=c0,c1,c2,c3` is the race
 scheduler's free-task counters -- `scheduleTask` returns NULL when the one it
@@ -1649,12 +1808,17 @@ so a rider that wedges itself costs a minute instead of a quarter of an hour.
 * ~~**Course 10 has not been reached.**~~ **Won on the user's own save** at
   rung 6, first attempt, `place=1` -- see "Course 10, and the ollie's bill".
   `progress [111111111115] won=11`.
-* **Course 11, the last one, is not won yet** -- but it is no longer a
-  mystery. It got its census; see "Course 11: the Ice Land boss, in full"
-  below. The pilot's four bugs are fixed and the boss now loses four heads a
-  race instead of one; what stands between four and thirteen is not the
-  pilot.
-* **The credits have not rolled.** They are one course away.
+* ~~**Course 11, the last one, is not won yet.**~~ **Won on the user's own
+  save**, 2026-09-12, first attempt, `boss hp=0 defeated=1` on thirteen heads
+  and seventy-four stars -- with one declared handicap, `--bossslow 48`. See
+  "What stood between course 11 and the credits, and what it was not": the
+  cause was never the racing line (22 wall retraces in a race of nine and a
+  half thousand), it was 1,808 retraces stunned and 938 hopping, which is the
+  Haunted House lock-out again with the boss's own projectiles feeding it.
+* ~~**The credits have not rolled.**~~ **They have.** `progress
+  [111111111111] won=12` -- every course in the game is won on the user's own
+  save, and the port has been played from the title screen to the credits by
+  its own self-play.
 * `nightmare_search.py sweep` -- the *per-course rider ladder*, which is a
   different search from `nm` -- still has not been run. Only `nm`, the
   Nightmare row itself, has, and only one course (0) has a golden movie. The

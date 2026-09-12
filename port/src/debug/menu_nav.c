@@ -1076,8 +1076,13 @@ static void nav_act(unsigned long retraces) {
     if (retraces - nav_last_action < 60) return;
     nav_last_action = retraces;
 
-    /* An unattended session must not sit on a screen it does not understand. */
-    if (retraces - screen_since > 3600) {
+    /* An unattended session must not sit on a screen it does not understand --
+     * except the credits, which are the one screen it is *supposed* to sit on.
+     * They run for well over a minute, and this guard sat above the credits
+     * branch below, so the first campaign to finish had its credits cut off at
+     * exactly 3,600 retraces by a B press and was put back in the town. The
+     * end of the game is not a screen the navigator failed to understand. */
+    if (retraces - screen_since > 3600 && !menu_has("redits")) {
         printf("sbk-nav: stuck on %s for %lu retraces, backing out\n", now, retraces - screen_since);
         fflush(stdout);
         screen_since = retraces;
