@@ -221,7 +221,8 @@ losses.
 | 2 | 8 | 1 (old ladder) | 28 / 0 / 0 | -- | **the boost reached a race for the first time**, and the race wedged twice: once at the lift, once mid-sector against a wall |
 | 3 | 8 | 1 (new ladder) | 0 / 0 / 100 | -- | crawled sectors 104-115 scraping a wall, killed by hand to run the sweep |
 | -- | | | | | *the lever sweep, off the user's save: see PLAN.md* |
-| 4 | 8 | 1 (measured ladder) | 0 / 60 / 165 | -- | *(the run this table was written during)* |
+| 4 | 8 | 1 (measured ladder) | 0 / 60 / 165 | **1st** | **won**, 342,800 -> 405,600 gold, saved to slot 0 (save #1). `levelUnlockStatus` goes `[1,1,1,1,1,1,1,1,4,4,0,0]` -> `[1,1,1,1,1,1,1,1,1,4,0,0]` |
+| 5 | 9 Haunted House | -- | -- | -- | the new blocker; see PLAN.md |
 
 The lesson of rows 1-3 is that every one of them was a different experiment
 being run on a rider whose handicap was being silently reverted, and that no
