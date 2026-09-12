@@ -22,7 +22,7 @@ command lists, a fixed-function OpenGL 1.3 backend, scripted input.
 | The navigator: `--autonav`, `--menutrace`, `--saveevery`, `--trial`, `--plan` | works; the campaign wins a course, writes the EEPROM, leaves the town by the right door and aims itself at the next course |
 | The lift wedge that stopped the campaign on Turtle Island | fixed -- it was the Nightmare row starving the task pool, not the borrowed path table. `docs/nightmare-row.md` |
 | The boss races (courses 3 and 7): ten snowman heads, not a finish line | won by the boss pilot -- `docs/PLAN.md`, "The boss races, which no handicap can win" |
-| The campaign end to end (every course, a save after each race) | in progress: courses 0-4 won on the user's own save, boss 3 included |
+| The campaign end to end (every course, a save after each race) | in progress: courses 0-7 won on the user's own save, both bosses included; course 8 was the one that resisted, and the cause was the boost lever never reaching a race plus the rider being on the worst-handling board in the game (`docs/PLAN.md`) |
 
 The title screen matches the emulator reference frame
 (`g4-shots/sbk2-s2dex-fix1.png` against Mupen64Plus's `snowboard_kids2-020.png`):
@@ -101,7 +101,17 @@ conjured item is logged and counted against the ones the rider picked up itself.
 `--autonav` plays the campaign, not one course: it leaves Jingle Town by the
 door that leads to the course list (`unk427 = 0xFF`, not a location id -- see
 `docs/PLAN.md`) and parks the list on whichever course the game has marked
-`levelUnlockStatus == 5`, which is its own "next up".
+`levelUnlockStatus == 5`, which is its own "next up". When the course list has
+nothing left it walks into the three Cross minigames instead -- they are
+buildings in the town, not courses, and slot 10 does not open until all three
+are won. They are also not races: each has its own pass mark (`playerLost`,
+twenty targets, 300 skill points) and `finishPosition` says 1st either way.
+
+**A handicap applied at the handoff is not applied to the race.** `initPlayer`
+re-runs `applyCharacterSnowboardStats` a second or two after `initRace`, which
+wiped the retune -- the boost lever did nothing at all for the first six
+courses. It is held now, and `--racedbg`'s `spd=<current>/<baseMaxSpeed>` is
+where to check that a lever survived into the race.
 
 `--trial level=N,char=C,board=B,boost=X,quit=1` runs one race as an experiment
 and prints a result line; `port/tools/nightmare_search.py` sweeps trials on the

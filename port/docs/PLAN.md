@@ -364,6 +364,40 @@ not need:
   `getCurrentAllocation()`, and `gActiveScheduler` points at whatever the last
   dispatch left when the host loop runs) and folds `--trial boost=N` into the
   top speed in 1/256ths.
+* **...and the tuning has to be *held*, because the game undoes it.** This is
+  the single most expensive thing in this document, so it gets its own
+  paragraph. `initPlayer` (`race_main.c` ~1061) ends with **its own** call to
+  `applyCharacterSnowboardStats`, and `initPlayer` runs from
+  `waitForFadeAndInitPlayers` -- which `initRace` queues *after* the
+  `setRenderContext(0x37)` the autoplay handoff hangs off. So all six fields
+  were recomputed from the stats table a second or two into every race, with
+  no boost in them.
+
+  **The boost lever therefore never reached a race.** The handicap ladder spent
+  six attempts on course 8 climbing rungs 1..5 -- +11%, +16%, +21% -- and the
+  rider raced every one of them at exactly the same speed. That is why the
+  places came back 4th, 3rd, 2nd, 2nd, 3rd, 2nd with no trend: they were six
+  samples of one experiment, and the "overshoot past +20%" the boss ladder's
+  note predicted was read into noise. The log had said so from the first
+  campaign run and nobody put the two lines side by side:
+
+  ```
+  sbk: autoplay: rider 0: cpu=1 boss=0 diff=7 char=0 board=8 top=1394607
+  sbk-race: r=9240 p0 ... spd=959922/1257111
+  ```
+
+  -- and `1257111 * (1 + 28/256) = 1394608`, the boost exactly undone. The
+  lesson for the next lever: a handicap that is applied at the handoff is not
+  applied to the race, and `--racedbg`'s `spd=x/y` is where to check that it
+  survived.
+
+  Nothing else writes `baseMaxSpeed` (`race_main.c:802` only copies it into
+  `maxSpeedCap` each frame; the two health bosses derive their own from it), so
+  the fix is one comparison per tick: `retune_hold` re-applies the retune
+  whenever the field is not what it left, and says so in the log. Held rather
+  than hooked because the write is inside a game source file, and everything
+  that changes game behaviour is supposed to be one line in `patches.txt` or
+  nothing at all.
 
 ### Nightmare
 
@@ -398,8 +432,40 @@ frames; `useChance=255` at the same delay does not finish, `delay=150` drops to
 second and `delay=90` to third -- so 120 is a real optimum, not the end of a
 monotonic trend.
 
-`--nightmare` also gives player 1 `SNOWBOARD_SPEED_LEVEL_3`, the fastest board
-that has no drawback.
+### The board, which was the worst one in the game
+
+`--nightmare` used to give player 1 `SNOWBOARD_SPEED_LEVEL_3`, described here
+as "the fastest board that has no drawback". Read `gSnowboardStatsTable` for
+Slash and it is the opposite:
+
+| board | spd | han | cor | dz | grv | acc |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `SNOWBOARD_SPEED_LEVEL_3` (8) | 83 | 35 | 50 | 37 | 75 | 40 |
+| `SNOWBOARD_STAR` (9) | 83 | 60 | 40 | 65 | 75 | 70 |
+
+-- the same top speed, and STAR is better on every other axis. Three of those
+are the racing line:
+
+* `handling` is the **turn rate**: `race_main.c:1392`,
+  `turnRate = (steeringAngle / 2) * handling / 125`.
+* `cornering` is the **drag a turn costs**: `race_main.c:1401`,
+  `cornering * scaledTurnRate^2 / turnRate` subtracted from the speed, so
+  *lower* is faster.
+* `lateralDeadzone` is how much sideways velocity is killed each frame
+  (`applyVelocityDeadzone`, `race_main.c:3170`), so *higher* is less sideslip.
+
+So the self-play rider had the worst-handling, worst-deadzone, worst-
+accelerating level-3 board in the game, and the ladder was (nominally) putting
+up to +21% on top of its top speed. STAR is not a cheat board: `race_session.c`
+:575 and :615 hand it to the game's own riders, and unlike DRAGON, HIGH_TECH,
+NINJA, RICH and POVERTY nothing in `hit_reactions.c` or `particle_items.c`
+gives it a behaviour. The only thing `>= SNOWBOARD_STAR` changes anywhere is
+that `race_main.c:6070` loads no palette for it.
+
+For reference, the game's own riders on each course are in
+`gCpuCharacterSnowboardConfigs[course][character]` (snowboardId, colorSlot,
+1P difficulty, MP difficulty) -- on course 8 they ride boards 2 and 5 at
+difficulty 5-6, which is exactly what the roster dump prints.
 
 ### The navigator
 
@@ -565,14 +631,24 @@ last resort:
 { 42, 0, 165 }, { 56, 0, 165 }, { 56, 160, 165 }
 ```
 
-The last three rungs were added when course 8 -- Wendy's House -- sat at 2nd
-place through rungs 2 and 3 and then **wedged** on what used to be the top
-rung, the tax rung this section already calls the one most likely to hang a
-race. So the tax rung moved to last and two boost rungs went in front of it, at
-the +16% and +21% the boss ladder wins with. Course 8 is still unbeaten at the
-top of it: +16% came 2nd and +21% came *3rd*, which is the overshoot the boss
-ladder's note predicts past about +20%. It is the one course in the campaign
-that has resisted every lever the port has.
+The last three rungs were added when course 8 -- **Starlight Highway**, not
+Wendy's House; the course order is Sunny Mountain, Turtle Island, Jingle Town,
+Jingle Town boss, Wendy's House, Linda's Castle, Crazy Jungle, Crazy Jungle
+boss, Starlight Highway, Haunted House, Ice Land, Ice Land boss, and
+`build/include/generated/course_definitions/display_list_assets.inc` is where
+to read it off -- sat at 2nd place through rungs 2 and 3 and then **wedged** on
+what used to be the top rung, the tax rung this section already calls the one
+most likely to hang a race. So the tax rung moved to last and two boost rungs
+went in front of it, at the +16% and +21% the boss ladder wins with.
+
+**And then it turned out that none of those rungs had ever done anything.**
+`initPlayer` recomputes the rider's stats after the handoff (see "The rider"
+above), so every boost rung raced at stock speed. The ladder's whole boost half
+was measuring nothing, and the six losses on course 8 -- 4th, 3rd, 2nd, 2nd,
+3rd, 2nd -- are six samples of rung 0 with a different label on each. The
+"overshoot past +20%" this paragraph used to claim was a pattern read into
+noise. Read the rungs below as untested from here down; the retune is held now,
+so the next campaign is the first one that actually climbs them.
 
 Rival relief is the cleanest handicap in the port: no rider's speed, handling
 or cornering changes, our rider keeps a full item set, and total pool pressure
@@ -707,6 +783,40 @@ everywhere else.
 `RACE_TYPE_BOSS_JUNGLE`, it has no `bossHealth` at all, and `race_main.c` decides
 it on who reaches the line first, so it stays on the ordinary ladder where boost
 is the lever that works.
+
+### The three Cross minigames, which are not races
+
+Slot 10 -- the last two courses, and so the credits -- is opened by
+`updateStorySlotUnlockStatus` only when slots 0..9 are all 1 **and** slots
+12..14 are as well, and 12..14 are the Speed / Shot / X Cross minigames. They
+are not on the course list: they are buildings in Jingle Town, and
+`handleGameStateComplete` (`src/story/map_state.c`) intercepts
+`storyMapLocationIndex` 3, 6 and 9 and sets `currentLevel` to 0xD, 0xE and 0xC
+itself. A location id is one less than its handler index, so the navigator
+walks into ids 2, 5 and 8.
+
+The part that would have quietly cost a night: **their "place" is not a
+place.** `initRace` gives each of them `totalRacers = 1`, so
+`players[0].finishPosition` is 0 whether the rider passed or failed, and a
+navigator reading it files every attempt as a win, never climbs the ladder, and
+waits for ever for a slot 10 the save is never going to open. Each has its own
+pass mark, and it is on the GameState the race is still holding when the finish
+flag goes up:
+
+| level | raceType | result handler | won when |
+| --- | --- | --- | --- |
+| 0xC Speed Cross | `RACE_TYPE_SPEED_CROSS` | `handleSkillGameResult` | `playerLost == 0` |
+| 0xD Shot Cross | `RACE_TYPE_SHOOT_CROSS` | `handleShotCrossGameResult` | `playerLost == 0` and `shootCrossTargetsHit == 0x14` |
+| 0xE X Cross | `RACE_TYPE_X_CROSS` | `handleMeterGameResult` | `playerLost == 0` and `players[0].skillPoints >= 0x12C` |
+
+Shot Cross is the trap in that table: 19 targets out of 20 takes the *win*
+branch of the state machine, prints a score, awards gold -- and still sets
+`gRaceResultCode` 6, which `awaitRaceResult` writes into the save as a 4. Only
+a 5 (or a 3) becomes the 1 that opens a gate. `nav_cross_place` asks the
+question the result handler asks, and the navigator prints the numbers on the
+finish edge (`sbk-nav: cross game level N type=T: lost=.. targets=../20
+skill=../300 -> PASS|fail`) because the GameState is gone by the time the
+result screen is up, and "how far short" is the only thing a diagnosis has.
 
 ### The loop guard, which had latched on
 
