@@ -1606,11 +1606,17 @@ so a rider that wedges itself costs a minute instead of a quarter of an hour.
 * ~~**Speed Cross (level 12) is not passed.**~~ **Won on the user's own save**
   at rung 0, `lost=0` at 87.8 seconds of ninety. See "Speed Cross" above --
   the ceiling is the game's own 0x180000 and the lever is the line.
-* **The golden movie for course 0 will no longer reproduce.** The ollie fix
-  changes the launch impulse for every rider on every course, so a replay
-  recorded before it diverges the first time anyone leaves the ground.
-  `regress` has to be re-recorded, and that is the correct outcome: the
-  recording was of a game whose jumps were wrong.
+* ~~**The golden movie for course 0 will no longer reproduce.**~~
+  **Re-recorded, and `regress` passes.** The ollie fix changes the launch
+  impulse for every rider on every course, so the old replay diverged the
+  first time anyone left the ground. Re-cut from the same spec
+  (`level=0,char=0,board=8,nmtax=0,nmdelay=120,nmuse=205,nmalt=205`) the row
+  moves and the movement is worth reading: still `place=1`, but **14,106 ->
+  14,256 frames**, gold 2,600 -> 1,800, and wall contacts **331 -> 30**. The
+  rider is a hundred and fifty frames slower round Sunny Mountain and it
+  scrapes the scenery a tenth as often, which is what a jump that leaves the
+  ground with the impulse the game intended -- rather than with two words of
+  somebody else's data -- ought to look like.
 * ~~**Course 10 has not been reached.**~~ **Won on the user's own save** at
   rung 6, first attempt, `place=1` -- see "Course 10, and the ollie's bill".
   `progress [111111111115] won=11`.
