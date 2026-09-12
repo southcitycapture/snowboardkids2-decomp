@@ -59,6 +59,10 @@ extern SbkSnowboardStats gSnowboardStatsTable[SNOWBOARD_COUNT][9];
 #define PLAYER_FINISHED_FLAG 0x80000
 
 int sbk_race_debug_enabled;
+/* --pintrace: the pin autopsy below. It is a diagnostic, not a gauge -- a
+ * campaign whose rivals stall writes about 1,200 lines a minute of it -- so it
+ * is off unless asked for, and --racedbg alone stays readable. */
+int sbk_pin_trace;
 int sbk_autoplay;   /* --autoplay: player 1 driven by the game's own CPU rider */
 int sbk_soak;       /* --soak: keep confirming through the menus between races */
 int sbk_nightmare;  /* --nightmare: a difficulty row above the hardest */
@@ -1074,7 +1078,7 @@ void sbk_autoplay_tick(unsigned long retraces) {
             }
         }
         wall_watch(gs);
-        if (sbk_race_debug_enabled) pin_watch(gs, retraces);
+        if (sbk_pin_trace) pin_watch(gs, retraces);
         race_watchdog(gs, retraces);
         marshal_tick(gs, retraces);
         if (sbk_autoplay && p1->isCpuControlled == 0) {

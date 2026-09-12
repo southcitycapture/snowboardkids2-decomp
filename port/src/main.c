@@ -268,6 +268,10 @@ int main(int argc, char **argv) {
             sbk_peek_add(argv[++i]);
         } else if (strcmp(argv[i], "--cmds") == 0 && i + 1 < argc) {
             sbk_input_play_set_cmdfile(argv[++i]);
+        } else if (strcmp(argv[i], "--pintrace") == 0) {
+            extern int sbk_pin_trace;
+            sbk_pin_trace = 1;
+            sbk_race_debug_enabled = 1;
         } else if (strcmp(argv[i], "--autoplay") == 0) {
             sbk_autoplay = 1;
             sbk_settings.launcher = 0;  /* unattended: never sit on a menu */
@@ -334,7 +338,7 @@ int main(int argc, char **argv) {
     }
 
     if (sbk_rom_load(rom) != 0) {
-        fprintf(stderr, "usage: %s [--fullscreen[=WxH]|--fullscreen-desktop|--windowed] [--wide] [--novsync] [--trace] [--play SCRIPT|MOVIE.m64] [--record MOVIE.m64] [--frames N] [--hashframe] [--perf] [--autoplay] [--soak] [--nightmare] [--trial SPEC] [--plan C:CH:B:BO,..] [--pak FILE|--nopak] [--eeprom FILE] [--unlockall] [--nopad] [--nobosspilot] [--noshotpilot] [--bosssupply N] [--status] [--coursetrace] [--turbo] [--headless] [--mute] [--wav OUT.wav] [snowboardkids2.z64]\n", argv[0]);
+        fprintf(stderr, "usage: %s [--fullscreen[=WxH]|--fullscreen-desktop|--windowed] [--wide] [--novsync] [--trace] [--play SCRIPT|MOVIE.m64] [--record MOVIE.m64] [--frames N] [--hashframe] [--perf] [--pintrace] [--autoplay] [--soak] [--nightmare] [--trial SPEC] [--plan C:CH:B:BO,..] [--pak FILE|--nopak] [--eeprom FILE] [--unlockall] [--nopad] [--nobosspilot] [--noshotpilot] [--bosssupply N] [--status] [--coursetrace] [--turbo] [--headless] [--mute] [--wav OUT.wav] [snowboardkids2.z64]\n", argv[0]);
         return 1;
     }
     printf("sbk: ROM %s (%lu bytes)\n", rom, (unsigned long)sbk_rom_size);
