@@ -592,7 +592,54 @@ static const struct { s16 boost, supply; } nav_boss_ladder[] = {
 /* Six rungs and a high top, because Speed Cross is a hard clock and the
  * street is long: the same course Shoot Cross runs in 139 seconds at +31% has
  * to be run in ninety, and the campaign lost it at +31, +43, +56 and +68. */
-static const s16 nav_cross_ladder[] = { 80, 128, 176, 224, 288, 352 };
+/* ...and the three Cross games do not want the same rung, because the levers
+ * that pass them are different levers. Measured on the harness, one race
+ * each, star board, Nightmare row:
+ *
+ *   Speed Cross (12)  boost 176 + hand 128 + corner -128 + dead 512
+ *                     -> lost=0 at 5,266 frames, 87.8 s of ninety. The same
+ *                     row with accel 1024 on top *fails*: the rider carries
+ *                     too much off the street's ramps and spends in the air
+ *                     the time it saved on the ground. Top speed is still
+ *                     not the lever -- the rider sits on the game's own
+ *                     0x180000 ceiling (race_main.c:854) for four fifths of
+ *                     the race whatever the boost says -- but the boost has
+ *                     to be big enough that the CPU penalty and the catch-up
+ *                     term (race_main.c:803, :833) do not pull it back off
+ *                     that ceiling.
+ *
+ *   X Cross (14)      the same row *with* accel 1024 -> 435 skill points of
+ *                     300, lost=0, 4,234 frames. Acceleration is the whole
+ *                     ollie here: beginPostTrickLaunchStep builds the jump
+ *                     out of unkB8C + baseAcceleration and nothing else.
+ *
+ *   Shoot Cross (13)  was passed at rung 0 with no lever at all, so it keeps
+ *                     the boost-only rungs it was won on.
+ */
+typedef struct {
+    s16 boost, accel, hand, corner, dead;
+} NavCrossRung;
+
+static const NavCrossRung nav_speed_cross_ladder[] = {
+    { 176, 0, 128, -128, 512 },  { 224, 0, 160, -160, 768 },  { 288, 0, 192, -192, 1024 },
+    { 128, 0, 96, -96, 384 },    { 352, 0, 224, -224, 1024 }, { 176, 0, 0, 0, 512 },
+};
+
+static const NavCrossRung nav_shot_cross_ladder[] = {
+    { 80, 0, 0, 0, 0 },  { 128, 0, 0, 0, 0 },        { 176, 0, 0, 0, 0 },
+    { 224, 0, 0, 0, 0 }, { 176, 0, 128, -128, 512 }, { 288, 0, 128, -128, 512 },
+};
+
+static const NavCrossRung nav_x_cross_ladder[] = {
+    { 176, 1024, 128, -128, 512 }, { 128, 2048, 128, -128, 512 }, { 224, 1024, 160, -160, 768 },
+    { 176, 512, 128, -128, 512 },  { 288, 2048, 160, -160, 768 }, { 128, 1024, 0, 0, 0 },
+};
+
+static const NavCrossRung *nav_cross_ladder_for(int level) {
+    if (level == 12) return nav_speed_cross_ladder;
+    if (level == 14) return nav_x_cross_ladder;
+    return nav_shot_cross_ladder;
+}
 
 static int nav_level_is_cross(int level) { return level >= 12 && level <= 14; }
 
@@ -620,7 +667,7 @@ static int nav_level_is_boss(int level) {
 #define NAV_LADDER_TOP(boss)                                                                                       \
     ((boss) ? (int)(sizeof(nav_boss_ladder) / sizeof(nav_boss_ladder[0])) - 1                                        \
             : (int)(sizeof(nav_ladder) / sizeof(nav_ladder[0])) - 1)
-#define NAV_CROSS_LADDER_TOP ((int)(sizeof(nav_cross_ladder) / sizeof(nav_cross_ladder[0])) - 1)
+#define NAV_CROSS_LADDER_TOP ((int)(sizeof(nav_speed_cross_ladder) / sizeof(nav_speed_cross_ladder[0])) - 1)
 
 /* Which course the ladder is armed for. It is declared here, above
  * nav_ladder_set, because the two ladders are chosen by course. */
@@ -634,20 +681,31 @@ static int nav_wedge_relief;
 static void nav_ladder_set(int rung) {
     int boss = nav_level_is_boss(nav_level);
     extern int sbk_boss_supply;
+    extern int sbk_boost_accel, sbk_boost_hand, sbk_boost_corner, sbk_boost_dead;
     extern int sbk_trial_pins_levers;
     /* A trial that names relief= or tax= is running an experiment on exactly
      * these variables; the ladder must not write over the experiment. */
     if (sbk_trial_pins_levers) return;
     if (rung < 0) rung = 0;
     if (nav_level_is_cross(nav_level)) {
+        const NavCrossRung *row;
         if (rung > NAV_CROSS_LADDER_TOP) rung = NAV_CROSS_LADDER_TOP;
         sbk_boss_supply = 0;
-        sbk_campaign_boost = nav_cross_ladder[rung];
+        row = &nav_cross_ladder_for(nav_level)[rung];
+        sbk_campaign_boost = row->boost;
+        sbk_boost_accel = row->accel;
+        sbk_boost_hand = row->hand;
+        sbk_boost_corner = row->corner;
+        sbk_boost_dead = row->dead;
         sbk_rival_tax = 0;
         sbk_rival_item_relief = 0;
         sbk_item_relief = nav_wedge_relief;
         return;
     }
+    /* Off a Cross game the four stat levers go back to zero, so a course
+     * that has never wanted them never quietly inherits the last Cross
+     * rung's. */
+    sbk_boost_accel = sbk_boost_hand = sbk_boost_corner = sbk_boost_dead = 0;
     if (rung > NAV_LADDER_TOP(boss)) rung = NAV_LADDER_TOP(boss);
     if (boss) {
         sbk_campaign_boost = nav_boss_ladder[rung].boost;

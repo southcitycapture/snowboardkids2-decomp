@@ -265,7 +265,8 @@ static int trial_gold0, trial_done;
 /* The four extra retune levers; see trial_retune below for what each is for
  * and why the boost lever alone was never going to pass either Cross game. */
 int sbk_boost_accel;    /* --trial accel=N   baseAcceleration */
-int sbk_boost_corner;   /* --trial corner=N  cornering + handling */
+int sbk_boost_hand;     /* --trial hand=N    handling: the turn rate */
+int sbk_boost_corner;   /* --trial corner=N  cornering: the drag a turn costs */
 int sbk_boost_dead;     /* --trial dead=N    lateralDeadzone */
 int sbk_boost_grav;     /* --trial grav=N    baseGravity (negative = floatier) */
 
@@ -275,7 +276,7 @@ int sbk_trial_parse(const char *spec) {
     while (*p) {
         char key[16];
         int val;
-        if (sscanf(p, "%15[a-z]=%d", key, &val) == 2) {
+        if (sscanf(p, "%15[a-z]=%d", key, &val) == 2) {   /* %d takes a leading '-' */
             if (!strcmp(key, "char")) trial.chr = val;
             else if (!strcmp(key, "board")) trial.board = val;
             else if (!strcmp(key, "boost")) trial.boost = val;
@@ -294,6 +295,7 @@ int sbk_trial_parse(const char *spec) {
             else if (!strcmp(key, "pathslot")) trial_pathslot = val;
             else if (!strcmp(key, "accel")) sbk_boost_accel = val;
             else if (!strcmp(key, "corner")) sbk_boost_corner = val;
+            else if (!strcmp(key, "hand")) sbk_boost_hand = val;
             else if (!strcmp(key, "dead")) sbk_boost_dead = val;
             else if (!strcmp(key, "grav")) sbk_boost_grav = val;
             else if (!strcmp(key, "tflags")) { extern int sbk_trick_flags; sbk_trick_flags = val; }
@@ -393,7 +395,15 @@ static void trial_retune(Player *p, int boost) {
      * cornering that came out as 44 would be a *worse* rider reported as a
      * better one, and that is exactly the kind of silent inversion the boost
      * ladder already cost this port two days over. */
-    p->handling = (u8)stat_clamp8(stat_boost(s->handling + 0x19, sbk_boost_corner));
+    /* These two do not pull the same way and one lever for both was a mistake
+     * worth writing down. `handling` (race_main.c:1392, steeringAngle/2 *
+     * handling / 125) is the turn *rate*, so more is a rider that gets round;
+     * `cornering` (1401) is the *drag* the turn costs, so more is a rider
+     * that scrubs off speed doing it. A single corner= lever that raised both
+     * took Speed Cross's wall contacts from 30 to 6 and left the finish
+     * exactly where it was, because it bought the line and paid for it in
+     * speed. They are separate now, and both take a negative. */
+    p->handling = (u8)stat_clamp8(stat_boost(s->handling + 0x19, sbk_boost_hand));
     p->cornering = (u8)stat_clamp8(stat_boost(s->cornering + 1, sbk_boost_corner));
     p->lateralDeadzone = stat_boost((s->lateralDeadzone << 15) / 100 + 0x1000, sbk_boost_dead);
     p->baseGravity = stat_boost((s->gravity << 14) / 100 + 0x3000, sbk_boost_grav);
