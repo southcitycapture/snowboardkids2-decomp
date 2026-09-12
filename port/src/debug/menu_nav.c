@@ -365,6 +365,19 @@ static int nav_next_cross(void) {
     return -1;
 }
 
+/* `--trial level=12|13|14`: a Cross minigame asked for by name. The course
+ * list cannot offer one -- they are buildings -- so the trial has to be served
+ * from the town branch, and it has to be served whatever the save says about
+ * the slot, or a trial could never re-run a game it has already passed. */
+static int nav_cross_location_for(int level) {
+    switch (level) {
+        case 13: return 2;
+        case 14: return 5;
+        case 12: return 8;
+        default: return -1;
+    }
+}
+
 static int nav_saves_pending(void) { return nav_want == NAV_SAVE; }
 
 /* The campaign's own progress bar. levelUnlockStatus is the one place the game
@@ -547,6 +560,22 @@ static const struct { s16 boost, supply; } nav_boss_ladder[] = {
     { 14, 0 }, { 28, 180 }, { 28, 120 }, { 42, 60 }, { 56, 30 },
 };
 
+/* A Cross minigame has its own ladder, and the lever is speed alone.
+ *
+ * There are no rivals to tax and no items to withhold: the rider is on its own
+ * against a clock. initShotCrossCountdownTimerTask puts 0x1194 thirtieths of a
+ * second -- a hundred and fifty seconds -- on Shoot and Speed Cross and 0xA8C
+ * (ninety) on X Cross, and when it reaches zero updateShotCrossCountdownTimer
+ * writes playerLost = 1 whatever the score is. Measured on Shoot Cross, the
+ * star board with no boost took 155 seconds to run the street and lost on the
+ * clock with eight targets still standing; +19% brought it home in 122 and
+ * +19% with the shot pilot aiming took nineteen of twenty. So rung 0 here is
+ * not "no handicap", it is "enough speed to finish at all", and every rung
+ * after a loss buys more of the same. */
+static const s16 nav_cross_ladder[] = { 48, 80, 112, 144, 176 };
+
+static int nav_level_is_cross(int level) { return level >= 12 && level <= 14; }
+
 /* Which courses are boss courses is not a list: it is asked of the race.
  * Guessing it by level number was wrong twice over -- course 7 reports
  * RACE_TYPE_BOSS_JUNGLE (1), the type that is won by reaching the line, not the
@@ -571,6 +600,7 @@ static int nav_level_is_boss(int level) {
 #define NAV_LADDER_TOP(boss)                                                                                       \
     ((boss) ? (int)(sizeof(nav_boss_ladder) / sizeof(nav_boss_ladder[0])) - 1                                        \
             : (int)(sizeof(nav_ladder) / sizeof(nav_ladder[0])) - 1)
+#define NAV_CROSS_LADDER_TOP ((int)(sizeof(nav_cross_ladder) / sizeof(nav_cross_ladder[0])) - 1)
 
 /* Which course the ladder is armed for. It is declared here, above
  * nav_ladder_set, because the two ladders are chosen by course. */
@@ -589,6 +619,15 @@ static void nav_ladder_set(int rung) {
      * these variables; the ladder must not write over the experiment. */
     if (sbk_trial_pins_levers) return;
     if (rung < 0) rung = 0;
+    if (nav_level_is_cross(nav_level)) {
+        if (rung > NAV_CROSS_LADDER_TOP) rung = NAV_CROSS_LADDER_TOP;
+        sbk_boss_supply = 0;
+        sbk_campaign_boost = nav_cross_ladder[rung];
+        sbk_rival_tax = 0;
+        sbk_rival_item_relief = 0;
+        sbk_item_relief = nav_wedge_relief;
+        return;
+    }
     if (rung > NAV_LADDER_TOP(boss)) rung = NAV_LADDER_TOP(boss);
     if (boss) {
         sbk_campaign_boost = nav_boss_ladder[rung].boost;
@@ -916,7 +955,11 @@ static void nav_act(unsigned long retraces) {
      * it wants and lets the navigator's own A press confirm it. */
     if (sbk_menu_on("handleLevelSelectInput")) {
         LevelSelectState *ls = (LevelSelectState *)sbk_menu_alloc("handleLevelSelectInput");
-        int want = sbk_nav_target_level >= 0 ? sbk_nav_target_level : nav_next_story_level();
+        /* 12..14 are the Cross minigames, which the course list never offers;
+         * a trial aimed at one leaves the cursor alone and lets the town
+         * branch above do the work. */
+        int want = (sbk_nav_target_level >= 0 && sbk_nav_target_level < 12) ? sbk_nav_target_level
+                                                                            : nav_next_story_level();
         /* Arm the ladder for the course being chosen, not for the one whose
          * result screen last went by. This is the only place the campaign
          * knows what it is about to race *before* it races it, and a course
@@ -991,6 +1034,12 @@ static void nav_act(unsigned long retraces) {
                 m->unk427 = (u8)(STORY_SAVE_LOCATION + 1);
                 printf("sbk-nav: town -> save point (location %d, handler %d)\n", STORY_SAVE_LOCATION,
                        STORY_SAVE_LOCATION + 1);
+            } else if (sbk_nav_target_level >= 12 && (cross = nav_cross_location_for(sbk_nav_target_level)) >= 0) {
+                m->discoveredLocationId = (u8)cross;
+                m->locationDiscovered = 1;
+                m->unk427 = (u8)(cross + 1);
+                printf("sbk-nav: town -> Cross minigame %d asked for by --trial (location %d, handler %d)\n",
+                       sbk_nav_target_level, cross, cross + 1);
             } else if (nav_next_story_level() < 0 && (cross = nav_next_cross()) >= 0) {
                 /* Nothing left on the course list means the campaign is at the
                  * slot-10 gate, which wants the three Cross minigames won. They

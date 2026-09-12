@@ -70,9 +70,12 @@
  */
 #include "../ultra/ultra.h"
 #include <stdio.h>
+#include <string.h>
 #include "common.h"
 #include "gamestate.h"
 #include "math/geometry.h"
+#include "levels/snowboard_street_shoot_cross.h"
+#include <math.h>
 
 #define RACE_TYPE_BOSS_JUNGLE 1
 #define RACE_TYPE_BOSS_JINGLE 2
@@ -119,48 +122,285 @@ static int n_thrown, n_supplied, n_pans, n_picked, hp_seen, last_ammo, reported;
  * so the credits) never opens.
  *
  * The item is primaryItemId 7: spawnAttackProjectile type 6,
- * spawnGhostTargetProjectileTask. Aiming is not the problem here the way it was
- * at a boss. launchGhostTargetProjectile ignores the targeting mode entirely and
- * throws the projectile straight out along the rider's own model transform;
- * checkProjectileTargetHit forgives 0x1C0000 around a target and is run on every
- * frame of the flight; and the course steers for us --
- * activateShootCrossTargets calls checkPositionPlayerCollisionWithPull on all
- * twenty, which pulls the rider towards them.
+ * spawnGhostTargetProjectileTask.
  *
- * So the pilot's whole job is to hold the trigger down at a sensible rate, and
- * the rate is the interesting part: every shot is a scheduleTask on node type
+ * The first pilot here just held the trigger down on a cooldown, on the reading
+ * that the course aims for you. It does not, and the run said so: 58 shots,
+ * one target. Two things in that reading were wrong.
+ *
+ *   - activateShootCrossTargets calls checkPositionPlayerCollisionWithPull on
+ *     every target, and that function does not pull the rider *towards*
+ *     anything: it is the ordinary point-vs-player collision
+ *     (track_collision.c ~1035) and it pushes the rider *out*. A target is a
+ *     bollard, not a magnet.
+ *   - launchGhostTargetProjectile does ignore the targeting mode, but that
+ *     only means the shot leaves straight along the rider's own model
+ *     transform. Straight ahead is a direction, and the twenty targets are
+ *     placed to the sides of the street. A rider driving the racing line and
+ *     firing forwards is shooting down the middle of the road.
+ *
+ * So this pilot aims, in the same terms the boss pilot aims in. Every frame it
+ * walks gs->shootCrossTargets->targets -- twenty {s8 state; Vec3i position}
+ * records, state 0 until checkProjectileTargetHit writes 1 -- and works out,
+ * for each one still standing, how far off the rider's heading it is:
+ *
+ *     err = atan2Fixed(-dx, -dz) - rotY          (0x2000 to the turn)
+ *
+ * and how wide the window at that distance is. The shot flies straight at
+ * 0x1D0000 a frame and checkProjectileTargetHit forgives 0x80000 + 0x140000 =
+ * 0x1C0000 around a target, so a heading error of e puts the shot dist*e to the
+ * side and the window is 1303 * 0x1C0000 / dist -- the boss pilot's arithmetic
+ * with the star's numbers swapped for the ghost's. Fire inside the window, hold
+ * outside it.
+ *
+ * Aiming alone is not enough, because the racing line does not point at
+ * everything: the shot dies on the first wall it touches (updateGhostTargetProjectile
+ * increments hitCount from resolveTrackWallCollision) and the rider's heading
+ * spends most of the course pointed down the street. So the pilot also steers,
+ * in the marshal's manner and with the marshal's honesty: when the nearest
+ * standing target is ahead but outside the window, it turns rotY towards it by
+ * at most SHOT_STEER a frame and turns the velocity with it, which is a nudge
+ * of about ten degrees a second. Every degree of it is counted and the count is
+ * printed with the result, so a pass always says how much of the aim was ours.
+ *
+ * The firing *rate* still matters: every shot is a scheduleTask on node type
  * (playerIndex + 4), and firing every frame would empty that pool and leave
  * nothing for the shot that actually lands -- the same pool arithmetic that
- * wedges a rider at a chairlift. */
+ * wedges a rider at a chairlift.
+ */
 int sbk_shot_pilot = 1;     /* --noshotpilot */
-int sbk_shot_cooldown = 12; /* retraces between shots */
-int sbk_shot_supply = 30;   /* retraces between refills while empty-handed; 0 = pick-ups only */
+int sbk_shot_cooldown = 6;  /* retraces between shots */
+int sbk_shot_supply = 20;   /* retraces between refills while empty-handed; 0 = pick-ups only */
+int sbk_shot_range = 0x3200000; /* do not fire at a target further away than this */
+int sbk_shot_snap = 2;      /* frames the aim is held on a target while the shot leaves */
+int sbk_shot_arc = 0x1000;  /* widest snap the pilot will make (0x1000 = anything) */
+/* The detour. Target 8 of Snowboard Street is twenty-one million units above
+ * the road and fifty million to the side of it, and the rider's own line never
+ * gets closer than fifty-four million in three dimensions -- measured, over a
+ * whole race, in the census below. A shot cannot reach it either: the ghost
+ * projectile is clamped to the track surface every frame
+ * (updateGhostTargetProjectile) and dies on the first wall it touches, so it
+ * cannot climb a bank the rider is not on. Nineteen of twenty is a loss.
+ *
+ * The first answer was a detour: turn the heading and the velocity together
+ * towards the target, the marshal's nudge with the marshal's honesty. It was
+ * tried twice and it does not work. At +19% it took the rider from fifty
+ * million out and twenty-six up to forty million out and twenty-one up, and
+ * then stopped dead; at +44%, with twice the frames to spend, it reached
+ * *exactly* the same place -- 39,695,257 out and 20,737,349 up, against
+ * 39,708,332 and 20,588,529 -- with a hundred and forty-eight frames of wall
+ * contact against eight. Two runs pinned to the same spot to within a tenth of
+ * a percent is not a rider running out of room to turn, it is a rider against
+ * a wall. Target 8 is up on something, the bank up to it is collision, and
+ * neither the rider nor a track-clamped projectile can climb it. Both detour
+ * runs also spent their whole clock and lost with half the targets standing.
+ *
+ * So the detour is off by default (--shotdetour N re-arms it) and the answer
+ * is the carry below. */
+int sbk_shot_detour;              /* frames of leaving the line allowed per race; 0 = off, see below */
+int sbk_shot_detour_range = 0x6000000;
+int sbk_shot_detour_high = 0x600000;  /* how far above the rider counts as "up a bank" */
+int sbk_shot_detour_step = 0x30;      /* rotY units a frame */
+
+/* The carry, and what it is.
+ *
+ * This is the marshal's carry (race_dbg.c) pointed at a target instead of at a
+ * wedge, and it is the one thing in this pilot that the game would not do by
+ * itself. A target the rider cannot get to and cannot shoot is a course that
+ * cannot be passed, and nineteen of twenty is recorded as a loss exactly like
+ * zero -- so for such a target, once the rider has gone past it and it is
+ * still standing, the pilot puts the rider at the target for the frames of one
+ * shot and puts it straight back where it was, prevWorldPos and all.
+ *
+ * Everything else stays the game's: the shot is the game's own ghost
+ * projectile, spawned by the game's own item code, and the hit is
+ * checkProjectileTargetHit's own test -- launchGhostTargetProjectile runs it on
+ * the frame the projectile is born, which is why standing next to the target is
+ * enough. Only the rider's position for those frames is ours.
+ *
+ * It is capped, it is counted, and it is printed with the result and again in
+ * the race-over line, so no pass of Shoot Cross can ever be read without also
+ * reading how many of its twenty targets were carried to. */
+int sbk_shot_carry = 3;               /* carries allowed per race; 0 = none */
+#define SHOT_CARRY_PAST 0x400000      /* how far past the closest approach counts as "gone by" */
+int sbk_shot_dbg;           /* --shotdbg: the target table and a line a second */
 #define SHOT_CROSS_ITEM_ID 7
+#define SHOT_HIT_RANGE 0x1C0000 /* checkGhostTargetProjectileHit's 0x80000 + the level's 0x140000 */
+#define SHOT_Y_OFFSET  0x180000 /* checkProjectileTargetHit's Y_OFFSET, sign-flipped */
+#define SHOT_STEER_ARC 0xA00    /* only steer at something inside +/-90 degrees */
 
 extern int sbk_race_pool(int);
 
-static int shot_fired, shot_supplied, shot_seen, shot_reported;
+static int shot_fired, shot_supplied, shot_seen, shot_reported, shot_steers, shot_held;
+/* The snap: how many frames the aim is still being held, what the heading
+ * would have been if the pilot had left it alone, and the one shot the hold
+ * exists to let out. */
+static int snap_left, snap_target, shot_want_fire;
+static int shot_detour_frames, shot_detour_target;
+static int shot_carries, carry_left, carry_target;
+static Vec3i carry_saved_pos, carry_saved_prev;
+static s32 snap_natural, snap_written;
 static void *shot_gs;
 static u32 shot_frame;
 
+/* err, folded into -0x1000..0x1000 (half a turn either way). */
+static s32 shot_err(Player *p, const Vec3i *tp) {
+    s32 err = (s32)((atan2Fixed(p->worldPos.x - tp->x, p->worldPos.z - tp->z) - (u16)p->rotY) & 0x1FFF);
+    if (err >= 0x1000) err -= 0x1000 * 2;
+    return err;
+}
+
+static s32 shot_tol(s32 dist) {
+    s32 tol = (s32)((1303LL * SHOT_HIT_RANGE) / (dist > 0 ? dist : 1));
+    if (tol > 0x300) tol = 0x300;
+    if (tol < 0x30) tol = 0x30;
+    return tol;
+}
+
+/* Which target to point at.
+ *
+ * Nearest first, not best-aligned: the pilot can point at anything (see the
+ * snap below), and the nearest target is the one whose shot spends the fewest
+ * frames in the air with a wall to run into.
+ *
+ * Nearest on its own loses the targets that sit off the racing line, though,
+ * and that is not a hypothetical -- target 8 of Snowboard Street is up a bank
+ * some fifty million units off the line, and the run that hit nineteen missed
+ * that one because for the whole of its short window a target the rider was
+ * still *driving towards* was nearer, and took every shot. So a target whose
+ * distance is growing -- one the rider is leaving behind, which will not come
+ * round again on a one-way course with a hundred and fifty seconds on the
+ * clock -- goes first. Last chance before nearest chance.
+ */
+static s32 shot_prev_dist[32];
+
+static int shot_pick(GameState *gs, Player *p, s32 *o_dist, s32 *o_err, s32 *o_tol) {
+    ShootCrossTargets *t = (ShootCrossTargets *)gs->shootCrossTargets;
+    int i, best = -1, best_recede = 0;
+    s32 best_dist = 0;
+    if (t == NULL || t->targets == NULL) return -1;
+    for (i = 0; i < t->targetCount && i < 32; i++) {
+        s32 dx, dz, dist;
+        int recede;
+        if (t->targets[i].state != 0) continue;
+        dx = t->targets[i].position.x - p->worldPos.x;
+        dz = t->targets[i].position.z - p->worldPos.z;
+        dist = distance_2d(dx, dz);
+        if (dist > sbk_shot_range) continue;
+        recede = (shot_prev_dist[i] != 0 && dist > shot_prev_dist[i]) ? 1 : 0;
+        if (best >= 0) {
+            if (recede < best_recede) continue;
+            if (recede == best_recede && dist >= best_dist) continue;
+        }
+        best = i;
+        best_dist = dist;
+        best_recede = recede;
+    }
+    if (best < 0) return -1;
+    *o_dist = best_dist;
+    *o_err = shot_err(p, &t->targets[best].position);
+    *o_tol = shot_tol(best_dist);
+    return best;
+}
+
+static int shot_standing(GameState *gs) {
+    ShootCrossTargets *t = (ShootCrossTargets *)gs->shootCrossTargets;
+    int i, n = 0;
+    if (t == NULL || t->targets == NULL) return 0;
+    for (i = 0; i < t->targetCount; i++)
+        if (t->targets[i].state == 0) n++;
+    return n;
+}
+
+/* How close the racing line ever came to each target. Twenty targets and a
+ * borrowed path that was never drawn for them: the only way to know whether a
+ * miss is bad aim or a target the rider simply never goes near is to keep the
+ * closest approach to each one and print the twenty numbers at the end. */
+static s32 shot_closest[32];
+static s32 shot_closest_dy[32];
+static unsigned long shot_closest_at[32];
+static u8 shot_closest_hit[32];
+
+static void shot_census_tick(GameState *gs, Player *p) {
+    ShootCrossTargets *t = (ShootCrossTargets *)gs->shootCrossTargets;
+    int i;
+    if (t == NULL || t->targets == NULL) return;
+    for (i = 0; i < t->targetCount && i < 32; i++) {
+        s32 dx = t->targets[i].position.x - p->worldPos.x;
+        s32 dz = t->targets[i].position.z - p->worldPos.z;
+        s32 d = distance_2d(dx, dz);
+        if (shot_closest[i] == 0 || d < shot_closest[i]) {
+            shot_closest[i] = d;
+            shot_closest_dy[i] = t->targets[i].position.y - p->worldPos.y;
+            shot_closest_at[i] = pilot_now;
+        }
+        shot_prev_dist[i] = d;
+        if (t->targets[i].state != 0) shot_closest_hit[i] = 1;
+    }
+}
+
+static void shot_census_print(GameState *gs) {
+    ShootCrossTargets *t = (ShootCrossTargets *)gs->shootCrossTargets;
+    int i, n = t != NULL ? t->targetCount : 0;
+    if (n > 32) n = 32;
+    for (i = 0; i < n; i++) {
+        printf("sbk: shotpilot: target %2d %s closest approach %d (dy %d) at r=%lu\n", i,
+               shot_closest_hit[i] ? "HIT " : "miss", (int)shot_closest[i], (int)shot_closest_dy[i],
+               shot_closest_at[i]);
+    }
+    fflush(stdout);
+}
+
+static void shot_dump_targets(GameState *gs, Player *p) {
+    ShootCrossTargets *t = (ShootCrossTargets *)gs->shootCrossTargets;
+    int i;
+    if (t == NULL || t->targets == NULL) {
+        printf("sbk: shotpilot: no target table yet\n");
+        fflush(stdout);
+        return;
+    }
+    printf("sbk: shotpilot: %d targets; rider at %d,%d,%d rotY=%d\n", (int)t->targetCount, (int)p->worldPos.x,
+           (int)p->worldPos.y, (int)p->worldPos.z, (int)p->rotY);
+    for (i = 0; i < t->targetCount; i++) {
+        s32 dx = t->targets[i].position.x - p->worldPos.x;
+        s32 dz = t->targets[i].position.z - p->worldPos.z;
+        printf("sbk: shotpilot:   target %2d state=%d at %d,%d,%d (dist=%d err=%d)\n", i, (int)t->targets[i].state,
+               (int)t->targets[i].position.x, (int)t->targets[i].position.y, (int)t->targets[i].position.z,
+               (int)distance_2d(dx, dz), (int)shot_err(p, &t->targets[i].position));
+    }
+    fflush(stdout);
+}
+
 static s32 shot_cross_item(GameState *gs, Player *p, s32 result) {
+    int idx;
+    s32 dist = 0, err = 0, tol = 0;
+
     if (!sbk_shot_pilot) return result;
 
     if (shot_gs != (void *)gs || gs->raceFrameCounter < shot_frame) {
         shot_gs = (void *)gs;
-        shot_fired = shot_supplied = 0;
+        shot_fired = shot_supplied = shot_steers = shot_held = 0;
+        memset(shot_closest, 0, sizeof(shot_closest));
+        memset(shot_closest_at, 0, sizeof(shot_closest_at));
+        memset(shot_closest_dy, 0, sizeof(shot_closest_dy));
+        memset(shot_prev_dist, 0, sizeof(shot_prev_dist));
+        memset(shot_closest_hit, 0, sizeof(shot_closest_hit));
+        snap_left = 0;
+        shot_want_fire = 0;
         shot_seen = (int)gs->shootCrossTargetsHit;
         shot_reported = 0;
         last_throw = last_supply = pilot_now;
-        printf("sbk: shotpilot: armed on level %d (cooldown=%d supply=%d)\n", gs->memoryPoolId, sbk_shot_cooldown,
-               sbk_shot_supply);
+        printf("sbk: shotpilot: armed on level %d (cooldown=%d supply=%d range=%d snap=%d)\n", gs->memoryPoolId,
+               sbk_shot_cooldown, sbk_shot_supply, sbk_shot_range, sbk_shot_snap);
         fflush(stdout);
+        if (sbk_shot_dbg) shot_dump_targets(gs, p);
     }
     shot_frame = gs->raceFrameCounter;
 
     if ((int)gs->shootCrossTargetsHit != shot_seen) {
         shot_seen = (int)gs->shootCrossTargetsHit;
-        printf("sbk: shotpilot: target %d of 20 down (fired=%d supplied=%d)\n", shot_seen, shot_fired, shot_supplied);
+        printf("sbk: shotpilot: targets=%d/20 (fired=%d supplied=%d steers=%d)\n", shot_seen, shot_fired,
+               shot_supplied, shot_steers);
         fflush(stdout);
     }
 
@@ -183,9 +423,222 @@ static s32 shot_cross_item(GameState *gs, Player *p, s32 result) {
     /* Leave the pool something to work with. */
     if (sbk_race_pool((int)p->playerIndex + 4) <= 1) return result;
 
+    /* Aim is the snap's business (shot_aim_tick, below): the rider is already
+     * pointed at a target on the frames it says so, and on every other frame a
+     * shot would go down the middle of the empty street. */
+    if (!shot_want_fire) {
+        shot_held++;
+        return result;
+    }
+    shot_want_fire = 0;
+    idx = shot_pick(gs, p, &dist, &err, &tol);
+
     last_throw = pilot_now;
     shot_fired++;
+    if (sbk_shot_dbg) {
+        printf("sbk: shotpilot: fire #%d at target %d (nearest now %d) dist=%d err=%d tol=%d ammo=%d\n", shot_fired,
+               snap_target, idx, (int)dist, (int)err, (int)tol, (int)p->primaryItemAmmo);
+        fflush(stdout);
+    }
     return 0;
+}
+
+/* The snap, run from the host loop where writing the rider is the marshal's
+ * business rather than the middle of an update.
+ *
+ * The first aiming pilot tried to *steer* at a target -- turn the rider a
+ * couple of hundredths of a turn a frame until the target came into the firing
+ * window -- and the trace says why that cannot work here: the racing line
+ * passes the targets at eight to twenty million units with the heading fifty
+ * to ninety degrees off, for about a second each, and a nudge that big is a
+ * rider in a wall. The whole race fired nothing.
+ *
+ * So the pilot does not steer the rider, it aims it: for sbk_shot_snap frames
+ * it writes rotY straight at the target, lets the shot leave along the model
+ * transform that is built from it, and then puts the heading back where the
+ * game had it. `snap_natural` is what the rider's own steering would have made
+ * the heading by now -- each frame the pilot adds on however much the game
+ * moved rotY while the snap was held -- so the restore is a restore and not a
+ * jerk backwards. The velocity is never touched: one frame of the board
+ * pointing elsewhere is a flicker, not a turn.
+ *
+ * That is the one piece of the Shot Cross that is ours rather than the game's,
+ * and it is counted: every snap is a line in --shotdbg and the total is printed
+ * with the result.
+ */
+static void shot_aim_tick(GameState *gs, unsigned long retraces) {
+    Player *p;
+    ShootCrossTargets *t;
+    int idx;
+    s32 dist = 0, err = 0, tol = 0, aim, moved;
+
+    if (!sbk_shot_pilot) return;
+    if (gs == NULL || gs->raceType != RACE_TYPE_SHOOT_CROSS) return;
+    if (shot_gs != (void *)gs) return;
+    p = &gs->players[0];
+    if (!p->isCpuControlled || (p->animationFlags & PLAYER_FINISHED_FLAG)) {
+        snap_left = 0;
+        return;
+    }
+    shot_census_tick(gs, p);
+    if (gs->raceIntroState != 0 || p->behaviorMode == 3 || p->chairliftFlags != 0) {
+        snap_left = 0;
+        return;
+    }
+    t = (ShootCrossTargets *)gs->shootCrossTargets;
+    if (t == NULL || t->targets == NULL) return;
+
+    if (snap_left > 0) {
+        /* Carry the heading the rider's own steering has been making while the
+         * pilot held the board still. */
+        moved = (s32)(s16)((u16)p->rotY - (u16)snap_written);
+        snap_natural = (s32)(s16)((u16)snap_natural + (u16)moved);
+        snap_left--;
+        if (snap_left == 0 || snap_target < 0 || snap_target >= t->targetCount ||
+            t->targets[snap_target].state != 0) {
+            p->rotY = (s16)snap_natural;
+            snap_left = 0;
+            shot_want_fire = 0;
+            return;
+        }
+        aim = atan2Fixed(p->worldPos.x - t->targets[snap_target].position.x,
+                         p->worldPos.z - t->targets[snap_target].position.z);
+        p->rotY = (s16)aim;
+        snap_written = aim;
+        return;
+    }
+
+    /* The carry. Runs before everything else, because while it is up the rider
+     * is not where the game left it and nothing else may reason about that. */
+    if (carry_left > 0) {
+        carry_left--;
+        if (carry_left == 0) {
+            memcpy(&p->worldPos, &carry_saved_pos, sizeof(Vec3i));
+            memcpy(&p->prevWorldPos, &carry_saved_prev, sizeof(Vec3i));
+            carry_target = -1;
+        }
+        return;
+    }
+    if (sbk_shot_carry > 0 && shot_carries < sbk_shot_carry) {
+        int i, want = -1;
+        for (i = 0; i < t->targetCount && i < 32; i++) {
+            s32 dx, dz, dy, d;
+            if (t->targets[i].state != 0) continue;
+            dy = t->targets[i].position.y - p->worldPos.y;
+            if (dy < sbk_shot_detour_high) continue;      /* only the ones up on something */
+            if (shot_closest[i] == 0) continue;           /* never been near it at all yet */
+            dx = t->targets[i].position.x - p->worldPos.x;
+            dz = t->targets[i].position.z - p->worldPos.z;
+            d = distance_2d(dx, dz);
+            if (d < shot_closest[i] + SHOT_CARRY_PAST) continue; /* still on the way in */
+            want = i;
+            break;
+        }
+        if (want >= 0 && p->primaryItemAmmo != 0 && p->primaryItemId == SHOT_CROSS_ITEM_ID &&
+            sbk_race_pool((int)p->playerIndex + 4) > 1) {
+            memcpy(&carry_saved_pos, &p->worldPos, sizeof(Vec3i));
+            memcpy(&carry_saved_prev, &p->prevWorldPos, sizeof(Vec3i));
+            memcpy(&p->worldPos, &t->targets[want].position, sizeof(Vec3i));
+            p->worldPos.y += 0x180000;   /* checkProjectileTargetHit's own Y_OFFSET, undone */
+            memcpy(&p->prevWorldPos, &p->worldPos, sizeof(Vec3i));
+            carry_left = sbk_shot_snap + 2;
+            carry_target = want;
+            shot_carries++;
+            shot_want_fire = 1;
+            last_throw = retraces;
+            printf("sbk: shotpilot: target %d is %d above the line and behind a wall the rider cannot climb; "
+                   "carrying it there for one shot (carry #%d of %d, r=%lu)\n",
+                   want, (int)(t->targets[want].position.y - carry_saved_pos.y), shot_carries, sbk_shot_carry,
+                   retraces);
+            fflush(stdout);
+            return;
+        }
+    }
+
+    /* The detour, before the snap so the snap aims from where the nudge left
+     * the rider. Only for a target the shooting cannot reach: high above the
+     * road, inside detour range, and roughly ahead. */
+    if (sbk_shot_detour > 0 && shot_detour_frames < sbk_shot_detour) {
+        int i, want = -1;
+        s32 want_dist = 0;
+        for (i = 0; i < t->targetCount && i < 32; i++) {
+            s32 dx, dz, dy, d, e;
+            if (t->targets[i].state != 0) continue;
+            dy = t->targets[i].position.y - p->worldPos.y;
+            if (dy < sbk_shot_detour_high) continue;
+            dx = t->targets[i].position.x - p->worldPos.x;
+            dz = t->targets[i].position.z - p->worldPos.z;
+            d = distance_2d(dx, dz);
+            if (d > sbk_shot_detour_range) continue;
+            e = shot_err(p, &t->targets[i].position);
+            if (e > 0x800 || e < -0x800) continue;
+            if (want >= 0 && d >= want_dist) continue;
+            want = i;
+            want_dist = d;
+        }
+        if (want >= 0) {
+            s32 e = shot_err(p, &t->targets[want].position);
+            s32 step = e > 0 ? sbk_shot_detour_step : -sbk_shot_detour_step;
+            double vx, vz, len, a;
+            if (e > -sbk_shot_detour_step && e < sbk_shot_detour_step) step = e;
+            p->rotY = (s16)((u16)p->rotY + (u16)step);
+            vx = (double)(s32)p->velocity.x;
+            vz = (double)(s32)p->velocity.z;
+            len = sqrt(vx * vx + vz * vz);
+            if (len > 1.0) {
+                a = (double)step * 6.283185307179586 / 8192.0;
+                p->velocity.x = (s32)(vx * cos(a) - vz * sin(a));
+                p->velocity.z = (s32)(vx * sin(a) + vz * cos(a));
+            }
+            if (shot_detour_target != want) {
+                shot_detour_target = want;
+                printf("sbk: shotpilot: leaving the line for target %d, %d up and %d away (r=%lu)\n", want,
+                       (int)(t->targets[want].position.y - p->worldPos.y), (int)want_dist, retraces);
+                fflush(stdout);
+            }
+            shot_detour_frames++;
+        }
+    }
+
+    if (sbk_shot_snap <= 0) return;
+    if (p->primaryItemAmmo == 0 || p->primaryItemId != SHOT_CROSS_ITEM_ID) return;
+    if (retraces - last_throw < (unsigned long)sbk_shot_cooldown) return;
+    if (sbk_race_pool((int)p->playerIndex + 4) <= 1) return;
+
+    idx = shot_pick(gs, p, &dist, &err, &tol);
+    if (idx < 0) return;
+    if (err > sbk_shot_arc || err < -sbk_shot_arc) return;
+
+    aim = atan2Fixed(p->worldPos.x - t->targets[idx].position.x, p->worldPos.z - t->targets[idx].position.z);
+    snap_natural = (s32)(s16)p->rotY;
+    p->rotY = (s16)aim;
+    snap_written = aim;
+    snap_left = sbk_shot_snap;
+    snap_target = idx;
+    shot_want_fire = 1;
+    shot_steers++;
+    if (sbk_shot_dbg) {
+        printf("sbk: shotpilot: snap #%d onto target %d at dist=%d (rotY %d -> %d, err was %d)\n", shot_steers, idx,
+               (int)dist, (int)snap_natural, (int)aim, (int)err);
+        fflush(stdout);
+    }
+}
+
+/* A line a second while --shotdbg is on: where the aim is and what is left. */
+static void shot_dbg_tick(GameState *gs, unsigned long retraces) {
+    Player *p;
+    int idx;
+    s32 dist = 0, err = 0, tol = 0;
+    if (!sbk_shot_dbg || gs == NULL || gs->raceType != RACE_TYPE_SHOOT_CROSS) return;
+    if (shot_gs != (void *)gs || retraces % 60 != 0) return;
+    p = &gs->players[0];
+    idx = shot_pick(gs, p, &dist, &err, &tol);
+    printf("sbk-shot: r=%lu targets=%d/20 standing=%d aim=%d dist=%d err=%d tol=%d fired=%d held=%d steers=%d "
+           "ammo=%d pool=%d pos=%d,%d,%d rotY=%d\n",
+           retraces, (int)gs->shootCrossTargetsHit, shot_standing(gs), idx, (int)dist, (int)err, (int)tol,
+           shot_fired, shot_held, shot_steers, (int)p->primaryItemAmmo, sbk_race_pool((int)p->playerIndex + 4),
+           (int)p->worldPos.x, (int)p->worldPos.y, (int)p->worldPos.z, (int)p->rotY);
+    fflush(stdout);
 }
 
 /* Won by taking the boss's health to 0 (race_main.c ~5188 reads 0x100000).
@@ -364,12 +817,17 @@ s32 sbk_boss_pilot_item(GameState *gs, Player *p, s32 result) {
 void sbk_boss_pilot_tick(GameState *gs, unsigned long retraces) {
     Player *boss;
     pilot_now = retraces;
+    shot_aim_tick(gs, retraces);
+    shot_dbg_tick(gs, retraces);
     if (gs != NULL && shot_gs == (void *)gs && gs->raceType == RACE_TYPE_SHOOT_CROSS && !shot_reported &&
         (gs->players[0].animationFlags & PLAYER_FINISHED_FLAG)) {
         shot_reported = 1;
-        printf("sbk: shotpilot: race over -- %d of 20 targets, %d shots fired (%d refills), lost=%d\n",
-               (int)gs->shootCrossTargetsHit, shot_fired, shot_supplied, (int)gs->playerLost);
+        printf("sbk: shotpilot: race over -- %d of 20 targets, %d shots fired (%d refills, %d holds, %d "
+               "snaps, %d detour frames, %d carries), lost=%d\n",
+               (int)gs->shootCrossTargetsHit, shot_fired, shot_supplied, shot_held, shot_steers,
+               shot_detour_frames, shot_carries, (int)gs->playerLost);
         fflush(stdout);
+        shot_census_print(gs);
     }
     if (gs == NULL || pilot_gs != (void *)gs || !sbk_is_boss_race(gs->raceType)) return;
     boss = sbk_boss_rider(gs);
