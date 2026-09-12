@@ -784,6 +784,95 @@ everywhere else.
 it on who reaches the line first, so it stays on the ordinary ladder where boost
 is the lever that works.
 
+### What the levers actually do, measured
+
+The trial harness runs a whole race in about **thirty seconds of wall clock**
+on the G4 -- the note under "The trial harness" saying `--headless` buys no
+speedup for the sequel is stale, and it cost this port two days of reasoning
+about levers that could have been swept in an afternoon. `--trial relief=N` and
+`tax=N` now pin the rival levers against the navigator's ladder, so a trial can
+reproduce a campaign rung exactly.
+
+Every row is one race, `--nightmare`, char 0, `SNOWBOARD_STAR`, and each
+configuration is deterministic (the same spec twice gives the same frame count
+to the frame):
+
+| course | boost | tax | relief | result |
+| --- | ---: | ---: | ---: | --- |
+| 0 Sunny Mountain | 0 | 0 | 0 | **1st**, 14,360 frames |
+| 0 | 0 | 60 | 165 | wedged |
+| 0 | 0 | 100 | 165 | wedged |
+| 8 Starlight Highway | 0 | 0 | 0 | 2nd, 21,384 |
+| 8 | 14 | 0 | 0 | wedged |
+| 8 | 42 | 0 | 0 | wedged |
+| 8 | 0 | 0 | 165 | wedged |
+| 8 | 0 | 60 | 0 | 2nd, 21,538 |
+| 8 | 0 | 30 | 165 | 4th |
+| 8 | 0 | 60 | 165 | **1st**, 20,744 |
+| 8 | 0 | 100 | 165 | **1st**, 22,164 |
+| 8 | 0 | 160 | 165 | wedged, 1,796 frames of wall contact |
+| 9 Haunted House | anything tried | | | wedged, always |
+| 10 Ice Land | 0 | 0 | 0 | **1st**, 25,904 |
+| 10 | 0 | 60 | 165 | wedged |
+
+* **Rung 0 wins two of the three.** The board change did that; nothing else in
+  rung 0 is new.
+* **Boost is a liability.** +5% wedges course 8 and so does +16%, while no
+  boost at all comes 2nd on the same course. It moves the rider off the line
+  the borrowed path was authored for. It is below the rival levers in the
+  ladder now.
+* **Relief and tax only work as a pair, and that is course 8's answer.**
+  Relief alone wedges it, tax alone leaves it 2nd, and the two together win it
+  at two different tax values. Relief keeps the task pool clear, which is what
+  stops the tax buying the chairlift wedge these notes have warned about since
+  Turtle Island; the tax is the only lever that makes a margin without touching
+  our rider's physics. A tax of 160 still wedges, so the warning was right
+  about the size, not about the lever.
+* **A handicap that wins one course loses another.** Relief+tax wedges courses
+  0 and 10, which rung 0 wins outright. There is no single setting for the
+  campaign, which is what the ladder is for.
+
+`--racedbg` gained two gauges for this work. `pool=c0,c1,c2,c3` is the race
+scheduler's free-task counters -- `scheduleTask` returns NULL when the one it
+wants is 0, which is the chairlift wedge in one number. `wall=a,b,c,d` counts
+the retraces each rider spent with `animationFlags & 0x10` set, which
+`race_main.c:5355` sets on any frame `handlePlayerTrackWallCollision` moved the
+rider: the game's own answer to "am I scraping something", and the way to tell
+a rider that is off the racing line from one that is merely slow.
+
+### Course 9, the Haunted House, which is the new wall
+
+Course 8 is beaten. Course 9 is not, and it is not a handicap problem: it
+wedges under every configuration tried -- rung 0, boost 28, boost 56,
+relief 165, relief 255, tax 100, relief+tax, path slots 0, 2 and 3, the balance
+board instead of the star, and with `--nightmare` off entirely so the rivals
+run the game's own difficulty rows. Thirteen races, thirteen wedges.
+
+What it looks like, from `--racedbg`:
+
+```
+sbk: WEDGE -- player 1 has got nowhere for 2400 retraces on level 9
+     (lap=0 prog=5105 sect=50 pos=201924736,553921596,-51215600
+      anim=00000000 spd=1355415 pool=50)
+```
+
+The two numbers that matter are `pool=50` and the position, which is
+byte-identical frame to frame. **It is not the task-pool wedge** -- there are
+fifty free nodes -- and it is not the wall wedge either, because the position
+does not move at all and `anim` carries no 0x10. The rider's `behaviorStep`
+cycles through 0, 1, 2 and 4 while it sits there, and in
+`knockbackBehaviorStepHandlers` those are `beginKnockbackRecoveryStep`,
+`updateKnockbackRecoveryStep`, `fallToTrackCenterStep` and
+`slideDuringKnockbackRecoveryStep`: **a knockback recovery that keeps
+restarting**, at one fixed spot in sector 50, with the rider pinned. The
+Haunted House's own overlay is the one with the ghosts
+(`updateGhostAnimation`), and `haunted_house.c` ~300 has a ghost that calls
+`spawnStarEffectImmediate` on any rider inside 0x100000 of it whose
+`slowdownLevel` is under 3 -- a hazard at a fixed position that hits a
+stationary rider for ever. That is the standing suspicion and the next thing to
+check; `slowdownLevel` and the behaviour handler's name are what `--racedbg`
+should print next.
+
 ### The three Cross minigames, which are not races
 
 Slot 10 -- the last two courses, and so the credits -- is opened by

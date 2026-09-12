@@ -59,13 +59,16 @@ def trial(spec, frames=60000, timeout=1500, stall=150, extra=()):
     """One headless race, ended either by the result line or by the rider
     standing still.
 
-    --headless implies --turbo, which takes a retrace "as soon as the game is
-    idle" -- and the sequel is never idle: three threads stay runnable every
-    frame, so headless buys no wall clock at all here and a trial runs at 1x,
-    not the first game's 12x. A three-lap Turtle Island race is about eleven
-    minutes of that, which is why `timeout` is 1500 s and not the 600 s it
-    started at: 600 s cut healthy races off mid-final-lap and recorded them as
-    hangs.
+    --headless implies --turbo. This docstring used to say that bought no wall
+    clock for the sequel -- "three threads stay runnable every frame, so a
+    trial runs at 1x" -- and that claim cost the port two days of reasoning
+    about levers it could have swept in an afternoon. It is wrong now, whatever
+    it was when it was written: a measured three-lap Starlight Highway trial,
+    20,744 frames, comes back in about **thirty seconds** of wall clock,
+    boot and menu walk included. Sweep the levers; do not argue about them.
+
+    `timeout` stays generous anyway, because a wedged race is bounded by the
+    stall detector below rather than by the clock.
 
     A fixed timeout is the wrong instrument anyway. What a hung trial actually
     looks like is a rider that has stopped moving -- pinned at `storedPosition`

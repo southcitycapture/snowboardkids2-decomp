@@ -22,7 +22,9 @@ command lists, a fixed-function OpenGL 1.3 backend, scripted input.
 | The navigator: `--autonav`, `--menutrace`, `--saveevery`, `--trial`, `--plan` | works; the campaign wins a course, writes the EEPROM, leaves the town by the right door and aims itself at the next course |
 | The lift wedge that stopped the campaign on Turtle Island | fixed -- it was the Nightmare row starving the task pool, not the borrowed path table. `docs/nightmare-row.md` |
 | The boss races (courses 3 and 7): ten snowman heads, not a finish line | won by the boss pilot -- `docs/PLAN.md`, "The boss races, which no handicap can win" |
-| The campaign end to end (every course, a save after each race) | in progress: courses 0-7 won on the user's own save, both bosses included; course 8 was the one that resisted, and the cause was the boost lever never reaching a race plus the rider being on the worst-handling board in the game (`docs/PLAN.md`) |
+| The campaign end to end (every course, a save after each race) | in progress: courses 0-7 won on the user's own save, both bosses included. Course 8 resisted for six races and the cause was two bugs, not a missing handicap: the boost lever never reached a race (`initPlayer` recomputes the rider's stats after the handoff) and the rider was on the worst-handling board in the game. It is won in trial at relief 165 + tax 60. `docs/PLAN.md`, "What the levers actually do, measured" |
+| Course 9, the Haunted House | **the current blocker.** Thirteen trials, thirteen wedges -- every rung, every path slot, two boards, and with `--nightmare` off entirely. It is not a handicap problem and not the task-pool wedge (fifty free nodes at the time): the rider is pinned byte-identically in sector 50 with its `behaviorStep` cycling round the knockback-recovery handlers. `docs/PLAN.md`, "Course 9, the Haunted House" |
+| The three Cross minigames (the gate on the last two courses) | the navigator enters them and knows each one's real pass mark; Shot Cross has a pilot, because a rider alone on a course has nothing to aim at. Not yet reached by a campaign |
 
 The title screen matches the emulator reference frame
 (`g4-shots/sbk2-s2dex-fix1.png` against Mupen64Plus's `snowboard_kids2-020.png`):
@@ -113,8 +115,15 @@ wiped the retune -- the boost lever did nothing at all for the first six
 courses. It is held now, and `--racedbg`'s `spd=<current>/<baseMaxSpeed>` is
 where to check that a lever survived into the race.
 
-`--trial level=N,char=C,board=B,boost=X,quit=1` runs one race as an experiment
-and prints a result line; `port/tools/nightmare_search.py` sweeps trials on the
+`--trial level=N,char=C,board=B,boost=X,relief=R,tax=T,pathslot=S,quit=1` runs
+one race as an experiment and prints a result line -- place, frames, gold, and
+the per-rider count of frames spent scraping a track wall. A trial takes about
+**thirty seconds** of wall clock on the G4 and is deterministic, so the
+handicap levers are worth sweeping rather than reasoning about; `relief` and
+`tax` pin themselves against the navigator's ladder so a rung can be
+reproduced exactly.
+
+ `port/tools/nightmare_search.py` sweeps trials on the
 G4, keeps `port/tools/nightmare_results.csv`, records golden movies into
 `port/scripts/golden/` and replays them (`regress`). `docs/PLAN.md`,
 "Self-play", has the state the tooling keys on and why.
