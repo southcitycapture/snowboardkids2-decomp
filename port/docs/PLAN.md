@@ -1058,6 +1058,24 @@ own save.** The ladder never needed a boost or a bigger tax for course 9 once
 the rider could steer: rung 1, relief 165 + tax 60, the same rung that won
 course 8.
 
+#### The Cross gate falls, and the last two courses open
+
+Same save, same command with `--autoplay` restored, 2026-09-12:
+
+| # | course | rung | result | gold after | save |
+| ---: | --- | ---: | --- | ---: | ---: |
+| 1 | 14 X Cross | 0 | **WON** -- 435 skill points of 300, `lost=0`, 3 jumps | 643,750 | #1 |
+| 2 | 12 Speed Cross | 0 | **WON** -- `lost=0` at 5,266 frames (87.8 s of ninety) | 648,750 | #2 |
+
+`progress [111111111150] won=10 next=10` -- **slot 10 has opened**, which is
+the whole point of the three Cross games: `updateStorySlotUnlockStatus` gives
+the last two courses only when 0..9 and 12..14 are all 1.
+
+Both were won at rung 0, first attempt, on the rows the harness had measured.
+That is only true because the ladder is armed at the handoff now: the earlier
+run of the same build lost both at a "rung 0" that was still carrying the
+previous course's levers, and then climbed straight past the row that passes.
+
 ### Shoot Cross: 1/20, then 19/20, then 20/20
 
 Slots 10 and 11 -- the last two courses, and so the credits -- are opened by
@@ -1405,18 +1423,17 @@ so a rider that wedges itself costs a minute instead of a quarter of an hour.
 
   With the row re-anchored on the game's own data, Turtle Island finishes.
 
-* **X Cross (level 14) is not passed.** See the section above: the rider jumps
-  and does not trick, and the gate is `updatePostTrickDescentStep`'s
-  three-frame `behaviorCounter`. This is the campaign's last wall before slots
-  10 and 11, and so before the credits.
-* **Speed Cross (level 12) is not passed**, and the boost ladder is the wrong
-  lever for it: at +112% the rider runs at half its own cap
-  (`spd=1572864/2985638`) and still crosses the line at about 98 seconds
-  against a ninety-second limit. It is corner speed, not top speed. The next
-  thing to try is a lever on `baseAcceleration` / `cornering` /
-  `lateralDeadzone`, which nothing in the ladder has ever touched.
-* **Courses 10 and 11 and the credits have not been reached.** They open only
-  when 12..14 are all won.
+* ~~**X Cross (level 14) is not passed.**~~ **Won on the user's own save**,
+  435 skill points of 300 at rung 0, `lost=0`. It was a port bug and not a
+  game rule: see "X Cross" above.
+* ~~**Speed Cross (level 12) is not passed.**~~ **Won on the user's own save**
+  at rung 0, `lost=0` at 87.8 seconds of ninety. See "Speed Cross" above --
+  the ceiling is the game's own 0x180000 and the lever is the line.
+* **The golden movie for course 0 will no longer reproduce.** The ollie fix
+  changes the launch impulse for every rider on every course, so a replay
+  recorded before it diverges the first time anyone leaves the ground.
+  `regress` has to be re-recorded, and that is the correct outcome: the
+  recording was of a game whose jumps were wrong.
 * `nightmare_search.py sweep` -- the *per-course rider ladder*, which is a
   different search from `nm` -- still has not been run. Only `nm`, the
   Nightmare row itself, has, and only one course (0) has a golden movie. The
