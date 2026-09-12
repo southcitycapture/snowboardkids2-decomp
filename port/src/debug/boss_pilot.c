@@ -163,7 +163,10 @@ int sbk_boss_supply_max = 16;
  * So the wide window and the slower trigger are kept. The real constraint is
  * not the pilot at all: see PLAN.md, "What still stands between course 11 and
  * the credits". */
-int sbk_boss_range = 0x4000000;
+/* 0x2000000, just outside the star's own homing radius: measured, everything
+ * beyond it is thrown away. At 0x8000000 the pilot put 32 stars up for 4 heads
+ * where 14 from inside this range took 5. */
+int sbk_boss_range = 0x2000000;
 /* Retraces between throws. Measured on course 11: the boss comes back within
  * range about every 500 frames and stays there for roughly 180, which is 460
  * armed-and-in-range frames in a race -- and at a cooldown of 10 plus a full
@@ -173,7 +176,19 @@ int sbk_boss_range = 0x4000000;
  * throws). So the trigger is faster and the in-flight hold is capped: a star
  * that misses is worth nothing held back, and the boss's own invulnerability
  * window already stops the pilot wasting them on a boss that is reacting. */
-int sbk_boss_cooldown = 10;
+int sbk_boss_cooldown = 4;
+
+/* The margin on top of the star's own flight time before the next throw.
+ *
+ * Eight was a guess and it is most of the trigger: at the ten million units a
+ * boss race's firing windows actually happen at, the flight itself is five
+ * frames and the margin is eight, so the pilot spent two thirds of every
+ * window waiting. And a boss race's windows are all there is -- measured, the
+ * Ice Land boss is inside 0x2000000 for about 250 frames of a 3,700-frame
+ * race, in two bursts, and every head this port has ever taken off it came
+ * out of one of them. Two frames, and the ammunition made free by the supply,
+ * turns 14 throws into 35 for the same 250 frames. --bosshold N. */
+int sbk_boss_hold = 2;
 
 /* The star homes. updateStarProjectile calls getHomingAngleToTarget with a
  * search radius of 0x1800000 and a forward cone of a quarter turn, and inside
@@ -907,9 +922,41 @@ static u32 trick_frame;
 static unsigned long last_trick;
 static int trick_jumps, trick_seen, trick_reported, trick_banked;
 
+/* --------------------------------------------- and on a boss race, no jump
+ *
+ * The Ice Land boss race is not scored on the air and the air is what was
+ * losing it. --sectorlog over one race: nineteen per cent of it in
+ * behaviourMode 2 and ten per cent in behaviourPhase 4, in blocks of a
+ * hundred and fifty to three hundred and twenty-six retraces, every one of
+ * them starting with `hitReactionState == 0` -- so not the boss's guided
+ * stars, which was the obvious suspect and the wrong one. mode 2 with no hit
+ * reaction is initStunnedAirborneBehavior: **the rider is crashing its own
+ * ollie**. tryFinalizeTrickLanding sends any rider still carrying 0x1000 (a
+ * spin or grab still turning when the board touches down) straight to it, and
+ * since the ollie's launch vector was repaired the CPU rider actually leaves
+ * the ground on every ramp Ice Land has.
+ *
+ * On a course scored by tricks that is the point. On a boss race it is four
+ * lost sectors a crash against a boss that never stops, and the whole of the
+ * gap this file spent an afternoon blaming on the racing line. So on a health
+ * boss the answer to "does the AI want the air here" is no.
+ *
+ * --bossjump re-arms it, because a lever that cannot be turned off is not a
+ * measurement.
+ */
+int sbk_is_hp_boss_race(int raceType);
+
+int sbk_boss_nojump = 1;
+int sbk_boss_jumps_declined;
+
 s32 sbk_trick_pilot_path(GameState *gs, Player *p, s32 choice) {
-    if (!sbk_autoplay || !sbk_trick_pilot || gs == NULL || p == NULL) return choice;
+    if (!sbk_autoplay || gs == NULL || p == NULL) return choice;
     if (p != &gs->players[0] || !p->isCpuControlled) return choice;
+    if (sbk_boss_nojump && sbk_is_hp_boss_race(gs->raceType)) {
+        if (choice != 0) sbk_boss_jumps_declined++;
+        return 0;
+    }
+    if (!sbk_trick_pilot) return choice;
     if (gs->raceType != RACE_TYPE_X_CROSS) return choice;
 
     if (trick_gs != (void *)gs || gs->raceFrameCounter < trick_frame) {
@@ -1097,6 +1144,211 @@ static void pilot_reset(GameState *gs, Player *boss) {
  * Called from game code (port/patches.txt), so getCurrentAllocation() and the
  * task scheduler are the race's own. Returns the targeting mode the game will
  * pass to spawnAttackProjectile, or -1 for "do not throw". */
+/* -------------------------------------------------- the pace band, and why
+ *
+ * `updateIceLandBoss` opens with the whole answer to course 11, and it took
+ * three sessions to read it:
+ *
+ *     if ((boss->finishPosition == 0) & (distanceToPlayer > 0xE00000)) {
+ *         if (flying)                        cap = TRICK_LEVEL_2 - 0x8000;
+ *         else if (dist > 0x8C00000)         cap = 0x70000;
+ *         else                               cap = BALANCE_LEVEL_1 - 0x8000;
+ *     } else {
+ *         cap = SPEED_LEVEL_3 + 0x18000;     -- and 0x180000 after the clamp
+ *     }
+ *
+ * The boss is **not** running a fixed script. It is on a rubber band, and the
+ * band has a trigger at 0xE00000: while the boss leads and we are further away
+ * than that it cruises at 1,072,168, and the moment we come inside it it winds
+ * up to the game's own 0x180000 ceiling -- faster than any rider can be, since
+ * `race_main.c:854` clamps ours to the same number. (This file used to say
+ * "the boss drives a scripted path" and "the crawl branch never fires". The
+ * first is wrong; the second is right, but for the boring reason that
+ * 0x8C00000 is a long way.)
+ *
+ * Worse, the wind-up is one-way in practice. `speedDelta` is clamped to
+ * +0x1000 a frame going up and **-0x80 going down**, so the boss reaches the
+ * ceiling in 122 frames and takes 3,911 to come back off it -- longer than the
+ * race. One approach that overshoots and course 11 is unwinnable for the rest
+ * of the race. The same trigger fires if we ever *overtake*: the test is
+ * `boss->finishPosition == 0`, so a rider in first place hands the boss the
+ * ceiling permanently.
+ *
+ * And the star homes inside 0x1800000. **0xE00000 < 0x1800000**, so there is a
+ * band -- roughly 17 to 25 million units behind the boss -- where our stars
+ * steer themselves onto it and the boss has no idea we are there. Course 11 is
+ * not a race and it is not an aiming problem: it is station-keeping inside
+ * that band for as long as the course lasts, with the trigger as the floor.
+ *
+ * The governor writes `maxSpeedCap`/`smoothedSpeedCap` rather than
+ * `baseMaxSpeed`, because baseMaxSpeed reaches the rider through the same
+ * +/-0x1000-a-frame smoothing the boss is subject to -- 122 frames to swing,
+ * against the ~22 frames it takes to cross the whole band at full closing
+ * speed. It never asks for more than the rider's own retuned top, and its
+ * floor is well clear of `race_main.c:1319`'s 0x5FFFF lock-out, because a
+ * governor that parks a CPU rider under that threshold has invented the
+ * Haunted House wedge on purpose.
+ *
+ * --nobosspace turns it off; --bosspacelo/--bosspacehi move the band.
+ */
+int sbk_boss_pace = 1;
+/* The band is *inside* the boss's own 0xE00000 speed-up trigger, not outside
+ * it, and that is the one thing about this course that reading the source got
+ * backwards. Sitting at 17-22M keeps the boss slow and puts the rider out of
+ * the fight: measured, 80 frames in band and four heads. Sitting at 4-12M
+ * gives the boss its fast branch and takes the heads anyway, because a hit
+ * puts the boss into an attack phase and an attack phase is not going
+ * anywhere. What must never happen is the *overtake* -- see the governor. */
+int sbk_boss_pace_lo = 0x400000;
+int sbk_boss_pace_hi = 0xC00000;
+#define BOSS_PACE_FLOOR 0x0A0000   /* dropping back, but never under the lock-out */
+
+int sbk_boss_pace_frames_in_band;
+
+/* ------------------------------------------------ and the logged handicap
+ *
+ * Ten races said the same number: **four heads of thirteen**, whatever the
+ * pilot did. Range 0x1900000, 0x2000000, 0x4000000 and 0x8000000; cooldown
+ * 10, 5 and 4; the in-flight hold at 8 and at 2; the supply off, at 60, at 30
+ * and at 6; the boost at 0, +21%, +25% and +78%; course 10's whole line row;
+ * the ollie declined; the lock-out breaker; the pace band at 17-22M and at
+ * 4-12M. Throws went from 9 to 34 and the heads did not move. What does not
+ * move with them is the only measurement that matters: the Ice Land boss is
+ * inside the star's homing radius for about fifty frames of a three thousand
+ * seven hundred frame race, and it is out of any useful range for the other
+ * ninety-eight per cent.
+ *
+ * The reason is in the census and it is not the pilot: the rider loses about
+ * 130 million units -- five sectors -- in the first three hundred frames, to
+ * one knockback at sector 5 and the start-line lock-out, and it never gets
+ * them back, because our rider and the boss cruise at very nearly the same
+ * speed and the boss is never stunned, never hops, and never touches a wall.
+ * A knockback is the game's own penalty and its *motion* is scripted -- the
+ * breaker's velocity write during behaviourMode 2 came back byte-identical,
+ * which is what "the game overwrites this before it integrates it" looks like
+ * -- so the port cannot give the rider those frames back without pretending
+ * the hit did not happen.
+ *
+ * So course 11 gets the handicap this document has kept in reserve since the
+ * boss ladder was written, and it is declared here rather than hidden in a
+ * tuning table: **--bossslow N caps the boss's own smoothedSpeedCap at N per
+ * cent of what updateIceLandBoss just asked for.** Nothing else changes. The
+ * thirteen heads are still thirteen, the star is still the only thing that
+ * takes one, the invulnerability window is still the game's, the pilot still
+ * has to be in range and aimed, and the race still ends when the boss crosses
+ * the line. It is a slower boss, it is logged as one at the start of every
+ * race it applies to, it is written into the campaign table beside the win,
+ * and it is off for every other course in the game.
+ */
+int sbk_boss_slow;          /* per cent, 0 = off */
+static int slow_said;
+
+/* What the governor decided this retrace, for the clampPlayerVelocityToMaxSpeed
+ * hook to apply. Pointers rather than indices, so a stale decision from a race
+ * that has gone cannot be applied to a rider in the next one. */
+static Player *sbk_pace_player;
+static Player *sbk_pace_boss;
+static s32 sbk_pace_target;
+
+/* Called from the one-line patch in clampPlayerVelocityToMaxSpeed
+ * (port/patches.txt), which is the only place the game reads maxSpeedCap for
+ * anything. Inert unless the boss-race governor armed itself this retrace. */
+s32 sbk_speed_cap(Player *p, s32 cap) {
+    if (p == NULL) return cap;
+    if (p == sbk_pace_player) return sbk_pace_target;
+    if (p == sbk_pace_boss && sbk_boss_slow > 0 && sbk_boss_slow < 100) {
+        return (s32)(((long long)cap * sbk_boss_slow) / 100);
+    }
+    return cap;
+}
+
+void sbk_boss_pace_tick(GameState *gs, unsigned long retraces) {
+    static void *pace_gs;
+    static u32 pace_frame;
+    static int in_band, sprint, coast, said;
+    Player *p, *boss;
+    double dx, dy, dz, dist;
+    s32 target;
+
+    if (!sbk_boss_pace || !sbk_autoplay || gs == NULL) return;
+    if (!sbk_is_hp_boss_race(gs->raceType)) return;
+    p = &gs->players[0];
+    if (!p->isCpuControlled) return;
+    if (pace_gs != (void *)gs || gs->raceFrameCounter < pace_frame) {
+        pace_gs = (void *)gs;
+        in_band = sprint = coast = said = 0;
+        slow_said = 0;
+    }
+    pace_frame = gs->raceFrameCounter;
+    sbk_pace_player = NULL;
+    if (gs->raceIntroState != 0) return;
+    if (p->animationFlags & PLAYER_FINISHED_FLAG) return;
+    boss = sbk_boss_rider(gs);
+    sbk_pace_boss = boss;
+    if (boss == NULL || (boss->animationFlags & 0x100000)) { sbk_pace_boss = NULL; return; }
+    /* Stunned or being carried by the lift: the cap is not what is holding
+     * the rider, and governing it would only hide that. */
+    if (p->behaviorMode == 2 || p->behaviorMode == 3 || p->chairliftFlags != 0) return;
+
+    dx = (double)(s32)boss->worldPos.x - (double)(s32)p->worldPos.x;
+    dy = (double)(s32)boss->worldPos.y - (double)(s32)p->worldPos.y;
+    dz = (double)(s32)boss->worldPos.z - (double)(s32)p->worldPos.z;
+    dist = sqrt(dx * dx + dy * dy + dz * dz);
+
+    /* Never overtake. `updateIceLandBoss`'s slow branches are gated on
+     * `boss->finishPosition == 0`, so the frame our rider takes the lead the
+     * boss is handed the game's own 0x180000 ceiling and keeps it -- the
+     * wind-up is +0x1000 a frame and the wind-down -0x80. Measured: the same
+     * row at 50% came home *first* and took three fewer heads off than the
+     * row at 60% that stayed behind. Being in front of this boss is worth
+     * nothing; being just behind it is worth everything. */
+    if (p->currentLap == boss->currentLap && p->lapProgressRemaining < boss->lapProgressRemaining) {
+        sbk_pace_player = p;
+        sbk_pace_target = BOSS_PACE_FLOOR;
+        sbk_pace_boss = boss;
+        coast++;
+        return;
+    }
+
+    if (dist > (double)sbk_boss_pace_hi) {
+        target = p->baseMaxSpeed;
+        sprint++;
+    } else if (dist < (double)sbk_boss_pace_lo) {
+        target = BOSS_PACE_FLOOR;
+        coast++;
+    } else {
+        target = boss->smoothedSpeedCap;
+        in_band++;
+        sbk_boss_pace_frames_in_band++;
+    }
+    if (target > p->baseMaxSpeed) target = p->baseMaxSpeed;
+    if (target < BOSS_PACE_FLOOR) target = BOSS_PACE_FLOOR;
+    /* Not written into maxSpeedCap here: the game rewrites that field from
+     * baseMaxSpeed at race_main.c:802 every frame, before the clamp reads it.
+     * The number is handed to sbk_speed_cap(), which the one-line patch in
+     * clampPlayerVelocityToMaxSpeed calls at the moment the cap is used. */
+    sbk_pace_player = p;
+    sbk_pace_target = target;
+    sbk_pace_boss = boss;
+    if (sbk_boss_slow > 0 && sbk_boss_slow < 100 && !slow_said) {
+        slow_said = 1;
+        printf("sbk: bosspilot: HANDICAP -- the boss's speed cap is held at %d%% of its own "
+               "(%d -> %d) on course %d. Nothing else is changed: thirteen heads, the star only, "
+               "the game's own invulnerability window. See PLAN.md.\n",
+               sbk_boss_slow, (int)boss->maxSpeedCap,
+               (int)(((long long)boss->maxSpeedCap * sbk_boss_slow) / 100), gs->memoryPoolId);
+        fflush(stdout);
+    }
+
+    if (!said || (retraces % 600) == 0) {
+        said = 1;
+        printf("sbk-bosspace: r=%lu dist=%.0f cap=%d (band=%d sprint=%d coast=%d) boss cap=%d sect %d/%d\n",
+               retraces, dist, (int)target, in_band, sprint, coast, (int)boss->smoothedSpeedCap,
+               (int)p->sectorIndex, (int)boss->sectorIndex);
+        fflush(stdout);
+    }
+}
+
 s32 sbk_boss_pilot_item(GameState *gs, Player *p, s32 result) {
     Player *boss;
     s32 dx, dz, dist, err, tol;
@@ -1250,6 +1502,20 @@ s32 sbk_boss_pilot_item(GameState *gs, Player *p, s32 result) {
      * the window a third too wide on course 11 and let the pilot fire at
      * headings a star could not cover. */
     hit_radius = (s32)boss->collisionListNode.radius + BOSS_STAR_HIT_RADIUS;
+    /* The capture radius, not the hit radius.
+     *
+     * A star does not have to be aimed at the boss's collision node from a
+     * hundred million units away: it has to be aimed close enough that it
+     * *arrives* inside the homing radius, and from there the game steers it
+     * the rest of the way. So the window a long throw needs is set by
+     * 0x1800000, not by the boss's 0x150000 node -- twelve times wider at
+     * sixty-seven million units (488 against 42), and the difference between
+     * a pilot that can only shoot at point-blank range and one that can open
+     * up the moment the boss is in front of it. The narrow window was written
+     * when a star was believed to be a dumb throw; it is not, and the census
+     * that said "range held 3,263 of 3,600 armed frames" was measuring a
+     * pilot holding fire for a reason that does not exist. */
+    if (dist > BOSS_STAR_HOMING_RANGE) hit_radius = BOSS_STAR_HOMING_RANGE;
     tol = (s32)((1303LL * hit_radius) / (dist > 0 ? dist : 1));
     /* Inside the homing radius the star steers itself onto the boss's
      * collision node every frame, so the heading only has to put the boss in
@@ -1271,7 +1537,7 @@ s32 sbk_boss_pilot_item(GameState *gs, Player *p, s32 result) {
     }
 
     last_throw = pilot_now;
-    throw_hold = (unsigned long)(dist / BOSS_STAR_SPEED) + 8;
+    throw_hold = (unsigned long)(dist / BOSS_STAR_SPEED) + sbk_boss_hold;
     n_thrown++;
     printf("sbk: bosspilot: throw #%d mode=%d dist=%d err=%d tol=%d hold=%lu ammo=%d boss hp=%d "
            "(boss mode=%d/%d flags=%03x)\n",

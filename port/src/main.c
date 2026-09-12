@@ -73,7 +73,7 @@ static const char *find_rom(int argc, char **argv) {
         if (argv[i][0] != '-') {
             return argv[i];
         }
-        if (strcmp(argv[i], "--play") == 0 || strcmp(argv[i], "--record") == 0 || strcmp(argv[i], "--drawdistance") == 0 || strcmp(argv[i], "--dumpdl") == 0 || strcmp(argv[i], "--frames") == 0 || strcmp(argv[i], "--wav") == 0 || strcmp(argv[i], "--dumpframes") == 0 || strcmp(argv[i], "--pak") == 0 || strcmp(argv[i], "--eeprom") == 0 || strcmp(argv[i], "--bigtri") == 0 || strcmp(argv[i], "--peek") == 0 || strcmp(argv[i], "--cmds") == 0 || strcmp(argv[i], "--trial") == 0 || strcmp(argv[i], "--plan") == 0 || strcmp(argv[i], "--saveevery") == 0 || strcmp(argv[i], "--startrung") == 0 || strcmp(argv[i], "--bosssupply") == 0 || strcmp(argv[i], "--shotsnap") == 0 || strcmp(argv[i], "--shotrange") == 0 || strcmp(argv[i], "--shotdetour") == 0 || strcmp(argv[i], "--shotcarry") == 0 || strcmp(argv[i], "--trickperiod") == 0 || strcmp(argv[i], "--trickflags") == 0 || strcmp(argv[i], "--tricktarget") == 0 || strcmp(argv[i], "--shotcooldown") == 0 || strcmp(argv[i], "--uiscript") == 0) {
+        if (strcmp(argv[i], "--play") == 0 || strcmp(argv[i], "--record") == 0 || strcmp(argv[i], "--drawdistance") == 0 || strcmp(argv[i], "--dumpdl") == 0 || strcmp(argv[i], "--frames") == 0 || strcmp(argv[i], "--wav") == 0 || strcmp(argv[i], "--dumpframes") == 0 || strcmp(argv[i], "--pak") == 0 || strcmp(argv[i], "--eeprom") == 0 || strcmp(argv[i], "--bigtri") == 0 || strcmp(argv[i], "--peek") == 0 || strcmp(argv[i], "--cmds") == 0 || strcmp(argv[i], "--trial") == 0 || strcmp(argv[i], "--plan") == 0 || strcmp(argv[i], "--saveevery") == 0 || strcmp(argv[i], "--startrung") == 0 || strcmp(argv[i], "--bosssupply") == 0 || strcmp(argv[i], "--shotsnap") == 0 || strcmp(argv[i], "--shotrange") == 0 || strcmp(argv[i], "--shotdetour") == 0 || strcmp(argv[i], "--shotcarry") == 0 || strcmp(argv[i], "--trickperiod") == 0 || strcmp(argv[i], "--trickflags") == 0 || strcmp(argv[i], "--tricktarget") == 0 || strcmp(argv[i], "--shotcooldown") == 0 || strcmp(argv[i], "--bossrange") == 0 || strcmp(argv[i], "--bosshold") == 0 || strcmp(argv[i], "--bossslow") == 0 || strcmp(argv[i], "--bosscooldown") == 0 || strcmp(argv[i], "--bossunstickarm") == 0 || strcmp(argv[i], "--bossunstickpush") == 0 || strcmp(argv[i], "--bosspacelo") == 0 || strcmp(argv[i], "--bosspacehi") == 0 || strcmp(argv[i], "--uiscript") == 0) {
             i++; /* option value */
         }
     }
@@ -268,6 +268,46 @@ int main(int argc, char **argv) {
             sbk_peek_add(argv[++i]);
         } else if (strcmp(argv[i], "--cmds") == 0 && i + 1 < argc) {
             sbk_input_play_set_cmdfile(argv[++i]);
+        } else if (strcmp(argv[i], "--bossunstickarm") == 0 && i + 1 < argc) {
+            extern int sbk_boss_unstick_arm;
+            sbk_boss_unstick_arm = atoi(argv[++i]);
+        } else if (strcmp(argv[i], "--bossunstickpush") == 0 && i + 1 < argc) {
+            extern int sbk_boss_unstick_push;
+            sbk_boss_unstick_push = (int)strtol(argv[++i], NULL, 0);
+        } else if (strcmp(argv[i], "--bossrange") == 0 && i + 1 < argc) {
+            extern int sbk_boss_range;
+            sbk_boss_range = (int)strtol(argv[++i], NULL, 0);
+        } else if (strcmp(argv[i], "--bossslow") == 0 && i + 1 < argc) {
+            extern int sbk_boss_slow;
+            sbk_boss_slow = atoi(argv[++i]);
+        } else if (strcmp(argv[i], "--bosshold") == 0 && i + 1 < argc) {
+            extern int sbk_boss_hold;
+            sbk_boss_hold = atoi(argv[++i]);
+        } else if (strcmp(argv[i], "--bosscooldown") == 0 && i + 1 < argc) {
+            extern int sbk_boss_cooldown;
+            sbk_boss_cooldown = atoi(argv[++i]);
+        } else if (strcmp(argv[i], "--nobosspace") == 0) {
+            extern int sbk_boss_pace;
+            sbk_boss_pace = 0;
+        } else if (strcmp(argv[i], "--bosspacelo") == 0 && i + 1 < argc) {
+            extern int sbk_boss_pace_lo;
+            sbk_boss_pace_lo = (int)strtol(argv[++i], NULL, 0);
+        } else if (strcmp(argv[i], "--bosspacehi") == 0 && i + 1 < argc) {
+            extern int sbk_boss_pace_hi;
+            sbk_boss_pace_hi = (int)strtol(argv[++i], NULL, 0);
+        } else if (strcmp(argv[i], "--bossjump") == 0) {
+            extern int sbk_boss_nojump;
+            sbk_boss_nojump = 0;
+        } else if (strcmp(argv[i], "--nobossunstickstun") == 0) {
+            extern int sbk_boss_unstick_stun;
+            sbk_boss_unstick_stun = 0;
+        } else if (strcmp(argv[i], "--nobossunstick") == 0) {
+            extern int sbk_boss_unstick;
+            sbk_boss_unstick = 0;
+        } else if (strcmp(argv[i], "--sectorlog") == 0) {
+            extern int sbk_sector_log;
+            sbk_sector_log = 1;
+            sbk_race_debug_enabled = 1;
         } else if (strcmp(argv[i], "--pintrace") == 0) {
             extern int sbk_pin_trace;
             sbk_pin_trace = 1;
@@ -379,7 +419,7 @@ int main(int argc, char **argv) {
     }
 
     if (sbk_rom_load(rom) != 0) {
-        fprintf(stderr, "usage: %s [--fullscreen[=WxH]|--fullscreen-desktop|--windowed] [--wide] [--novsync] [--trace] [--play SCRIPT|MOVIE.m64] [--record MOVIE.m64] [--frames N] [--hashframe] [--perf] [--pintrace] [--autoplay] [--soak] [--nightmare] [--trial SPEC] [--plan C:CH:B:BO,..] [--pak FILE|--nopak] [--eeprom FILE] [--unlockall] [--nopad] [--nobosspilot] [--noshotpilot] [--bosssupply N] [--shotdbg] [--shotsnap N] [--shotrange N] [--shotdetour N] [--shotcarry N] [--notrickpilot] [--trickperiod N] [--trickflags N] [--tricktarget N] [--shotcooldown N] [--status] [--coursetrace] [--turbo] [--headless] [--mute] [--wav OUT.wav] [snowboardkids2.z64]\n", argv[0]);
+        fprintf(stderr, "usage: %s [--fullscreen[=WxH]|--fullscreen-desktop|--windowed] [--wide] [--novsync] [--trace] [--play SCRIPT|MOVIE.m64] [--record MOVIE.m64] [--frames N] [--hashframe] [--perf] [--pintrace] [--sectorlog] [--nobossunstick] [--bossunstickarm N] [--bossjump] [--nobosspace] [--bosspacelo N] [--bosspacehi N] [--bossrange N] [--bosscooldown N] [--bossunstickarm N] [--bossunstickpush N] [--autoplay] [--soak] [--nightmare] [--trial SPEC] [--plan C:CH:B:BO,..] [--pak FILE|--nopak] [--eeprom FILE] [--unlockall] [--nopad] [--nobosspilot] [--noshotpilot] [--bosssupply N] [--shotdbg] [--shotsnap N] [--shotrange N] [--shotdetour N] [--shotcarry N] [--notrickpilot] [--trickperiod N] [--trickflags N] [--tricktarget N] [--shotcooldown N] [--status] [--coursetrace] [--turbo] [--headless] [--mute] [--wav OUT.wav] [snowboardkids2.z64]\n", argv[0]);
         return 1;
     }
     printf("sbk: ROM %s (%lu bytes)\n", rom, (unsigned long)sbk_rom_size);

@@ -112,3 +112,20 @@ src/animation/slot_animation.c	s16 gCharacterEffectSpawnPointsBoard[16] = {	s16 
 # one two-byte object.
 src/cutscene/cutscene_commands.c	u8 gFirstCutsceneCategoryIndex = 0;	u8 sbk_cutscene_category_pair[2] = { 0, 9 };\n#define gFirstCutsceneCategoryIndex sbk_cutscene_category_pair[0]\n#define gCutsceneCategoryCount sbk_cutscene_category_pair[1]
 src/cutscene/cutscene_commands.c	u8 gCutsceneCategoryCount = 9;	/* folded into sbk_cutscene_category_pair[1] */
+
+# The speed cap the game actually uses, so the boss race's governor can reach it.
+#
+# race_main.c:802 rewrites `maxSpeedCap` from `baseMaxSpeed` every frame, and
+# updateIceLandBoss rewrites the boss's from its own distance branch every
+# frame, both *before* the clamp that consumes it -- so a host tick writing
+# either field between frames changes nothing at all. Three separate
+# measurements came back byte-identical to the run before them (the pace
+# governor, the knockback breaker, --bossslow) before the reason was read off
+# `clampPlayerVelocityToMaxSpeed` (track_height.c:61), which is the one place
+# the number is used: `maxMagnitude = player->maxSpeedCap`.
+#
+# So the hook goes there, one line, immediately before the read. It is the
+# port's only way to govern a rider's speed at the moment it takes effect, and
+# it is inert unless --autoplay has armed the boss-race governor for exactly
+# the two riders in a health-boss race (port/src/debug/boss_pilot.c).
+src/race/track_height.c	maxMagnitude = player->maxSpeedCap;	{ extern s32 sbk_speed_cap(Player *, s32); player->maxSpeedCap = sbk_speed_cap(player, player->maxSpeedCap); }\n    maxMagnitude = player->maxSpeedCap;

@@ -616,8 +616,15 @@ static const struct { s16 boost, tax, relief, hand, corner, dead, accel; } nav_l
  * a loss shortens the interval at which the pilot hands the rider another star
  * while it is empty-handed. The boost column stays small and constant: on a
  * boss the only thing speed buys is staying in throwing range. */
+/* Rewritten on the row that took the Ice Land boss's thirteenth head. Courses
+ * 3 and 7 were won on the old rungs and are not raced again; course 11 needed
+ * all of it at once rather than climbed to, so rung 0 *is* the measured row --
+ * +21% (the most that fits under race_main.c:854's 0x180000 ceiling once the
+ * CPU penalty is taken off) and a star in the rider's hand every six retraces
+ * it is empty-handed. The rungs above it only shorten the supply further,
+ * because supply is the only thing on a boss race a ladder can still raise. */
 static const struct { s16 boost, supply; } nav_boss_ladder[] = {
-    { 14, 0 }, { 28, 180 }, { 28, 120 }, { 42, 60 }, { 56, 30 },
+    { 56, 6 }, { 56, 6 }, { 56, 4 }, { 56, 3 }, { 56, 2 },
 };
 
 /* A Cross minigame has its own ladder, and the lever is speed alone.
@@ -736,7 +743,7 @@ static void nav_ladder_set(int rung) {
     int boss = nav_level_is_boss(nav_level);
     extern int sbk_boss_supply, sbk_boss_supply_pinned;
     extern int sbk_boost_accel, sbk_boost_hand, sbk_boost_corner, sbk_boost_dead;
-    extern int sbk_trial_pins_levers;
+    extern int sbk_trial_pins_levers, sbk_trial_pins_stats;
     /* A trial that names relief= or tax= is running an experiment on exactly
      * these variables; the ladder must not write over the experiment. */
     if (sbk_trial_pins_levers) return;
@@ -747,10 +754,12 @@ static void nav_ladder_set(int rung) {
         if (!sbk_boss_supply_pinned) sbk_boss_supply = 0;
         row = &nav_cross_ladder_for(nav_level)[rung];
         sbk_campaign_boost = row->boost;
-        sbk_boost_accel = row->accel;
-        sbk_boost_hand = row->hand;
-        sbk_boost_corner = row->corner;
-        sbk_boost_dead = row->dead;
+        if (!sbk_trial_pins_stats) {
+            sbk_boost_accel = row->accel;
+            sbk_boost_hand = row->hand;
+            sbk_boost_corner = row->corner;
+            sbk_boost_dead = row->dead;
+        }
         sbk_rival_tax = 0;
         sbk_rival_item_relief = 0;
         sbk_item_relief = nav_wedge_relief;
@@ -759,9 +768,11 @@ static void nav_ladder_set(int rung) {
     /* Off a Cross game the four stat levers go back to zero, so a course
      * that has never wanted them never quietly inherits the last Cross
      * rung's. */
-    sbk_boost_accel = sbk_boost_hand = sbk_boost_corner = sbk_boost_dead = 0;
+    if (!sbk_trial_pins_stats) {
+        sbk_boost_accel = sbk_boost_hand = sbk_boost_corner = sbk_boost_dead = 0;
+    }
     if (rung > NAV_LADDER_TOP(boss)) rung = NAV_LADDER_TOP(boss);
-    if (!boss) {
+    if (!boss && !sbk_trial_pins_stats) {
         sbk_boost_hand = nav_ladder[rung].hand;
         sbk_boost_corner = nav_ladder[rung].corner;
         sbk_boost_dead = nav_ladder[rung].dead;

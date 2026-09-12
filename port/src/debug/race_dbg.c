@@ -270,6 +270,21 @@ int sbk_boost_corner;   /* --trial corner=N  cornering: the drag a turn costs */
 int sbk_boost_dead;     /* --trial dead=N    lateralDeadzone */
 int sbk_boost_grav;     /* --trial grav=N    baseGravity (negative = floatier) */
 
+/* Set when a trial spec names any of the four line levers.
+ *
+ * They are ladder state as well as trial state, and the ladder wins by
+ * default: nav_ladder_set() zeroes all four on every course begin so that a
+ * course never inherits the last Cross rung's, and the course list runs it in
+ * a trial too. So `--trial hand=128,corner=-128,dead=512` on course 11 came
+ * back **byte-identical** to the same spec without them -- the same 8,988
+ * frames, the same 34 wall retraces, the same four heads -- and `sbk-trial:
+ * start` printed the stock `cor=85/41` beside a boost that had plainly
+ * arrived. That is the third lever in this port to be measured while not
+ * connected, and the tell is the same one every time: a run that does not
+ * move at all. relief= and tax= already had this guard; the stats get it
+ * too. */
+int sbk_trial_pins_stats;
+
 int sbk_trial_parse(const char *spec) {
     const char *p = spec;
     trial.on = 1;
@@ -293,10 +308,10 @@ int sbk_trial_parse(const char *spec) {
             else if (!strcmp(key, "nmuse")) nm_use = val;
             else if (!strcmp(key, "nmalt")) nm_alt = val;
             else if (!strcmp(key, "pathslot")) trial_pathslot = val;
-            else if (!strcmp(key, "accel")) sbk_boost_accel = val;
-            else if (!strcmp(key, "corner")) sbk_boost_corner = val;
-            else if (!strcmp(key, "hand")) sbk_boost_hand = val;
-            else if (!strcmp(key, "dead")) sbk_boost_dead = val;
+            else if (!strcmp(key, "accel")) { sbk_boost_accel = val; sbk_trial_pins_stats = 1; }
+            else if (!strcmp(key, "corner")) { sbk_boost_corner = val; sbk_trial_pins_stats = 1; }
+            else if (!strcmp(key, "hand")) { sbk_boost_hand = val; sbk_trial_pins_stats = 1; }
+            else if (!strcmp(key, "dead")) { sbk_boost_dead = val; sbk_trial_pins_stats = 1; }
             else if (!strcmp(key, "grav")) sbk_boost_grav = val;
             else if (!strcmp(key, "tflags")) { extern int sbk_trick_flags; sbk_trick_flags = val; }
             else if (!strcmp(key, "ttarget")) { extern int sbk_trick_target; sbk_trick_target = val; }
@@ -525,6 +540,93 @@ static void boss_brake_tick(GameState *gs, Player *p) {
            (int)p->sectorIndex, (int)boss->currentLap, (int)boss->lapProgressRemaining,
            (int)boss->sectorIndex);
     fflush(stdout);
+}
+
+/* --------------------------------------------------- the per-sector census
+ *
+ * `wall=14,0,0,0` and `spd=1532104/1072168` were the two numbers course 11 was
+ * being argued from, and neither is what it looks like. `spd=` prints
+ * `smoothedSpeedCap`, which is a *cap* and not a speed, and fourteen wall
+ * retraces out of three and a half thousand cannot cost a rider two thirds of
+ * a lap. So this asks the question directly, one line per rider per sector:
+ * how long each rider took over the same piece of track, how far it actually
+ * moved while it was there, and what its mean velocity magnitude and slowdown
+ * were. Two riders on the same course compared sector by sector is the only
+ * thing that can say where the ground goes.
+ *
+ * --sectorlog. Off by default: about 240 lines a boss race.
+ */
+int sbk_sector_log;
+
+static int race_is_new(GameState *gs, void **seen, unsigned *last_frame);
+
+static struct {
+    void *gs;
+    unsigned frame;
+    struct {
+        int sect;
+        unsigned enter;      /* raceFrameCounter on entry */
+        int wall;            /* retraces with animationFlags & 0x10 */
+        int slow;            /* retraces with slowdownLevel != 0 */
+        int hop;             /* retraces in behaviourPhase 4, the ollie */
+        int stun;            /* retraces in behaviourMode 2 */
+        double dist;         /* summed |delta worldPos| */
+        double vel;          /* summed |velocity| */
+        s32 px, py, pz;
+        int have;
+    } r[4];
+} sect;
+
+static double vmag3(s32 x, s32 y, s32 z) {
+    double dx = (double)x, dy = (double)y, dz = (double)z;
+    return sqrt(dx * dx + dy * dy + dz * dz);
+}
+
+static void sector_census(GameState *gs) {
+    int i;
+    if (!sbk_sector_log) return;
+    if (race_is_new(gs, &sect.gs, &sect.frame)) memset(sect.r, 0, sizeof(sect.r));
+
+    for (i = 0; i < gs->numPlayers && i < 4; i++) {
+        Player *p = &gs->players[i];
+        int cur = (int)p->sectorIndex;
+
+        if (!sect.r[i].have) {
+            sect.r[i].have = 1;
+            sect.r[i].sect = cur;
+            sect.r[i].enter = (unsigned)gs->raceFrameCounter;
+            sect.r[i].px = p->worldPos.x;
+            sect.r[i].py = p->worldPos.y;
+            sect.r[i].pz = p->worldPos.z;
+            continue;
+        }
+
+        if (cur != sect.r[i].sect) {
+            unsigned f = (unsigned)gs->raceFrameCounter;
+            int frames = (int)(f - sect.r[i].enter);
+            if (frames < 1) frames = 1;
+            printf("sbk-sect: p%d sect=%d->%d r=%u frames=%d dist=%.0f vel=%.0f wall=%d slow=%d hop=%d stun=%d prog=%d lap=%d\n",
+                   i, sect.r[i].sect, cur, f, frames, sect.r[i].dist, sect.r[i].vel / frames,
+                   sect.r[i].wall, sect.r[i].slow, sect.r[i].hop, sect.r[i].stun,
+                   (int)p->lapProgressRemaining, (int)p->currentLap);
+            fflush(stdout);
+            sect.r[i].sect = cur;
+            sect.r[i].enter = f;
+            sect.r[i].wall = sect.r[i].slow = sect.r[i].hop = sect.r[i].stun = 0;
+            sect.r[i].dist = sect.r[i].vel = 0.0;
+        }
+
+        sect.r[i].dist += vmag3(p->worldPos.x - sect.r[i].px, p->worldPos.y - sect.r[i].py,
+                                p->worldPos.z - sect.r[i].pz);
+        sect.r[i].px = p->worldPos.x;
+        sect.r[i].py = p->worldPos.y;
+        sect.r[i].pz = p->worldPos.z;
+        sect.r[i].vel += vmag3(p->velocity.x, p->velocity.y, p->velocity.z);
+        if (p->animationFlags & 0x10) sect.r[i].wall++;
+        if (p->slowdownLevel) sect.r[i].slow++;
+        if (p->behaviorPhase == 4) sect.r[i].hop++;
+        if (p->behaviorMode == 2) sect.r[i].stun++;
+    }
 }
 
 /* ----------------------------------------------------------- the race watchdog
@@ -1318,6 +1420,208 @@ static void marshal_tick(GameState *gs, unsigned long retraces) {
     }
 }
 
+/* ------------------------------------------- the boss race's real handicap
+ *
+ * The per-sector census (--sectorlog) settled what a whole afternoon of
+ * `wall=` could not. Over one Ice Land boss race:
+ *
+ *   p0 (us):   129 sectors, 4769 frames, wall=22, hop=938, stun=1808
+ *   p1 (boss): 137 sectors, 4783 frames, wall=0,  hop=0,   stun=0
+ *
+ * Twenty-two wall retraces in a race of nine and a half thousand is nothing,
+ * and the "worse line" this file blamed for four heads a race does not exist.
+ * What exists is `stun` and `hop`: **nineteen per cent of the race stunned and
+ * ten per cent hopping**, in six or seven blocks of a hundred and fifty
+ * frames, each one costing about a sector and a half against a boss that
+ * never stops.
+ *
+ * The chain is the Haunted House lock-out, met again in a new place. The boss
+ * shoots guided stars at us the whole race
+ * (iceLandBossChaseAttackPhase -> spawnPlayerGuidedStarProjectile); a hit
+ * stuns the rider, the stun drops it under `race_main.c:1319`'s 0x5FFFF, and
+ * under that threshold **a CPU rider cannot steer and cannot re-aim** -- it
+ * ollies, and waits for gravity. A human keeps steering through all of it,
+ * because the human branch is a button test. So the boss race's real handicap
+ * is not the boss's speed or our line: it is that being shot costs a CPU rider
+ * three times what it costs a person.
+ *
+ * The marshal already fixes exactly this, and could not reach it: it arms on
+ * 240 retraces of *no lap progress*, and a rider hopping down a hill is still
+ * making progress -- slowly, which is the whole problem. So the boss race gets
+ * its own arming condition, on the lock-out itself rather than on its worst
+ * consequence: below the threshold, in the ollie phase, not stunned, not at
+ * the lift, for BOSS_UNSTICK_ARM retraces. The push is the marshal's own.
+ *
+ * Scoped to the health bosses (raceType 2 and 3) so nothing that is already
+ * won can regress. --nobossunstick turns it off.
+ */
+/* One retrace, not twelve. Arming on twelve measured exactly the oscillation
+ * it was meant to damp: the push puts the rider over the threshold, the
+ * counter resets, the rider falls back under it, and twelve more retraces of
+ * hopping go by -- which is the 10-to-13-retrace blocks that fill the log from
+ * the start line to sector 16. There is nothing to debounce: below the
+ * threshold and in the ollie phase is the lock-out, on the first frame as much
+ * as on the twelfth. */
+int sbk_boss_unstick_arm = 1;
+
+/* And a push that clears the threshold rather than sitting on it. The
+ * marshal's 0x68000 is deliberately "a shade over" 0x5FFFF, which is right for
+ * a rider wedged in a dip on Haunted House and wrong for one being shot at
+ * every few seconds: the log has the rider oscillating between 360,000 and
+ * 450,000 for hundreds of retraces, dipping back under the threshold on every
+ * other frame and re-entering the ollie each time. Twice the threshold puts it
+ * clearly in the driving regime, where the game's own acceleration takes it
+ * from there. */
+int sbk_boss_unstick_push = 0xC0000;
+
+/* Whether the breaker also reaches into a knockback's hopping tail.
+ *
+ * behaviourMode 2 is the game's penalty for being hit and the first version of
+ * this left it strictly alone. But the ring dump says the rider spends that
+ * penalty in **mode 2 phase 4** at 24,576 units a frame -- stunned *and*
+ * locked out, hopping -- and the blocks run 146 to 326 retraces, two and a
+ * half to five and a half seconds. A human is knocked down for a moment and
+ * then steers out of it; a CPU rider under the threshold cannot steer at all,
+ * so its knockback lasts until gravity happens to carry it back over 0x5FFFF.
+ * The lock-out is what makes the penalty long, and the lock-out is the thing
+ * this port has been undoing since Haunted House.
+ *
+ * --nobossunstickstun holds off and leaves the tail alone, which is the
+ * measurement the claim above rests on. */
+int sbk_boss_unstick_stun = 1;
+
+int sbk_boss_unstick = 1;
+int sbk_boss_unstick_pushes;
+
+/* Where the racing line goes from here: the centre of the end of the sector
+ * two ahead, or the lift entry at the end of the track. Factored out of
+ * marshal_tick, which is the only other caller and still owns the comment
+ * about why calculateAITargetPosition cannot be called from a host tick. */
+static int line_target(GameState *gs, Player *p, s32 *o_tx, s32 *o_tz) {
+    TrackData *td = &gs->gameData;
+    int sec = (int)p->sectorIndex, k, at_end = 0;
+    if (sec < 0 || sec >= (int)td->sectorCount) return -1;
+    for (k = 0; k < 2; k++) {
+        int nxt = (int)td->sectors[sec].nextSectorIndex;
+        if (nxt < 0 || nxt >= (int)td->sectorCount) { at_end = 1; break; }
+        sec = nxt;
+    }
+    if (at_end) {
+        LevelConfig *lc = getLevelConfig(gs->memoryPoolId);
+        *o_tx = lc->liftEntryPosX;
+        *o_tz = lc->liftEntryPosZ;
+    } else {
+        *o_tx = (s32)td->vertices[td->sectors[sec].endCenterVertexIndex].x << 16;
+        *o_tz = (s32)td->vertices[td->sectors[sec].endCenterVertexIndex].z << 16;
+    }
+    return at_end;
+}
+
+static void boss_unstick_tick(GameState *gs, unsigned long retraces) {
+    extern int sbk_is_hp_boss_race(int);
+    extern s32 computeAngleToPosition(s32, s32, s32, s32);
+    static void *u_gs;
+    static unsigned u_frame;
+    static int held, blocks, stun_frames, hop_frames, pushes;
+    static int in_stall, stall_start, stall_hit, stall_sect;
+    /* A four-frame ring of the rider's state, so the rising edge of a stall
+     * can be read backwards: what the rider was doing on the way in is the
+     * only thing that names the cause. */
+    static struct { int mode, phase, step, hit, inv, slow, face, anim, beh, spd; } ring[6];
+    static int ringn;
+    Player *p = &gs->players[0];
+    double vx, vy, vz, speed, dx, dz, len;
+    s32 tx = 0, tz = 0;
+    int locked;
+
+    if (!sbk_autoplay || !p->isCpuControlled) return;
+    if (!sbk_is_hp_boss_race(gs->raceType)) return;
+
+    if (race_is_new(gs, &u_gs, &u_frame)) {
+        held = blocks = stun_frames = hop_frames = pushes = 0;
+        in_stall = 0;
+    }
+    if ((p->animationFlags & PLAYER_FINISHED_FLAG) || gs->raceIntroState != 0) return;
+
+    vx = (double)(s32)p->velocity.x;
+    vy = (double)(s32)p->velocity.y;
+    vz = (double)(s32)p->velocity.z;
+    speed = sqrt(vx * vx + vy * vy + vz * vz);
+
+    {
+        int k = ringn % 6;
+        ring[k].mode = p->behaviorMode; ring[k].phase = p->behaviorPhase; ring[k].step = p->behaviorStep;
+        ring[k].hit = (int)p->hitReactionState; ring[k].inv = (int)p->invincibilityTimer;
+        ring[k].slow = (int)p->slowdownLevel; ring[k].face = (int)p->trackFaceType;
+        ring[k].anim = (int)p->animationFlags; ring[k].beh = (int)p->behaviorFlags; ring[k].spd = (int)speed;
+        ringn++;
+    }
+
+    if (p->behaviorMode == 2) stun_frames++;
+    if (p->behaviorPhase == 4) hop_frames++;
+
+    /* The stall trace: one line per block, so a log says how many times the
+     * rider was taken out of the race and what took it out. */
+    if (p->behaviorMode == 2 || (p->behaviorPhase == 4 && speed <= (double)MARSHAL_SPEED)) {
+        if (!in_stall) {
+            in_stall = 1;
+            stall_start = (int)retraces;
+            stall_hit = (int)p->hitReactionState;
+            stall_sect = (int)p->sectorIndex;
+            blocks++;
+            {
+                int j;
+                printf("sbk-bossstall: block %d enter r=%lu sect %d:", blocks, retraces, stall_sect);
+                for (j = 5; j >= 0; j--) {
+                    int k = (ringn - 1 - j + 12) % 6;
+                    printf(" [%d/%d/%d hit=%d inv=%d slow=%d face=%d anim=%x beh=%x v=%d]", ring[k].mode,
+                           ring[k].phase, ring[k].step, ring[k].hit, ring[k].inv, ring[k].slow, ring[k].face,
+                           (unsigned)ring[k].anim, (unsigned)ring[k].beh, ring[k].spd);
+                }
+                printf("\n");
+                fflush(stdout);
+            }
+        }
+    } else if (in_stall) {
+        in_stall = 0;
+        printf("sbk-bossstall: block %d r=%d..%lu (%lu retraces) from sect %d hit=%d -> sect %d speed=%d\n",
+               blocks, stall_start, retraces, retraces - (unsigned long)stall_start, stall_sect, stall_hit,
+               (int)p->sectorIndex, (int)speed);
+        fflush(stdout);
+    }
+
+    if (!sbk_boss_unstick) return;
+    /* Mode 3 and the lift are the marshal's standing rule and they are this
+     * one's too. Mode 2 is the game's own penalty for being hit and is left
+     * alone: what is being undone here is only the steering lock-out that
+     * follows it. */
+    if (p->behaviorMode == 3 || p->chairliftFlags != 0) { held = 0; return; }
+    if (p->behaviorMode == 2 && !sbk_boss_unstick_stun) { held = 0; return; }
+
+    locked = (p->behaviorPhase == 4 && speed <= (double)MARSHAL_SPEED);
+    if (!locked) { held = 0; return; }
+    if (++held < sbk_boss_unstick_arm) return;
+
+    if (line_target(gs, p, &tx, &tz) < 0) return;
+    dx = (double)tx - (double)(s32)p->worldPos.x;
+    dz = (double)tz - (double)(s32)p->worldPos.z;
+    len = sqrt(dx * dx + dz * dz);
+    if (len < 1.0) return;
+
+    p->velocity.x = (s32)(dx / len * (double)sbk_boss_unstick_push);
+    p->velocity.z = (s32)(dz / len * (double)sbk_boss_unstick_push);
+    p->rotY = (s16)computeAngleToPosition(tx, tz, (s32)p->worldPos.x, (s32)p->worldPos.z);
+    p->steeringAngle = 0;
+    pushes++;
+    sbk_boss_unstick_pushes++;
+    if (pushes == 1 || (pushes % 300) == 0) {
+        printf("sbk-bossunstick: r=%lu push %d at sect %d prog %d speed %d (stun=%d hop=%d blocks=%d)\n",
+               retraces, pushes, (int)p->sectorIndex, (int)p->lapProgressRemaining, (int)speed, stun_frames,
+               hop_frames, blocks);
+        fflush(stdout);
+    }
+}
+
 /* --------------------------------------------------------------------- ticks */
 
 void sbk_autoplay_tick(unsigned long retraces) {
@@ -1349,9 +1653,12 @@ void sbk_autoplay_tick(unsigned long retraces) {
             }
         }
         wall_watch(gs);
+        sector_census(gs);
         if (sbk_pin_trace) pin_watch(gs, retraces);
         race_watchdog(gs, retraces);
         marshal_tick(gs, retraces);
+        boss_unstick_tick(gs, retraces);
+        { extern void sbk_boss_pace_tick(GameState *, unsigned long); sbk_boss_pace_tick(gs, retraces); }
         boss_brake_tick(gs, p1);
         if (sbk_autoplay && p1->isCpuControlled == 0) {
             autoplay_arm(gs, retraces);
