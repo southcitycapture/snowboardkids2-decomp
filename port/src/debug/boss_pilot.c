@@ -1324,8 +1324,21 @@ void sbk_boss_pace_tick(GameState *gs, unsigned long retraces) {
      * row at 60% that stayed behind. Being in front of this boss is worth
      * nothing; being just behind it is worth everything. */
     if (p->currentLap == boss->currentLap && p->lapProgressRemaining < boss->lapProgressRemaining) {
+        /* Three quarters of whatever the boss is *actually* allowed, not a
+         * constant. A fixed floor is only a brake while it is below the boss's
+         * own cap, and --bossslow moves that cap: at 48% the boss is allowed
+         * 650,599 against the old floor of 655,360, and at 35% it is allowed
+         * 474,395 -- so "coasting" was overtaking, which hands the boss the
+         * 0x180000 ceiling for the rest of the race. That is why the heads
+         * went 10, 12, 7 as the handicap was made *heavier*: the harder the
+         * boss was slowed, the more certainly the rider passed it. */
+        s32 room = boss->maxSpeedCap;
+        if (sbk_boss_slow > 0 && sbk_boss_slow < 100) room = (s32)(((long long)room * sbk_boss_slow) / 100);
+        room = (s32)(((long long)room * 3) / 4);
+        if (room > BOSS_PACE_FLOOR) room = BOSS_PACE_FLOOR;
+        if (room < 0x62000) room = 0x62000;   /* never under the lock-out */
         sbk_pace_player = p;
-        sbk_pace_target = BOSS_PACE_FLOOR;
+        sbk_pace_target = room;
         sbk_pace_boss = boss;
         coast++;
         return;

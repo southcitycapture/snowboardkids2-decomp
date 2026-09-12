@@ -1087,10 +1087,45 @@ first credits this port ever reached were cut off at exactly 3,600 retraces by
 a B press and the rider was put back in the town. The end of the game is not a
 screen the navigator failed to understand; the guard skips it now.
 
-A boss race is not deterministic the way a trial is, and the retry that was run
-to re-photograph the credits took two heads where the campaign's took thirteen
-on the same row. The handicap sets the odds, not the outcome; the ladder's
-higher rungs shorten the supply for exactly that reason.
+#### And the credits, watched all the way through
+
+`g4-shots/sbk2-credits.png` and `sbk2-credits-mid.png` are the staff roll on
+the real G4, in fullscreen, at 60 Hz: the hand-drawn plates behind the names,
+the character parade walking along the bottom of the screen, and the roles
+advancing (Programer / Event Motion / ...). It runs from about retrace 56,300
+to 71,300 -- **fifteen thousand retraces, a little over four minutes** -- and
+ends on the game's own `awaitPostCreditsSaveScreen`, which the navigator
+answers and which writes the save. `~/eeprom.sav.COMPLETE-2026-09-12` is the
+completion save and `~/eeprom.sav.COMPLETE-2026-09-12-postcredits` is the same
+save after the game's own post-credits write.
+
+#### The odds, and what re-rolling the credits cost
+
+A campaign boss race is deterministic for a given build and save state and
+*not* reproducible across either: the same row that won at the first attempt
+gave 15 throws and two heads once the save recorded course 11 as won, because
+the course list, the cutscene and the ladder all take a different path through
+the same frame. Re-rolling the credits took four more races and found two real
+things on the way:
+
+* **the supply ceiling.** Every losing race stopped at exactly `supplied=16`
+  and left the rider empty-handed for the rest of it. Thirteen heads at the
+  hit rate a boss race gets needs sixty-odd throws, so `sbk_boss_supply_max`
+  is forty.
+* **the coast floor has to be relative to the handicap.** The governor's
+  "never overtake" branch dropped the rider to a fixed 0xA0000, which is
+  *above* what the boss is allowed once `--bossslow` has taken its cap to
+  650,599 at 48% or 474,395 at 35%. So coasting was overtaking, and overtaking
+  hands the boss the 0x180000 ceiling for the rest of the race. That is why the
+  heads went 10, 12, 7 as the handicap was made **heavier** -- a trend that
+  reads as noise until the mechanism is named. The floor is three quarters of
+  whatever the boss is actually allowed now, clamped above the lock-out, and
+  the next race after that change took ten heads where the three before it had
+  taken two, one and three.
+
+With both in, `--bossslow 40`: races 1, 2, 3 gave hp 3, hp 7 and then
+`boss hp=0 defeated=1, 41 stars` -- won, credits, four minutes of staff roll,
+post-credits save.
 
 
 ### What the levers actually do, measured
