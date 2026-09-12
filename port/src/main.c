@@ -73,7 +73,7 @@ static const char *find_rom(int argc, char **argv) {
         if (argv[i][0] != '-') {
             return argv[i];
         }
-        if (strcmp(argv[i], "--play") == 0 || strcmp(argv[i], "--record") == 0 || strcmp(argv[i], "--drawdistance") == 0 || strcmp(argv[i], "--dumpdl") == 0 || strcmp(argv[i], "--frames") == 0 || strcmp(argv[i], "--wav") == 0 || strcmp(argv[i], "--dumpframes") == 0 || strcmp(argv[i], "--pak") == 0 || strcmp(argv[i], "--eeprom") == 0 || strcmp(argv[i], "--bigtri") == 0 || strcmp(argv[i], "--peek") == 0 || strcmp(argv[i], "--cmds") == 0 || strcmp(argv[i], "--trial") == 0 || strcmp(argv[i], "--plan") == 0 || strcmp(argv[i], "--saveevery") == 0 || strcmp(argv[i], "--startrung") == 0 || strcmp(argv[i], "--bosssupply") == 0 || strcmp(argv[i], "--shotsnap") == 0 || strcmp(argv[i], "--shotrange") == 0 || strcmp(argv[i], "--shotdetour") == 0 || strcmp(argv[i], "--shotcarry") == 0 || strcmp(argv[i], "--trickperiod") == 0 || strcmp(argv[i], "--trickflags") == 0 || strcmp(argv[i], "--tricktarget") == 0 || strcmp(argv[i], "--shotcooldown") == 0 || strcmp(argv[i], "--bossrange") == 0 || strcmp(argv[i], "--bosshold") == 0 || strcmp(argv[i], "--bossslow") == 0 || strcmp(argv[i], "--bosssupplymax") == 0 || strcmp(argv[i], "--level") == 0 || strcmp(argv[i], "--bosscooldown") == 0 || strcmp(argv[i], "--bossunstickarm") == 0 || strcmp(argv[i], "--bossunstickpush") == 0 || strcmp(argv[i], "--bosspacelo") == 0 || strcmp(argv[i], "--bosspacehi") == 0 || strcmp(argv[i], "--uiscript") == 0) {
+        if (strcmp(argv[i], "--play") == 0 || strcmp(argv[i], "--record") == 0 || strcmp(argv[i], "--drawdistance") == 0 || strcmp(argv[i], "--dumpdl") == 0 || strcmp(argv[i], "--frames") == 0 || strcmp(argv[i], "--wav") == 0 || strcmp(argv[i], "--dumpframes") == 0 || strcmp(argv[i], "--pak") == 0 || strcmp(argv[i], "--eeprom") == 0 || strcmp(argv[i], "--bigtri") == 0 || strcmp(argv[i], "--peek") == 0 || strcmp(argv[i], "--cmds") == 0 || strcmp(argv[i], "--trial") == 0 || strcmp(argv[i], "--plan") == 0 || strcmp(argv[i], "--saveevery") == 0 || strcmp(argv[i], "--startrung") == 0 || strcmp(argv[i], "--bosssupply") == 0 || strcmp(argv[i], "--shotsnap") == 0 || strcmp(argv[i], "--shotrange") == 0 || strcmp(argv[i], "--shotdetour") == 0 || strcmp(argv[i], "--shotcarry") == 0 || strcmp(argv[i], "--trickperiod") == 0 || strcmp(argv[i], "--trickflags") == 0 || strcmp(argv[i], "--tricktarget") == 0 || strcmp(argv[i], "--shotcooldown") == 0 || strcmp(argv[i], "--bossrange") == 0 || strcmp(argv[i], "--bosshold") == 0 || strcmp(argv[i], "--bossslow") == 0 || strcmp(argv[i], "--bosssupplymax") == 0 || strcmp(argv[i], "--level") == 0 || strcmp(argv[i], "--bosscooldown") == 0 || strcmp(argv[i], "--bossunstickarm") == 0 || strcmp(argv[i], "--bossunstickpush") == 0 || strcmp(argv[i], "--bosspacelo") == 0 || strcmp(argv[i], "--bosspacehi") == 0 || strcmp(argv[i], "--uiscript") == 0 || strcmp(argv[i], "--shotat") == 0) {
             i++; /* option value */
         }
     }
@@ -111,6 +111,23 @@ static int scripted_run(int argc, char **argv) {
         }
     }
     return 0;
+}
+
+/* --shotat R1,R2,...: dump the frame presented at each of those retraces to
+ * /tmp/sbk-shot-<retrace>.ppm.  A capture harness wants one named, repeatable
+ * still per screen; --dumpframes only counts frames from a --dumpdl task. */
+static unsigned long sbk_shotat[64];
+static int sbk_shotat_n, sbk_shotat_i;
+
+static void sbk_shotat_parse(const char *spec) {
+    const char *p = spec;
+    while (*p != '\0' && sbk_shotat_n < (int)(sizeof(sbk_shotat) / sizeof(sbk_shotat[0]))) {
+        char *end;
+        unsigned long v = strtoul(p, &end, 10);
+        if (end == p) break;
+        sbk_shotat[sbk_shotat_n++] = v;
+        p = (*end == ',') ? end + 1 : end;
+    }
 }
 
 int main(int argc, char **argv) {
@@ -196,6 +213,8 @@ int main(int argc, char **argv) {
             record = argv[++i];
         } else if (strcmp(argv[i], "--dumpdl") == 0 && i + 1 < argc) {
             sbk_dump_task = atoi(argv[++i]);
+        } else if (strcmp(argv[i], "--shotat") == 0 && i + 1 < argc) {
+            sbk_shotat_parse(argv[++i]);
         } else if (strcmp(argv[i], "--frames") == 0 && i + 1 < argc) {
             max_frames = strtoul(argv[++i], NULL, 10); /* quit after N retraces */
         } else if (strcmp(argv[i], "--dumpframes") == 0 && i + 1 < argc) {
@@ -524,6 +543,13 @@ int main(int argc, char **argv) {
         sbk_vi_retrace();
         sbk_ai_retrace();
         retraces++;
+        while (sbk_shotat_i < sbk_shotat_n && sbk_shotat[sbk_shotat_i] < retraces) sbk_shotat_i++;
+        if (sbk_shotat_i < sbk_shotat_n && sbk_shotat[sbk_shotat_i] == retraces) {
+            extern int sbk_frame_dump_left, sbk_frame_dump_tag;
+            sbk_frame_dump_tag = (int)retraces;
+            sbk_frame_dump_left = 1;
+            sbk_shotat_i++;
+        }
         sbk_perf_frame();
         sbk_autoplay_tick(retraces);
         if (sbk_perf_enabled && retraces % 60 == 0) {
