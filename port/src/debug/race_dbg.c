@@ -474,6 +474,24 @@ static void autoplay_arm(GameState *gs, unsigned long retraces) {
     printf("sbk: autoplay: player 1 handed to the CPU rider (level=%d type=%d diff=%d boost=%d top=%d path=%p)\n",
            gs->memoryPoolId, gs->raceType, p->aiDifficultyIndex, sbk_campaign_boost, (int)p->baseMaxSpeed,
            p->aiPathData);
+    /* Who else is in this race, and is the handicap reaching them?
+     *
+     * The campaign lost the Jingle Town boss four times running, at every rung
+     * of the ladder, always by exactly one place and never earning a coin --
+     * the signature of a handicap that is not being applied to anybody. The
+     * levers only reach riders that race_dbg put on RIVAL_ROW, and it only
+     * does that for isCpuControlled riders; a boss is flagged isBossRacer and
+     * takes its own path through applyCharacterSnowboardStats. Printing the
+     * roster once per race turns that from a guess into a line in the log. */
+    {
+        int i;
+        for (i = 0; i < gs->numPlayers && i < 4; i++) {
+            Player *q = &gs->players[i];
+            printf("sbk: autoplay: rider %d: cpu=%d boss=%d diff=%d char=%d board=%d top=%d\n", i,
+                   (int)q->isCpuControlled, (int)q->isBossRacer, (int)q->aiDifficultyIndex, (int)q->characterId,
+                   (int)q->snowboardId, (int)q->baseMaxSpeed);
+        }
+    }
     fflush(stdout);
 }
 
@@ -531,6 +549,10 @@ void sbk_autoplay_tick(unsigned long retraces) {
     if (sbk_nightmare) nightmare_write_row();
 
     gs = sbk_race_state();
+    /* The boss pilot's clock. It is fed on every tick, race or no race: the
+     * hook it drives runs inside the game's own item code, which has no idea
+     * what a retrace is. */
+    { extern void sbk_boss_pilot_tick(GameState *, unsigned long); sbk_boss_pilot_tick(gs, retraces); }
     if (gs != NULL && !sbk_race_is_demo(gs)) {
         int i;
         Player *p1 = &gs->players[0];
@@ -635,12 +657,12 @@ void sbk_race_debug(unsigned long retraces) {
     for (i = 0; i < gs->numPlayers && i < 4; i++) {
         Player *p = &gs->players[i];
         printf("sbk-race: r=%lu p%d cpu=%d diff=%d chr=%d board=%d place=%d lap=%d prog=%d sect=%d stick=%d,%d "
-               "btn=%04x pos=%d,%d,%d spd=%d/%d anim=%08x beh=%d item=%d/%d gold=%d\n",
+               "btn=%04x pos=%d,%d,%d spd=%d/%d anim=%08x beh=%d item=%d/%d ammo=%d boss=%d hp=%d gold=%d\n",
                retraces, i, p->isCpuControlled, p->aiDifficultyIndex, p->characterId, p->snowboardId,
                p->finishPosition + 1, p->currentLap, p->lapProgressRemaining, p->sectorIndex, p->inputStickX,
                p->inputStickY, (unsigned)p->inputButtonsHeld, (int)p->worldPos.x, (int)p->worldPos.y, (int)p->worldPos.z,
                (int)p->smoothedSpeedCap, (int)p->baseMaxSpeed, (unsigned)p->animationFlags, p->behaviorMode, p->primaryItemId,
-               p->secondaryItemId, (int)p->raceGold);
+               p->secondaryItemId, (int)p->primaryItemAmmo, (int)p->isBossRacer, (int)p->bossHealth, (int)p->raceGold);
     }
     fflush(stdout);
 }

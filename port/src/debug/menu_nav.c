@@ -233,6 +233,26 @@ static int nav_credits_seen;
  * navigator latches it there, and the result screen goes back to being what it
  * should have been all along -- the trigger, not the source. */
 #define PLAYER_FINISHED_FLAG 0x80000
+/* ...and on a boss course the place is not the place at all. race_main.c ~5188
+ * never gives our rider finishPosition 0 for beating a health boss: the boss is
+ * usually still ahead of us on the track when its last snowman head goes, so
+ * the rank order that the finish flag freezes says 2nd. The win is written
+ * somewhere else -- 0x100000 on the boss, which is also what handleBossDefeatResult
+ * reads to choose gRaceResultCode 3 over 4. So the navigator asks the same
+ * question the game asks. Without this a *won* boss race would be recorded as a
+ * loss and the campaign would grind it for ever at ever-higher rungs. */
+#define BOSS_DEFEATED_FLAG 0x100000
+static int nav_place_of(GameState *gs) {
+    extern int sbk_is_hp_boss_race(int);
+    extern Player *sbk_boss_rider(GameState *);
+    Player *boss;
+    if (gs == NULL) return -1;
+    if (sbk_is_hp_boss_race(gs->raceType) && (boss = sbk_boss_rider(gs)) != NULL) {
+        return (boss->animationFlags & BOSS_DEFEATED_FLAG) ? 0 : 1;
+    }
+    return (int)gs->players[0].finishPosition;
+}
+
 static int nav_latched_place = -1;
 static int nav_latched_level = -1;
 
@@ -393,7 +413,51 @@ static void nav_progress(const char *why) {
 static const struct { s16 boost, tax, relief; } nav_ladder[] = {
     { 0, 0, 0 }, { 28, 0, 0 }, { 28, 0, 100 }, { 28, 0, 165 }, { 28, 160, 165 },
 };
-#define NAV_LADDER_TOP ((int)(sizeof(nav_ladder) / sizeof(nav_ladder[0])) - 1)
+
+/* A boss race needs a different ladder, because on a boss none of the rival
+ * levers reach anything -- and neither does our own top speed.
+ *
+ * The campaign lost the Jingle Town boss four times running, at every rung,
+ * always by exactly one place, never earning a coin. The roster dump said the
+ * first half of why in two lines:
+ *
+ *     rider 0 (us):   cpu=1 boss=0 diff=7 top=1394607
+ *     rider 1 (boss): cpu=1 boss=1 diff=6 top=0
+ *
+ * The boss *is* on RIVAL_ROW, so the tax was reaching the right rider -- but its
+ * baseMaxSpeed is 0. A boss does not move by the racer speed model at all
+ * (updateJingleTownBoss writes maxSpeedCap itself, from its distance to us), so
+ * the speed tax subtracts from something the boss never reads.
+ *
+ * The other half is that a boss race is not won by racing. race_main.c ~5188
+ * ends RACE_TYPE_BOSS_JINGLE / BOSS_ICE two ways only: the boss reaches the line
+ * (we lose) or the boss's animationFlags gain 0x100000 (we win), and that flag
+ * comes from bossHealth hitting 0 -- the ten snowman heads. Our own rider
+ * crossing the line does nothing whatever, so boost cannot win it either.
+ *
+ * What wins it is hitting the boss ten times, and that is the boss pilot
+ * (port/src/debug/boss_pilot.c). This ladder is the pilot's supply line: rung 0
+ * is the pure mechanic -- throw what the course gives us -- and each rung after
+ * a loss shortens the interval at which the pilot hands the rider another star
+ * while it is empty-handed. The boost column stays small and constant: on a
+ * boss the only thing speed buys is staying in throwing range. */
+static const struct { s16 boost, supply; } nav_boss_ladder[] = {
+    { 14, 0 }, { 28, 180 }, { 28, 120 }, { 28, 60 }, { 28, 30 },
+};
+
+/* Courses 3 and 7 -- jingle_town_boss and ice_land_boss -- are the two health
+ * bosses. Course 0xB, the Crazy Jungle boss, is RACE_TYPE_BOSS_JUNGLE: it has no
+ * bossHealth at all and race_main.c decides it on who reaches the line first, so
+ * it stays on the ordinary ladder where boost is the lever that works. */
+static int nav_level_is_boss(int level) { return level == 3 || level == 7; }
+
+#define NAV_LADDER_TOP(boss)                                                                                       \
+    ((boss) ? (int)(sizeof(nav_boss_ladder) / sizeof(nav_boss_ladder[0])) - 1                                        \
+            : (int)(sizeof(nav_ladder) / sizeof(nav_ladder[0])) - 1)
+
+/* Which course the ladder is armed for. It is declared here, above
+ * nav_ladder_set, because the two ladders are chosen by course. */
+static int nav_level = -1;
 
 /* The wedge relief is kept apart from the ladder's own, because the two are
  * raised by different things and neither may quietly undo the other: climbing a
@@ -401,8 +465,19 @@ static const struct { s16 boost, tax, relief; } nav_ladder[] = {
 static int nav_wedge_relief;
 
 static void nav_ladder_set(int rung) {
+    int boss = nav_level_is_boss(nav_level);
+    extern int sbk_boss_supply;
     if (rung < 0) rung = 0;
-    if (rung > NAV_LADDER_TOP) rung = NAV_LADDER_TOP;
+    if (rung > NAV_LADDER_TOP(boss)) rung = NAV_LADDER_TOP(boss);
+    if (boss) {
+        sbk_campaign_boost = nav_boss_ladder[rung].boost;
+        sbk_boss_supply = nav_boss_ladder[rung].supply;
+        sbk_rival_tax = 0;
+        sbk_rival_item_relief = 0;
+        sbk_item_relief = nav_wedge_relief;
+        return;
+    }
+    sbk_boss_supply = 0;
     sbk_campaign_boost = nav_ladder[rung].boost;
     sbk_rival_tax = nav_ladder[rung].tax;
     /* The ladder's relief is the rivals' alone; the wedge's is both rows,
@@ -421,7 +496,6 @@ int sbk_nav_start_rung;
  * its first race ends: nav_handicap runs off a result screen, so a rung applied
  * only there always throws the first race of a course away. nav_level_begin is
  * therefore called from the course list too, and is idempotent. */
-static int nav_level = -1;
 static int nav_rung, nav_losses, nav_wedges;
 
 static void nav_level_begin(int level) {
@@ -500,7 +574,7 @@ static void nav_handicap(int level, int place) {
     }
 
     nav_losses++;
-    if (nav_rung < NAV_LADDER_TOP) {
+    if (nav_rung < NAV_LADDER_TOP(nav_level_is_boss(nav_level))) {
         nav_rung++;
         nav_ladder_set(nav_rung);
         printf("sbk-nav: level %d lost %d time(s); retrying at rung %d (boost=%d +%d%% top speed, rivaltax=%d, "
@@ -589,7 +663,7 @@ static void nav_watch(unsigned long retraces) {
          * levelUnlockStatus into the 1 that lets the next gate open. A campaign
          * that never prints the place cannot tell a stall from a loss. */
         GameState *gs = sbk_race_state();
-        int place = gs != NULL ? (int)gs->players[0].finishPosition : -1;
+        int place = nav_place_of(gs);
         int level = gGameSessionContext ? gGameSessionContext->currentLevel : -1;
         if (place < 0) place = nav_latched_place;
         if (level < 0) level = nav_latched_level;
@@ -901,7 +975,7 @@ void sbk_menu_nav_tick(unsigned long retraces) {
             GameState *gs = sbk_race_state();
             racing = gs != NULL && !sbk_race_is_demo(gs);
             if (racing && (gs->players[0].animationFlags & PLAYER_FINISHED_FLAG)) {
-                nav_latched_place = (int)gs->players[0].finishPosition;
+                nav_latched_place = nav_place_of(gs);
                 nav_latched_level = gGameSessionContext ? gGameSessionContext->currentLevel : -1;
             }
         }
