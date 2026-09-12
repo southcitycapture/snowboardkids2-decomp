@@ -453,15 +453,29 @@ static void nav_progress(const char *why) {
  * it, not more -- and it touches no rider's speed, handling or cornering at
  * all. The tax survives as the last rung only, on top of a pool the relief has
  * already emptied. */
+/* And then the boost turned out never to have reached a race at all: initPlayer
+ * recomputes the rider's stats after the handoff (see race_dbg.c's
+ * retune_hold). Every rung this ladder has ever climbed raced at stock speed,
+ * so the whole ordering above was argued from six samples of rung 0, and the
+ * ordering has to be argued again from what is actually known:
+ *
+ *   - rival relief is the only lever that is *good* for the task pool, and it
+ *     changes no rider's physics at all. It cannot cause the thing it is there
+ *     to prevent.
+ *   - boost is now known to change our rider's line, not just its pace. The
+ *     first race that ever ran with a real +11% wedged twice on Starlight
+ *     Highway, once at the lift and once mid-sector at full speed with the
+ *     position barely moving -- a rider driving into geometry, which is what
+ *     "too fast for the borrowed path" looks like from outside.
+ *   - the tax is the one that buys the wedge, and it stays last.
+ *
+ * So relief goes first, boost second, tax last. The board change that landed
+ * with the retune fix (SNOWBOARD_STAR: +25 handling, +28 deadzone, +30
+ * acceleration at the same top speed) is itself a large step up from what
+ * every rung below used to race with, so rung 0 is no longer the same rung 0
+ * these notes were written about. */
 static const struct { s16 boost, tax, relief; } nav_ladder[] = {
-    /* Boost past +10% is new, and it is above the relief rather than below it:
-     * course 8 sat at 2nd place through rungs 2 and 3 -- close, and not going to
-     * be closed by taking more items off rivals who were already relieved of
-     * 165 -- and then *wedged* on the old top rung, which is the tax rung the
-     * ladder's own notes call the one most likely to hang a race. So the tax
-     * rung moves to last and two boost rungs go in front of it, at the +16% and
-     * +21% the boss ladder already wins races with. */
-    { 0, 0, 0 },  { 28, 0, 0 },   { 28, 0, 100 },  { 28, 0, 165 },
+    { 0, 0, 0 },    { 0, 0, 100 },  { 0, 0, 165 },  { 28, 0, 165 },
     { 42, 0, 165 }, { 56, 0, 165 }, { 56, 160, 165 },
 };
 
