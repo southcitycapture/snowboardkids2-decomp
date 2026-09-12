@@ -336,16 +336,33 @@ static void nav_progress(const char *why) {
  *
  * A course that loses every rung is a real finding about the rider, not a knob
  * to keep turning, and the last rung says so. */
-static const struct { s16 boost, tax; } nav_ladder[] = {
-    { 0, 0 }, { 28, 0 }, { 28, 160 }, { 28, 255 },
+/* The third lever, and the last rung: `relief`, taken off every item's
+ * useChance on both rows by nightmare_write_row (race_dbg.c). At the searched
+ * row's 205 a relief of 165 leaves 40, the floor that function clamps to -- the
+ * rivals still race, but they almost never throw anything.
+ *
+ * It belongs above the tax rather than below it because it is the gentlest
+ * lever on the physics and the harshest on the opposition: our rider's speed,
+ * handling and cornering are untouched, and so is every rival's, but a course
+ * that was being lost to a bomb in the back on the last straight stops being
+ * lost to it. Course 1 was lost twice at rung 0 and rung 1, which is what put
+ * this rung in: the ladder ran out of levers that were safe to pull. */
+static const struct { s16 boost, tax, relief; } nav_ladder[] = {
+    { 0, 0, 0 }, { 28, 0, 0 }, { 28, 160, 0 }, { 28, 255, 0 }, { 28, 255, 165 },
 };
 #define NAV_LADDER_TOP ((int)(sizeof(nav_ladder) / sizeof(nav_ladder[0])) - 1)
+
+/* The wedge relief is kept apart from the ladder's own, because the two are
+ * raised by different things and neither may quietly undo the other: climbing a
+ * rung must not hand the items back to a course that is wedging on them. */
+static int nav_wedge_relief;
 
 static void nav_ladder_set(int rung) {
     if (rung < 0) rung = 0;
     if (rung > NAV_LADDER_TOP) rung = NAV_LADDER_TOP;
     sbk_campaign_boost = nav_ladder[rung].boost;
     sbk_rival_tax = nav_ladder[rung].tax;
+    sbk_item_relief = nav_ladder[rung].relief + nav_wedge_relief;
 }
 
 static void nav_handicap(int level, int place) {
@@ -356,7 +373,7 @@ static void nav_handicap(int level, int place) {
     if (level != last_level) {
         last_level = level;
         rung = losses = wedges = 0;
-        sbk_item_relief = 0;
+        nav_wedge_relief = 0;
         nav_ladder_set(0);
     }
 
@@ -381,7 +398,8 @@ static void nav_handicap(int level, int place) {
          * wedged at three different rungs, twice at the same sector and the
          * same world position to the byte, so a second identical race only buys
          * the same wedge again at the cost of six minutes. */
-        sbk_item_relief += 55;
+        nav_wedge_relief += 55;
+        nav_ladder_set(rung);
         printf("sbk-nav: level %d wedged (%d so far); not a loss, retrying at rung %d "
                "(boost=%d rivaltax=%d itemrelief=%d)\n",
                level, wedges, rung, sbk_campaign_boost, sbk_rival_tax, sbk_item_relief);
@@ -395,7 +413,7 @@ static void nav_handicap(int level, int place) {
                    level, rung, sbk_campaign_boost, sbk_rival_tax, losses);
         }
         rung = losses = wedges = 0;
-        sbk_item_relief = 0;
+        nav_wedge_relief = 0;
         nav_ladder_set(0);
         fflush(stdout);
         return;
@@ -405,12 +423,14 @@ static void nav_handicap(int level, int place) {
     if (rung < NAV_LADDER_TOP) {
         rung++;
         nav_ladder_set(rung);
-        printf("sbk-nav: level %d lost %d time(s); retrying at rung %d (boost=%d +%d%% top speed, rivaltax=%d)\n",
-               level, losses, rung, sbk_campaign_boost, sbk_campaign_boost * 100 / 256, sbk_rival_tax);
+        printf("sbk-nav: level %d lost %d time(s); retrying at rung %d (boost=%d +%d%% top speed, rivaltax=%d, "
+               "itemrelief=%d)\n",
+               level, losses, rung, sbk_campaign_boost, sbk_campaign_boost * 100 / 256, sbk_rival_tax,
+               sbk_item_relief);
     } else {
         printf("sbk-nav: WARNING -- level %d lost %d time(s) at the top of the handicap ladder "
-               "(boost=%d rivaltax=%d); the rider cannot win this course\n",
-               level, losses, sbk_campaign_boost, sbk_rival_tax);
+               "(boost=%d rivaltax=%d itemrelief=%d); the rider cannot win this course\n",
+               level, losses, sbk_campaign_boost, sbk_rival_tax, sbk_item_relief);
     }
     fflush(stdout);
 }
@@ -692,21 +712,38 @@ void sbk_menu_nav_tick(unsigned long retraces) {
     if (!sbk_autonav) return;
     nav_watch();
     nav_progress("tick");
-    /* Hands off the pad only while a race is actually being played. */
-    if (sbk_menu_on("handleRaceStateUpdate")) {
-        /* Clear the loop guard on the rising edge of a *story* race only. The
-         * attract demo runs this same handler, and clearing on every tick of it
-         * meant the counter could never hold anything. */
+    /* Clear the loop guard on the rising edge of a *story* race only. The
+     * attract demo runs this same handler, so the demo is excluded; and the
+     * edge has to be evaluated on *every* tick, not only on the ticks that see
+     * a race.
+     *
+     * That last part was the third bug this counter had. The test used to live
+     * inside the `if (racing)` branch below, so `was_racing` was only ever
+     * assigned while a race was on screen -- it latched at 1 when the first
+     * story race ended and nothing ever cleared it, so no later race could be a
+     * rising edge and the counter was never reset again. It showed up in the
+     * log as "exit #2, since race 2" where the second race should have put it
+     * back to #1: harmless in itself, but it means the count creeps up by one
+     * per course until it crosses the threshold and cries "looping" at a
+     * campaign that is doing exactly what it should. A guard that fires on a
+     * healthy run is worse than no guard, because the next person to read the
+     * log believes it. */
+    {
         static int was_racing;
-        GameState *gs = sbk_race_state();
-        int real = gs != NULL && !sbk_race_is_demo(gs);
-        if (real && !was_racing) {
+        int racing = 0;
+        if (sbk_menu_on("handleRaceStateUpdate")) {
+            GameState *gs = sbk_race_state();
+            racing = gs != NULL && !sbk_race_is_demo(gs);
+        }
+        if (racing && !was_racing) {
             nav_town_exits = 0;
             nav_loop_warned = 0;
         }
-        was_racing = real;
-        return;
+        was_racing = racing;
     }
+    /* Hands off the pad only while a race is actually being played -- including
+     * the attract demo, which must be left to run itself out. */
+    if (sbk_menu_on("handleRaceStateUpdate")) return;
     /* A race should follow the very next town exit. More than a handful without
      * one means the campaign is going round in a circle again, and an
      * unattended run should say so -- with the save's own progress table, which
