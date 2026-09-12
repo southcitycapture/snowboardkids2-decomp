@@ -356,6 +356,7 @@ static int nav_next_story_level(void) {
  * course list at all. Returns the location id to walk into, or -1. */
 static int nav_cross_tries[15];
 static int nav_cross_rung[15];
+static int nav_cross_start_rung;
 
 static int nav_next_cross(void) {
     static const struct { u8 slot, location; } cross[3] = { { 13, 2 }, { 14, 5 }, { 12, 8 } };
@@ -691,12 +692,18 @@ static void nav_level_begin(int level) {
      * narrowly still gets a nearly-honest race. */
     int known_lost;
     if (level < 0 || level == nav_level) return;
+    if (sbk_nav_start_rung > 0 && nav_cross_start_rung == 0) nav_cross_start_rung = sbk_nav_start_rung;
     /* A Cross game keeps its own rung. The navigator now rotates between the
      * outstanding ones rather than butting against the first, so a level
      * change is the normal case here rather than the end of a course -- and
      * resetting to rung 0 on every rotation means neither of them ever
      * climbs. */
     if (nav_level_is_cross(level)) {
+        /* --startrung applies to every Cross game, not just the first course
+         * after boot: the rungs live in memory, so a rebuild-and-relaunch
+         * otherwise makes the campaign climb the whole ladder again from the
+         * bottom, twenty minutes of races it has already lost. */
+        if (nav_cross_rung[level] == 0 && nav_cross_start_rung > 0) nav_cross_rung[level] = nav_cross_start_rung;
         nav_level = level;
         nav_rung = nav_cross_rung[level];
         nav_losses = nav_wedges = 0;
