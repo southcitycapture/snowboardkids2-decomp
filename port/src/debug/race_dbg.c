@@ -26,6 +26,7 @@
 #include "race/hit_reactions.h"
 #include "system/task_scheduler.h"
 #include "graphics/displaylist.h"
+#include "data/course_data.h"
 #include "../platform/input.h"
 
 /* race/race_session.h drags in half the graphics headers; the four enum values
@@ -963,6 +964,7 @@ static void marshal_tick(GameState *gs, unsigned long retraces) {
     extern s32 computeAngleToPosition(s32, s32, s32, s32);
     double vx, vy, vz, speed, dx, dz, len;
     s32 tx = 0, tz = 0;
+    int at_end = 0;
 
     if (!sbk_autoplay || !p->isCpuControlled) return;
     if (m_gs != (void *)gs) {
@@ -1048,11 +1050,29 @@ static void marshal_tick(GameState *gs, unsigned long retraces) {
         if (sec < 0 || sec >= (int)td->sectorCount) return;
         for (k = 0; k < 2; k++) {
             int nxt = (int)td->sectors[sec].nextSectorIndex;
-            if (nxt < 0 || nxt >= (int)td->sectorCount) break;
+            if (nxt < 0 || nxt >= (int)td->sectorCount) {
+                at_end = 1;
+                break;
+            }
             sec = nxt;
         }
-        tx = (s32)td->vertices[td->sectors[sec].endCenterVertexIndex].x << 16;
-        tz = (s32)td->vertices[td->sectors[sec].endCenterVertexIndex].z << 16;
+        if (at_end) {
+            /* The last sector does not end at a vertex you can stand on, it
+             * ends at the lift. A lap -- the final one included -- wraps at
+             * race_main.c:4504, `distanceToTarget < 0x1000 && rollAngle == 0`,
+             * and that target is the level's own liftEntryPos. Parked on the
+             * end centre of sector 116 instead, the rider sat 48 million units
+             * short of it with sectorIndex still reading 115 and
+             * lapProgressRemaining still 55, which is three races of course 9
+             * lost at the goal. calculateAITargetPosition does exactly this
+             * when sectors[cur].nextSectorIndex < 0; so does the marshal. */
+            LevelConfig *lc = getLevelConfig(gs->memoryPoolId);
+            tx = lc->liftEntryPosX;
+            tz = lc->liftEntryPosZ;
+        } else {
+            tx = (s32)td->vertices[td->sectors[sec].endCenterVertexIndex].x << 16;
+            tz = (s32)td->vertices[td->sectors[sec].endCenterVertexIndex].z << 16;
+        }
     }
     dx = (double)tx - (double)(s32)p->worldPos.x;
     dz = (double)tz - (double)(s32)p->worldPos.z;
@@ -1087,26 +1107,36 @@ static void marshal_tick(GameState *gs, unsigned long retraces) {
     if (retraces - pushing_since >= MARSHAL_LIFT) {
         TrackData *td = &gs->gameData;
         int sec = (int)p->sectorIndex;
-        /* The end of the rider's *own* sector is not far enough: carried
-         * there at level 9 sector 115 it slid straight back and
-         * lapProgressRemaining never left 55, twice. Carry it to the end of
-         * the next sector instead, which is past the boundary, so the carry
-         * is progress by the game's own measure and the stall clock clears. */
-        if (sec >= 0 && sec < (int)td->sectorCount) {
+        int ok = 1;
+        if (at_end) {
+            /* Put it at the lift, where the lap wrap is waiting for it. */
+            p->worldPos.x = tx;
+            p->worldPos.z = tz;
+        } else if (sec >= 0 && sec < (int)td->sectorCount) {
+            /* The end of the rider's *own* sector is not far enough: carried
+             * there at level 9 sector 115 it slid straight back and
+             * lapProgressRemaining never left 55, twice. Carry it to the end
+             * of the next sector, which is past the boundary, so the carry is
+             * progress by the game's own measure. */
             int nxt = (int)td->sectors[sec].nextSectorIndex;
             if (nxt >= 0 && nxt < (int)td->sectorCount) sec = nxt;
+            {
+                const Vec3s *v = &td->vertices[td->sectors[sec].endCenterVertexIndex];
+                p->worldPos.x = (s32)v->x << 16;
+                p->worldPos.y = ((s32)v->y << 16) + 0x20000;
+                p->worldPos.z = (s32)v->z << 16;
+            }
+        } else {
+            ok = 0;
         }
-        if (sec >= 0 && sec < (int)td->sectorCount) {
-            const Vec3s *v = &td->vertices[td->sectors[sec].endCenterVertexIndex];
-            p->worldPos.x = (s32)v->x << 16;
-            p->worldPos.y = ((s32)v->y << 16) + 0x20000;
-            p->worldPos.z = (s32)v->z << 16;
+        if (ok) {
             memcpy(&p->prevWorldPos, &p->worldPos, sizeof(Vec3i));
+            p->rollAngle = 0; /* race_main.c:4504 wants it zero to let the lap wrap */
             printf("sbk-marshal: r=%lu %d frames of pushing at level %d lap %d sect %d prog %d moved player 1 "
-                   "nowhere; carrying it to the end of its own sector at %d,%d,%d\n",
-                   retraces, (int)(retraces - pushing_since), gs->memoryPoolId, p->currentLap,
-                   p->sectorIndex, (int)p->lapProgressRemaining, (int)p->worldPos.x, (int)p->worldPos.y,
-                   (int)p->worldPos.z);
+                   "nowhere; carrying it to %s at %d,%d,%d\n",
+                   retraces, (int)(retraces - pushing_since), gs->memoryPoolId, p->currentLap, p->sectorIndex,
+                   (int)p->lapProgressRemaining, at_end ? "the lift entry" : "the end of the next sector",
+                   (int)p->worldPos.x, (int)p->worldPos.y, (int)p->worldPos.z);
             fflush(stdout);
             pushing_since = retraces; /* give it another MARSHAL_LIFT to get going */
         }
