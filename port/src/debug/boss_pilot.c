@@ -776,11 +776,32 @@ static void shot_dbg_tick(GameState *gs, unsigned long retraces) {
 #define RACE_TYPE_X_CROSS 6
 int sbk_trick_pilot = 1;     /* --notrickpilot */
 int sbk_trick_period = 45;   /* retraces between jumps */
+/* Which row of gSpecialTrickTypeTable the ollie asks for -- see the table
+ * above. Row 7 chains five tricks and is worth 145 points, but a chain that
+ * is still rotating when the board touches down is a *crash*, not a trick:
+ * updateFlipSpinTrickAnimation raises animationFlags 0x1000 for as long as
+ * 0xC000 is up, and tryFinalizeTrickLanding's very first test after "am I
+ * still in the air" sends a rider carrying 0x1000 to
+ * initStunnedAirborneBehavior with its trickPoints unread. The first fixed-
+ * ollie run scored 145 points of trick and nought of skill for exactly that
+ * reason, five times over. So the row has to fit the air, and the air is
+ * what --trickaccel buys. */
+int sbk_trick_flags = 7;     /* --trickflags N */
+/* And when to stop. X Cross is two tests, not one: handleMeterGameResult wants
+ * `skillPoints >= 0x12C` *and* `playerLost == 0`, and playerLost is the
+ * ninety-second countdown -- so a rider that tricks all the way down the
+ * street scores 2,610 points and still fails, which is what
+ * `accel=2048,boost=128` measured. Every air is time not spent going
+ * downhill. So the pilot does what a human does: bank the points, then put
+ * the board down and race for the line. The margin over 300 is there because
+ * the last chain is banked on the *landing*, and a chain still in the air
+ * when the line goes by is worth nothing. */
+int sbk_trick_target = 330;  /* --tricktarget N */
 
 static void *trick_gs;
 static u32 trick_frame;
 static unsigned long last_trick;
-static int trick_jumps, trick_seen, trick_reported;
+static int trick_jumps, trick_seen, trick_reported, trick_banked;
 
 s32 sbk_trick_pilot_path(GameState *gs, Player *p, s32 choice) {
     if (!sbk_autoplay || !sbk_trick_pilot || gs == NULL || p == NULL) return choice;
@@ -792,8 +813,10 @@ s32 sbk_trick_pilot_path(GameState *gs, Player *p, s32 choice) {
         trick_jumps = 0;
         trick_seen = 0;
         trick_reported = 0;
+        trick_banked = 0;
         last_trick = pilot_now;
-        printf("sbk: trickpilot: armed on level %d (period=%d)\n", gs->memoryPoolId, sbk_trick_period);
+        printf("sbk: trickpilot: armed on level %d (period=%d flags=%d)\n", gs->memoryPoolId, sbk_trick_period,
+               sbk_trick_flags);
         fflush(stdout);
     }
     trick_frame = gs->raceFrameCounter;
@@ -806,6 +829,15 @@ s32 sbk_trick_pilot_path(GameState *gs, Player *p, s32 choice) {
 
     if (p->animationFlags & PLAYER_FINISHED_FLAG) return choice;
     if (gs->raceIntroState != 0) return choice;
+    if (p->skillPoints >= sbk_trick_target) {             /* banked: now race */
+        if (!trick_banked) {
+            trick_banked = 1;
+            printf("sbk: trickpilot: %d points banked after %d jumps at frame %d -- racing for the line\n",
+                   (int)p->skillPoints, trick_jumps, (int)gs->raceFrameCounter);
+            fflush(stdout);
+        }
+        return choice;
+    }
     if (choice != 0) return choice;                       /* the AI wants the air itself */
     if (pilot_now - last_trick < (unsigned long)sbk_trick_period) return choice;
     /* Only into rising ground.
@@ -827,21 +859,31 @@ s32 sbk_trick_pilot_path(GameState *gs, Player *p, s32 choice) {
 
     last_trick = pilot_now;
     trick_jumps++;
-    return 7;
+    return sbk_trick_flags;
 }
 
 void sbk_trick_dbg(GameState *gs, unsigned long retraces) {
     Player *p;
     extern int sbk_shot_dbg;
+    static int tail;
     if (!sbk_shot_dbg || gs == NULL || gs->raceType != RACE_TYPE_X_CROSS) return;
-    if (trick_gs != (void *)gs || retraces % 15 != 0) return;
+    if (trick_gs != (void *)gs) return;
     p = &gs->players[0];
-    printf("sbk-trick: r=%lu skill=%d pts=%d score=%d cnt=%d mode=%d phase=%d step=%d flags=%08x cpuin=%d "
-           "vy=%d spin=%02x mask=%02x\n",
+    /* Frame-by-frame while anything trick-shaped is happening, and for a
+     * short tail afterwards, because the whole question is which of
+     * updatePostTrickDescentStep's three branches the rider takes and on
+     * which frame. Every quarter second otherwise. */
+    if (p->behaviorPhase == 4 || p->behaviorPhase == 1 || (p->animationFlags & 1)) tail = 20;
+    else if (tail > 0) tail--;
+    else if (retraces % 15 != 0) return;
+    printf("sbk-trick: r=%lu skill=%d pts=%d score=%d cnt=%d mode=%d phase=%d step=%d bc=%d q=%d air=%d "
+           "flags=%08x cpuin=%d vy=%d acc=%d b8c=%d tap=%d spin=%02x mask=%02x\n",
            retraces, (int)p->skillPoints, (int)p->trickPoints, (int)p->trickScore, (int)p->trickCount,
-           (int)p->behaviorMode, (int)p->behaviorPhase, (int)p->behaviorStep, (unsigned)p->animationFlags,
-           (int)p->cpuInputFlags, (int)p->velocity.y, (unsigned)p->spinsPerformedMask,
-           (unsigned)p->tricksPerformedMask);
+           (int)p->behaviorMode, (int)p->behaviorPhase, (int)p->behaviorStep, (int)p->behaviorCounter,
+           (int)p->queuedTrickType, (int)(p->animationFlags & 1), (unsigned)p->animationFlags,
+           (int)p->cpuInputFlags, (int)p->velocity.y, (int)p->baseAcceleration, (int)p->unkB8C,
+           (int)p->trickAnimationPhase,
+           (unsigned)p->spinsPerformedMask, (unsigned)p->tricksPerformedMask);
     fflush(stdout);
 }
 
@@ -849,8 +891,8 @@ void sbk_trick_pilot_report(GameState *gs) {
     if (gs == NULL || trick_gs != (void *)gs || gs->raceType != RACE_TYPE_X_CROSS) return;
     if (trick_reported || !(gs->players[0].animationFlags & PLAYER_FINISHED_FLAG)) return;
     trick_reported = 1;
-    printf("sbk: trickpilot: race over -- %d skill points of 300 from %d jumps, lost=%d\n",
-           (int)gs->players[0].skillPoints, trick_jumps, (int)gs->playerLost);
+    printf("sbk: trickpilot: race over -- %d skill points of 300 from %d jumps (flags=%d), lost=%d\n",
+           (int)gs->players[0].skillPoints, trick_jumps, sbk_trick_flags, (int)gs->playerLost);
     fflush(stdout);
 }
 

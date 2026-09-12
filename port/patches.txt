@@ -42,3 +42,34 @@ src/race/hit_reactions.c	    result = findPrimaryItemTarget(player);	    result 
 # pilot answers that one question differently, exactly as the boss pilot does
 # for the item choice, and every trick after it is the game's own.
 src/race/race_main.c	        player->cpuInputFlags = determineAIPathChoice(player);	        player->cpuInputFlags = determineAIPathChoice(player);\n        { extern s32 sbk_trick_pilot_path(GameState *, Player *, s32); player->cpuInputFlags = (u8)sbk_trick_pilot_path(gameState, player, player->cpuInputFlags); }
+
+# The ollie's launch vector, which the PowerPC linker took apart.
+#
+# beginPostTrickLaunchStep (race_main.c ~1911) builds the jump impulse in three
+# separate file-scope globals and then hands the *address of the first one* to
+# transformVector2, which reads three consecutive s32 as a Vec3i:
+#
+#     D_800BAB40_AA9F0 = player->unkB8C + player->baseAcceleration;   /* y */
+#     D_800BAB44_AA9F4 = 0x20000;                                     /* z */
+#     transformVector2(&D_800BAB3C_AA9EC, &rotationTemp2, &launchVelocity);
+#
+# On the N64 the three sit at 0xBAB3C, 0xBAB40, 0xBAB44 in declaration order and
+# that pun is exactly a Vec3i. In the Mach-O build they are three independent
+# zero-initialised globals, and `nm` puts them at 0xb428, 0xb424 and 0xb420 --
+# *descending*. So the transform read the x it wanted and then two words past
+# the end of the block, and every jump in the port, by every rider on every
+# course, was launched with whatever those two words happened to hold.
+#
+# It is not a subtle wrongness: on X Cross the CPU rider's ollie came out at a
+# fixed +24,000 of vertical velocity against a slope carrying it down at
+# -29,000, so it never left the ground, updatePostTrickDescentStep's
+# behaviourCounter ran out every time, and ninety-two jumps in a ninety-second
+# race scored nothing. Multiplying baseAcceleration by five changed the launch
+# by not one unit -- which is the measurement that says the field is not being
+# read at all.
+#
+# The three become one array and keep their names, so the pun is a real Vec3i
+# and nothing else in the file has to change.
+src/race/race_main.c	s32 D_800BAB3C_AA9EC = 0;	s32 sbk_ollie_vec[3];\n#define D_800BAB3C_AA9EC sbk_ollie_vec[0]
+src/race/race_main.c	s32 D_800BAB40_AA9F0 = 0;	#define D_800BAB40_AA9F0 sbk_ollie_vec[1]
+src/race/race_main.c	s32 D_800BAB44_AA9F4 = 0;	#define D_800BAB44_AA9F4 sbk_ollie_vec[2]

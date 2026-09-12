@@ -262,6 +262,13 @@ static int trial_pathslot = -1;
 static unsigned long trial_start, trial_frames;
 static int trial_gold0, trial_done;
 
+/* The four extra retune levers; see trial_retune below for what each is for
+ * and why the boost lever alone was never going to pass either Cross game. */
+int sbk_boost_accel;    /* --trial accel=N   baseAcceleration */
+int sbk_boost_corner;   /* --trial corner=N  cornering + handling */
+int sbk_boost_dead;     /* --trial dead=N    lateralDeadzone */
+int sbk_boost_grav;     /* --trial grav=N    baseGravity (negative = floatier) */
+
 int sbk_trial_parse(const char *spec) {
     const char *p = spec;
     trial.on = 1;
@@ -285,6 +292,12 @@ int sbk_trial_parse(const char *spec) {
             else if (!strcmp(key, "nmuse")) nm_use = val;
             else if (!strcmp(key, "nmalt")) nm_alt = val;
             else if (!strcmp(key, "pathslot")) trial_pathslot = val;
+            else if (!strcmp(key, "accel")) sbk_boost_accel = val;
+            else if (!strcmp(key, "corner")) sbk_boost_corner = val;
+            else if (!strcmp(key, "dead")) sbk_boost_dead = val;
+            else if (!strcmp(key, "grav")) sbk_boost_grav = val;
+            else if (!strcmp(key, "tflags")) { extern int sbk_trick_flags; sbk_trick_flags = val; }
+            else if (!strcmp(key, "ttarget")) { extern int sbk_trick_target; sbk_trick_target = val; }
             /* The two handicap-ladder levers the navigator drives, so a trial
              * can reproduce a campaign rung exactly instead of approximating
              * it. Setting them is not enough on its own: nav_level_begin runs
@@ -342,17 +355,49 @@ static void plan_apply(int level) {
  * the boost folded into the top speed. Recomputed here rather than called: the
  * game's own version reads getCurrentAllocation(), and gActiveScheduler points
  * at whatever the last dispatch left when the host loop runs. */
+/* The other three stats, which the boost lever never touched.
+ *
+ * `boost` is a 1/256th multiplier on the rider's top speed, and for eight
+ * courses that was the whole handicap. It is the wrong lever for both Cross
+ * games and the measurements say so in two different ways.
+ *
+ * Speed Cross: at +112% the rider reads `spd=1572864/2985638` -- it is running
+ * at half a cap it never approaches, so raising the cap again buys nothing.
+ * What ninety seconds of Snowboard Street wants is a rider that gets back up
+ * to speed out of a corner, which is `baseAcceleration`, and one that does not
+ * scrub speed going round it, which is `cornering` and `lateralDeadzone`.
+ *
+ * X Cross: `beginPostTrickLaunchStep` builds the jump out of
+ * `unkB8C + baseAcceleration` (race_main.c ~1911), and unkB8C is a fixed
+ * 0x10000 for a CPU rider. So the *only* thing that makes a CPU's ollie bigger
+ * is its acceleration stat -- and X Cross is lost because the ollie is too
+ * small to leave the ground at all. One lever, both walls.
+ *
+ * Each is the same shape as `boost`: 1/256ths added to the stat the game's own
+ * table computed, so zero is exactly the old behaviour. */
+static s32 stat_boost(s32 v, int pct) {
+    if (pct == 0) return v;
+    return v + (s32)(((long long)v * pct) >> 8);
+}
+
+static s32 stat_clamp8(s32 v) { return v < 0 ? 0 : (v > 255 ? 255 : v); }
+
 static void trial_retune(Player *p, int boost) {
     const SbkSnowboardStats *s = &gSnowboardStatsTable[p->snowboardId % SNOWBOARD_COUNT][p->characterId % 9];
     s32 top = (s32)(s->maxSpeed * 353894 / 100 + 0xEB333);
     top += (s32)(((long long)top * boost) >> 8);
     p->baseMaxSpeed = top;
     p->maxSpeedCap = top;
-    p->handling = s->handling + 0x19;
-    p->cornering = s->cornering + 1;
-    p->lateralDeadzone = (s->lateralDeadzone << 15) / 100 + 0x1000;
-    p->baseGravity = (s->gravity << 14) / 100 + 0x3000;
-    p->baseAcceleration = (s->acceleration << 17) / 100 + 0x28000;
+    /* handling and cornering are single bytes (gamestate.h 0xAC0/0xAC1), so
+     * the boost has to be clamped rather than allowed to wrap: a "+300%"
+     * cornering that came out as 44 would be a *worse* rider reported as a
+     * better one, and that is exactly the kind of silent inversion the boost
+     * ladder already cost this port two days over. */
+    p->handling = (u8)stat_clamp8(stat_boost(s->handling + 0x19, sbk_boost_corner));
+    p->cornering = (u8)stat_clamp8(stat_boost(s->cornering + 1, sbk_boost_corner));
+    p->lateralDeadzone = stat_boost((s->lateralDeadzone << 15) / 100 + 0x1000, sbk_boost_dead);
+    p->baseGravity = stat_boost((s->gravity << 14) / 100 + 0x3000, sbk_boost_grav);
+    p->baseAcceleration = stat_boost((s->acceleration << 17) / 100 + 0x28000, sbk_boost_accel);
 }
 
 /* ...and the retune has to be *held*, because the game undoes it.
@@ -382,15 +427,25 @@ static void trial_retune(Player *p, int boost) {
  * nothing at all. */
 static int retune_boost = -1;   /* the boost the current race was armed with */
 static s32 retune_top;          /* what baseMaxSpeed should read all race */
+static s32 retune_accel;        /* ...and what baseAcceleration should read */
 
+/* Watching baseMaxSpeed alone was enough while boost was the only lever, and
+ * became wrong the moment there were others: a trial with `accel=1024` and no
+ * boost leaves baseMaxSpeed at exactly the value applyCharacterSnowboardStats
+ * recomputes, so the hold saw nothing to do and the acceleration lever was
+ * silently undone a second into every race. The evidence was a run that came
+ * back byte-identical to the unlevered one -- same 5,222 frames, same 716
+ * airborne retraces, same 92 jumps -- which is what "the lever never reached
+ * the race" looks like, and this port has now been told that twice. */
 static void retune_hold(Player *p) {
     s32 was;
-    if (retune_boost < 0 || p->baseMaxSpeed == retune_top) return;
+    if (retune_boost < 0) return;
+    if (p->baseMaxSpeed == retune_top && p->baseAcceleration == retune_accel) return;
     was = p->baseMaxSpeed;
     trial_retune(p, retune_boost);
     printf("sbk: autoplay: the game recomputed the rider's stats; retune re-applied "
-           "(top %d -> %d, boost=%d = +%d%%)\n",
-           (int)was, (int)p->baseMaxSpeed, retune_boost, retune_boost * 100 / 256);
+           "(top %d -> %d, accel %d, boost=%d = +%d%%)\n",
+           (int)was, (int)p->baseMaxSpeed, (int)p->baseAcceleration, retune_boost, retune_boost * 100 / 256);
     fflush(stdout);
 }
 
@@ -400,6 +455,7 @@ static void retune_arm(Player *p, int boost) {
     trial_retune(p, boost);
     retune_boost = boost;
     retune_top = p->baseMaxSpeed;
+    retune_accel = p->baseAcceleration;
 }
 
 /* ----------------------------------------------------------- the race watchdog
@@ -614,9 +670,11 @@ static void autoplay_arm(GameState *gs, unsigned long retraces) {
         trial_start = retraces ? retraces : 1;
         trial_gold0 = p->raceGold;
         trial_done = 0;
-        printf("sbk-trial: start r=%lu level=%d type=%d char=%d board=%d top=%d diff=%d\n", retraces,
-               gs->memoryPoolId, gs->raceType, p->characterId, p->snowboardId, (int)p->baseMaxSpeed,
-               p->aiDifficultyIndex);
+        printf("sbk-trial: start r=%lu level=%d type=%d char=%d board=%d top=%d accel=%d cor=%d/%d dz=%d "
+               "grv=%d diff=%d\n",
+               retraces, gs->memoryPoolId, gs->raceType, p->characterId, p->snowboardId, (int)p->baseMaxSpeed,
+               (int)p->baseAcceleration, (int)p->handling, (int)p->cornering, (int)p->lateralDeadzone,
+               (int)p->baseGravity, p->aiDifficultyIndex);
     } else if (sbk_nightmare) {
         /* Amazing, not just aggressive: the best board in the game on the
          * rider's own character, and the speed tax taken off.
