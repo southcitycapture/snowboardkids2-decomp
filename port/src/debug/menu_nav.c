@@ -336,19 +336,35 @@ static void nav_progress(const char *why) {
  *
  * A course that loses every rung is a real finding about the rider, not a knob
  * to keep turning, and the last rung says so. */
-/* The third lever, and the last rung: `relief`, taken off every item's
- * useChance on both rows by nightmare_write_row (race_dbg.c). At the searched
- * row's 205 a relief of 165 leaves 40, the floor that function clamps to -- the
- * rivals still race, but they almost never throw anything.
+/* The third lever: `relief`, taken off every item's useChance on both rows by
+ * nightmare_write_row (race_dbg.c). At the searched row's 205 a relief of 165
+ * leaves 40, the floor that function clamps to -- the rivals still race, but
+ * they almost never throw anything.
  *
- * It belongs above the tax rather than below it because it is the gentlest
- * lever on the physics and the harshest on the opposition: our rider's speed,
- * handling and cornering are untouched, and so is every rival's, but a course
- * that was being lost to a bomb in the back on the last straight stops being
- * lost to it. Course 1 was lost twice at rung 0 and rung 1, which is what put
- * this rung in: the ladder ran out of levers that were safe to pull. */
+ * The order of these rungs is the whole point of them, and the campaign had to
+ * teach it. The ladder used to run boost, then tax, then more tax. On course 1
+ * that read:
+ *
+ *   rung 0  no handicap                     2nd
+ *   rung 1  boost 28                        2nd
+ *   rung 2  boost 28, rivaltax 160          4th, and the rider WEDGED
+ *
+ * The wedge at rung 2 is not bad luck, it is the ladder biting itself.
+ * docs/nightmare-row.md measured `tax=168` applied to the whole field and got a
+ * DNF out of it, for a reason that applies just as well when only the rivals
+ * pay: a heavy tax makes the whole race longer, every item is a scheduled task,
+ * and the one call that lets a rider out of the chairlift wait is a
+ * scheduleTask that returns NULL once the pool is full. Slowing the opposition
+ * buys time for exactly the pressure that stops the race ending. So the two
+ * highest rungs of the old ladder were the two most likely to hang it.
+ *
+ * The relief rungs now come first. They are the only lever that is *good* for
+ * the pool -- fewer items thrown is less pool pressure, not more -- and they
+ * touch no rider's speed, handling or cornering at all. The tax survives only
+ * as the last resort, and only on top of a pool that the relief has already
+ * emptied. */
 static const struct { s16 boost, tax, relief; } nav_ladder[] = {
-    { 0, 0, 0 }, { 28, 0, 0 }, { 28, 160, 0 }, { 28, 255, 0 }, { 28, 255, 165 },
+    { 0, 0, 0 }, { 28, 0, 0 }, { 28, 0, 100 }, { 28, 0, 165 }, { 28, 160, 165 },
 };
 #define NAV_LADDER_TOP ((int)(sizeof(nav_ladder) / sizeof(nav_ladder[0])) - 1)
 
