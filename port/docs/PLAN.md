@@ -988,6 +988,52 @@ directly. And the push has to set `rotY` as well as the velocity, or
 Measured: `--trial level=9` went from wedged-at-25,322-frames to **finished,
 place 2, 25,322 frames, one push**.
 
+#### What the marshal grew, and what each thing cost
+
+The first version was six lines and none of the following, and every one of
+them was bought with a lost campaign race:
+
+* **Not at the lift.** A lap wraps by waiting at the chairlift: `tryEnterLift`
+  hands the rider to `initKnockbackBehavior`, so `behaviourMode` is 3, the
+  rider makes no lap progress for about nine seconds and moves at ~110,000
+  units a frame -- under the threshold and over the arming time, exactly the
+  shape the marshal looks for. The first campaign race with the marshal in it
+  finished course 9 for the first time; the second wedged at `sect=116`, the
+  lift. The marshal now stands back from mode 3 and any set `chairliftFlags`,
+  which is the guard the game's own branch has in `isPlayerNearLiftEntry()`.
+* **One line per stall, not per race.** The sector-115 wedge could not be read
+  because the race had spent its one log line at sector 49. The two ways of
+  declining print too, so "the marshal did nothing" is never the same as "the
+  marshal was not reached".
+* **A carry, when pushing does not work.** At `lap=2 prog=55 sect=115` the
+  rider's position was byte-identical *across two separate races* while the
+  marshal pushed it every frame. That is a rider being held, not a rider being
+  slow, and a velocity the game overwrites before it integrates is no use.
+  Fifteen seconds of fruitless pushing now picks the rider up and puts it down
+  further along.
+* **Its own clock.** "2445 frames of pushing" on the very first push: the
+  escalation was measuring time-since-progress, and a stall that begins above
+  the threshold spends its first seconds being declined.
+* **The end of the track is the lift, not a vertex.** Carried onto the end
+  centre of sector 116 the rider sat there happily with `sect=115 prog=55`,
+  forty-eight million units short of `liftEntryPos`, which is what
+  race_main.c:4504 measures `distanceToTarget` against.
+  `calculateAITargetPosition` answers this case the same way -- when
+  `sectors[cur].nextSectorIndex < 0` it returns `liftEntryPos` and nothing
+  else -- so the marshal does too, for the push and for the carry, and the
+  carry zeroes `rollAngle` because the wrap wants that as well.
+* **A new race is not a new `GameState` pointer.** The scheduler hands the
+  next race the *same* allocation. Every per-race counter in `race_dbg.c` keyed
+  on `gs` was carrying over: the marshal entered a fresh race with a stall
+  clock a minute old and carried the rider at sector 33, and `wall=` had been
+  printing a stale 3444 for one rider since it was written. `race_is_new()`
+  tests the pointer **and** the race's own frame counter going backwards, and
+  the marshal, the pin autopsy and the wall watch all use it.
+
+With all of that in, course 9 finishes every time -- one carry, at the lift,
+on the final lap -- and it is a tuning problem again rather than a wedge: the
+first two attempts came second, and the ladder went to rung 2.
+
 ### The three Cross minigames, which are not races
 
 Slot 10 -- the last two courses, and so the credits -- is opened by
