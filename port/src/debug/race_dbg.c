@@ -947,6 +947,8 @@ static void pin_watch(GameState *gs, unsigned long retraces) {
 #define MARSHAL_PUSH  0x68000 /* a shade over it, along the racing line */
 #define MARSHAL_ARM   240     /* four seconds of no progress before pushing */
 #define MARSHAL_MAX   3600    /* and never for longer than a minute of them */
+#define MARSHAL_LIFT  900     /* pushing for fifteen seconds and still nowhere:
+                               * pick the rider up and put it on the line */
 
 int sbk_marshal_pushes;
 
@@ -1059,6 +1061,36 @@ static void marshal_tick(GameState *gs, unsigned long retraces) {
     p->rotY = (s16)computeAngleToPosition(tx, tz, (s32)p->worldPos.x, (s32)p->worldPos.z);
     p->steeringAngle = 0;
     pushes++;
+
+    /* A push that is not working.
+     *
+     * Course 9's final lap found a spot the push cannot solve: the rider sat
+     * at `lap=2 prog=55 sect=115` with a position byte-identical across two
+     * separate races while the marshal pushed it every frame -- being *held*
+     * rather than being slow, and a velocity the game overwrites before it
+     * integrates it is no use. Fifteen seconds of that and the marshal stops
+     * pushing and carries: the rider is put on the centre of the end of the
+     * sector it is in, at the track's own height there, with prevWorldPos
+     * moved with it so nothing downstream sees a teleport-sized delta. The
+     * watchdog still owns anything this does not fix. */
+    if (retraces - since >= MARSHAL_LIFT) {
+        TrackData *td = &gs->gameData;
+        int sec = (int)p->sectorIndex;
+        if (sec >= 0 && sec < (int)td->sectorCount) {
+            const Vec3s *v = &td->vertices[td->sectors[sec].endCenterVertexIndex];
+            p->worldPos.x = (s32)v->x << 16;
+            p->worldPos.y = ((s32)v->y << 16) + 0x20000;
+            p->worldPos.z = (s32)v->z << 16;
+            memcpy(&p->prevWorldPos, &p->worldPos, sizeof(Vec3i));
+            printf("sbk-marshal: r=%lu %d frames of pushing at level %d lap %d sect %d prog %d moved player 1 "
+                   "nowhere; carrying it to the end of its own sector at %d,%d,%d\n",
+                   retraces, (int)(retraces - since), gs->memoryPoolId, p->currentLap,
+                   p->sectorIndex, (int)p->lapProgressRemaining, (int)p->worldPos.x, (int)p->worldPos.y,
+                   (int)p->worldPos.z);
+            fflush(stdout);
+            since = retraces; /* give it another MARSHAL_LIFT to get going */
+        }
+    }
     sbk_marshal_pushes++;
     if (!said) {
         said = 1;
