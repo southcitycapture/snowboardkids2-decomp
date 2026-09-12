@@ -986,13 +986,24 @@ static void marshal_tick(GameState *gs, unsigned long retraces) {
      * alone. The game does the same thing itself: the lock-out branch is
      * guarded by isPlayerNearLiftEntry(). */
     if (p->behaviorMode == 3 || p->chairliftFlags != 0) {
-        since = retraces;
+        /* Not a reason to forget how long the rider has been here: a lift wait
+         * that never ends is a wedge too, and the log should say that the
+         * marshal stood back rather than that nothing happened. */
+        if (retraces - since >= MARSHAL_ARM && !said) {
+            said = 1;
+            printf("sbk-marshal: r=%lu player 1 has made no progress for %lu retraces at level %d lap %d "
+                   "sect %d prog %d, but it is at the lift (mode=%d liftflags=%02x); standing back\n",
+                   retraces, retraces - since, gs->memoryPoolId, p->currentLap, p->sectorIndex,
+                   (int)p->lapProgressRemaining, p->behaviorMode, p->chairliftFlags);
+            fflush(stdout);
+        }
         return;
     }
     if (p->currentLap > best_lap || (p->currentLap == best_lap && p->lapProgressRemaining < best)) {
         best_lap = p->currentLap;
         best = p->lapProgressRemaining;
         since = retraces;
+        said = 0; /* one line per stall, not one per race */
         return;
     }
     if (retraces - since < MARSHAL_ARM || pushes >= MARSHAL_MAX) return;
@@ -1003,7 +1014,19 @@ static void marshal_tick(GameState *gs, unsigned long retraces) {
     speed = sqrt(vx * vx + vy * vy + vz * vz);
     /* Above the threshold the rider is not locked out; whatever is holding it
      * is a different wedge and the watchdog owns that one. */
-    if (speed > (double)MARSHAL_SPEED) return;
+    if (speed > (double)MARSHAL_SPEED) {
+        if (!said) {
+            said = 1;
+            printf("sbk-marshal: r=%lu player 1 has made no progress for %lu retraces at level %d lap %d "
+                   "sect %d prog %d but is moving at %d (> %d): not the lock-out, leaving it to the "
+                   "watchdog (mode=%d phase=%d anim=%08x)\n",
+                   retraces, retraces - since, gs->memoryPoolId, p->currentLap, p->sectorIndex,
+                   (int)p->lapProgressRemaining, (int)speed, MARSHAL_SPEED, p->behaviorMode, p->behaviorPhase,
+                   (unsigned)p->animationFlags);
+            fflush(stdout);
+        }
+        return;
+    }
 
     /* Where "along the line" is.
      *
