@@ -24,7 +24,7 @@ command lists, a fixed-function OpenGL 1.3 backend, scripted input.
 | The boss races (courses 3 and 7): ten snowman heads, not a finish line | won by the boss pilot -- `docs/PLAN.md`, "The boss races, which no handicap can win" |
 | The campaign end to end (every course, a save after each race) | **courses 0-9 are all won on the user's own save** (`progress [111111111100]`, 584,500 gold), both bosses included. Course 8 took relief 165 + tax 60; course 9 took the same rung once the Haunted House wedge was fixed, and was won at first place with four marshal pushes and no carry. `docs/PLAN.md` has the campaign table |
 | Course 9, the Haunted House | **the wedge is fixed.** Thirteen trials had wedged at sector 50 under every rung, path slot and board, and with `--nightmare` off; a pin autopsy (`--racedbg`, `sbk-pin:`) ruled out the ghost, the pendulum, the push zones, the other riders and the task pool, and named the real cause: `updatePlayerNormalDriving` sends any **CPU** rider whose speed drops below 0x5FFFF away from the lift to behaviour phase 4 (the ollie) and returns before `calculateAITargetPosition`, so a slow CPU rider cannot steer or re-aim. Not a port bug, and a human never hits it -- the human branch is a button test. Self-play is a CPU rider, so it does. Fixed by a marshal in `race_dbg.c` that pushes player 1 back over the threshold along the track graph. The course finishes now. `docs/PLAN.md`, "Course 9, the Haunted House" |
-| The three Cross minigames (the gate on the last two courses) | **Shoot Cross is won on the user's own save** (`level 13 type=5: lost=0 targets=20/20 -> PASS`, `g4-shots/sbk2-campaign-13.png`). It took an aiming shot pilot -- the course does not aim for you and its targets push the rider away rather than pull it in -- which is 1/20 -> 19/20, plus one target that is twenty-one million units above the road behind collision neither the rider nor a track-clamped projectile can climb, and is reached by moving the target in front of the rider for one shot (capped, counted, logged). **Speed Cross** (level 12) is five and a half seconds over a ninety-second clock and should fall to the boost ladder. **X Cross** (level 14) is the open one: the rider now jumps, but a trick only starts if it lands within two frames of the pop and on a descent it never does. `docs/PLAN.md`, "Shoot Cross", "X Cross", "Speed Cross" |
+| The three Cross minigames (the gate on the last two courses) | **all three are won on the user's own save.** Shoot Cross took an aiming shot pilot (the course does not aim for you and its targets push the rider away rather than pull it in) plus one target twenty-one million units above the road that is reached by moving it in front of the rider for one shot, capped and counted. **X Cross** turned out to be a port bug and not a game rule: `beginPostTrickLaunchStep` puns three adjacent globals as a `Vec3i` and the Mach-O linker laid them out *descending*, so every jump in the port -- by every rider on every course -- was launched with two words of unrelated data. With the pun made real in `patches.txt` the rider scores 435 of the 300 it needs. **Speed Cross** is 87.8 seconds of a ninety-second clock on handling, cornering and lateral deadzone; top speed was never the lever, because `race_main.c:854` clamps every rider to 0x180000. `docs/PLAN.md`, "X Cross", "Speed Cross" |
 
 The title screen matches the emulator reference frame
 (`g4-shots/sbk2-s2dex-fix1.png` against Mupen64Plus's `snowboard_kids2-020.png`):
@@ -105,8 +105,9 @@ conjured item is logged and counted against the ones the rider picked up itself.
 **The Cross minigames.** They are buildings in Jingle Town, not courses, and
 each is first a clock: 150 seconds on Shoot and Speed Cross, 90 on X Cross and
 a second 90 on Speed Cross's own race timer, after which `playerLost` is 1
-whatever the score is. So `nav_cross_ladder` is a boost-only ladder starting at
-+31%, kept per Cross game across the rotation between them.
+whatever the score is. So the Cross ladder is three ladders, one per game,
+kept per Cross game across the rotation between them -- and they do not share
+a rung, because the levers that pass them are different levers.
 
 On Shoot Cross the shot pilot hangs off the same hook as the boss pilot and
 does the aiming the course will not do: it walks the twenty targets, writes the
@@ -114,8 +115,18 @@ rider's heading straight at the nearest one still standing for two frames, and
 puts it back. `--shotdbg` prints the target table and a line a second;
 `--shotsnap`, `--shotrange`, `--shotcooldown`, `--shotcarry` and `--shotdetour`
 are its knobs, and `--noshotpilot` turns it off. On X Cross the trick pilot
-(`--notrickpilot`, `--trickperiod N`) answers `determineAIPathChoice` for our
-rider so it jumps at all. `--trial level=12|13|14` runs one of them on its own.
+(`--notrickpilot`, `--trickperiod N`, `--trickflags N`, `--tricktarget N`)
+answers `determineAIPathChoice` for our rider so it jumps at all, and then
+stops once it has banked enough skill points, because X Cross is two tests --
+300 points *and* a ninety-second clock -- and a rider that tricks the whole
+street scores 2,610 and still fails.
+
+Five levers reach the rider now rather than one. `--trial boost=N` was the
+only handicap for eight courses and it is a top-speed lever, which is the
+wrong lever for both of the last two Cross games: `accel`, `hand`, `corner`
+and `dead` put the same 1/256ths on `baseAcceleration`, `handling`,
+`cornering` (which takes a negative -- it is the *drag* a turn costs) and
+`lateralDeadzone`. `--trial level=12|13|14` runs one of them on its own.
 
 `--autonav` plays the campaign, not one course: it leaves Jingle Town by the
 door that leads to the course list (`unk427 = 0xFF`, not a location id -- see
