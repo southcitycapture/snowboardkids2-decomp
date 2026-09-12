@@ -218,6 +218,24 @@ static unsigned long nav_last_action;
  * i.e. after the last story course has been won. */
 static int nav_credits_seen;
 
+/* The rider's finish, latched while the race is still on screen.
+ *
+ * A boss race tears its GameState down before its result screen comes up, so
+ * sbk_race_state() is already NULL when nav_watch fires and the place reads
+ * -1. nav_handicap can only read that as a loss, which means a *won* boss race
+ * would climb the handicap ladder and a lost one would be indistinguishable
+ * from it -- the campaign would grind the boss for ever at ever-higher rungs
+ * having already beaten it. The Jingle Town boss is where that showed up.
+ *
+ * The place is settled long before the result screen: race_main.c writes
+ * finishPosition and then sets the 0x80000 "finished" bit in animationFlags
+ * the moment the rider crosses the line, with the race still running. So the
+ * navigator latches it there, and the result screen goes back to being what it
+ * should have been all along -- the trigger, not the source. */
+#define PLAYER_FINISHED_FLAG 0x80000
+static int nav_latched_place = -1;
+static int nav_latched_level = -1;
+
 static void nav_press(const char *line) { sbk_input_play_add(line); }
 
 /* Which course the campaign should play next, when no --trial level says.
@@ -550,6 +568,9 @@ static void nav_watch(unsigned long retraces) {
         GameState *gs = sbk_race_state();
         int place = gs != NULL ? (int)gs->players[0].finishPosition : -1;
         int level = gGameSessionContext ? gGameSessionContext->currentLevel : -1;
+        if (place < 0) place = nav_latched_place;
+        if (level < 0) level = nav_latched_level;
+        nav_latched_place = nav_latched_level = -1;
         nav_races++;
         if (sbk_autonav_every > 0 && nav_races % sbk_autonav_every == 0) nav_want = NAV_SAVE;
         printf("sbk-nav: race %d finished on level %d, place=%d (%s), gold=%d, want=%s\n", nav_races, level, place + 1,
@@ -856,10 +877,15 @@ void sbk_menu_nav_tick(unsigned long retraces) {
         if (sbk_menu_on("handleRaceStateUpdate")) {
             GameState *gs = sbk_race_state();
             racing = gs != NULL && !sbk_race_is_demo(gs);
+            if (racing && (gs->players[0].animationFlags & PLAYER_FINISHED_FLAG)) {
+                nav_latched_place = (int)gs->players[0].finishPosition;
+                nav_latched_level = gGameSessionContext ? gGameSessionContext->currentLevel : -1;
+            }
         }
         if (racing && !was_racing) {
             nav_town_exits = 0;
             nav_loop_warned = 0;
+            nav_latched_place = nav_latched_level = -1;
         }
         was_racing = racing;
     }
