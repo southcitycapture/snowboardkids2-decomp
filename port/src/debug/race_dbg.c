@@ -88,6 +88,21 @@ GameState *sbk_race_state(void) {
     return NULL;
 }
 
+/* The race scheduler's free-task counters. scheduleTask (task_scheduler.c:350)
+ * hands out a node only while counters[nodeType] is non-zero, so this is the
+ * gauge the chairlift wedge lives on. -1 when there is no race. */
+int sbk_race_pool(int nodeType) {
+    TaskScheduler *s = gSchedulerListSentinel.next;
+    if (nodeType < 0 || nodeType > 7) return -1;
+    while (s != NULL) {
+        if (s->renderContext == (u8)RACE_RENDER_CONTEXT && s->schedulerState == SCHEDULER_STATE_RUNNING &&
+            s->allocatedState != NULL)
+            return (int)s->counters[nodeType];
+        s = s->next;
+    }
+    return -1;
+}
+
 /* A demo/attract/intro race must be left alone: its riders replay a recorded
  * input stream and handing one to the CPU desynchronises the whole thing. */
 int sbk_race_is_demo(const GameState *gs) {
@@ -735,20 +750,29 @@ void sbk_race_debug(unsigned long retraces) {
         fflush(stdout);
         return;
     }
-    printf("sbk-race: r=%lu level=%d type=%d players=%d/%d lap=%d/%d frame=%u paused=%d intro=%d demo=%d rank=",
+    /* counters[] is the task pool, and counters[0] is the one that matters: the
+     * lift step out of the lap wait is `scheduleTask(..., nodeType 0, ...)`
+     * (race_main.c:4505 for most courses, :4516 for Turtle Island), and
+     * scheduleTask returns NULL the moment counters[nodeType] hits 0. A rider
+     * frozen byte-identically at the lift with counters[0] == 0 beside it is
+     * the wedge, named, rather than inferred from a still position.
+     * docs/nightmare-row.md has the chain. */
+    printf("sbk-race: r=%lu level=%d type=%d players=%d/%d lap=%d/%d frame=%u paused=%d intro=%d demo=%d pool=%d,%d,%d,%d "
+           "rank=",
            retraces, gs->memoryPoolId, gs->raceType, gs->playerCount, gs->numPlayers, gs->players[0].currentLap,
            gs->finalLapNumber, (unsigned)gs->raceFrameCounter, gs->gamePaused, gs->raceIntroState,
-           sbk_race_is_demo(gs));
+           sbk_race_is_demo(gs), sbk_race_pool(0), sbk_race_pool(1), sbk_race_pool(2), sbk_race_pool(3));
     for (i = 0; i < gs->numPlayers && i < 4; i++) printf("%s%d", i ? "," : "", gs->rankOrder[i]);
     printf("\n");
     for (i = 0; i < gs->numPlayers && i < 4; i++) {
         Player *p = &gs->players[i];
         printf("sbk-race: r=%lu p%d cpu=%d diff=%d chr=%d board=%d place=%d lap=%d prog=%d sect=%d stick=%d,%d "
-               "btn=%04x pos=%d,%d,%d spd=%d/%d anim=%08x beh=%d item=%d/%d ammo=%d boss=%d hp=%d gold=%d\n",
+               "btn=%04x pos=%d,%d,%d spd=%d/%d anim=%08x beh=%d/%d roll=%d item=%d/%d ammo=%d boss=%d hp=%d gold=%d\n",
                retraces, i, p->isCpuControlled, p->aiDifficultyIndex, p->characterId, p->snowboardId,
                p->finishPosition + 1, p->currentLap, p->lapProgressRemaining, p->sectorIndex, p->inputStickX,
                p->inputStickY, (unsigned)p->inputButtonsHeld, (int)p->worldPos.x, (int)p->worldPos.y, (int)p->worldPos.z,
-               (int)p->smoothedSpeedCap, (int)p->baseMaxSpeed, (unsigned)p->animationFlags, p->behaviorMode, p->primaryItemId,
+               (int)p->smoothedSpeedCap, (int)p->baseMaxSpeed, (unsigned)p->animationFlags, p->behaviorMode,
+               p->behaviorStep, (int)p->rollAngle, p->primaryItemId,
                p->secondaryItemId, (int)p->primaryItemAmmo, (int)p->isBossRacer, (int)p->bossHealth, (int)p->raceGold);
     }
     fflush(stdout);
