@@ -831,12 +831,14 @@ void sbk_race_debug(unsigned long retraces) {
     for (i = 0; i < gs->numPlayers && i < 4; i++) {
         Player *p = &gs->players[i];
         printf("sbk-race: r=%lu p%d cpu=%d diff=%d chr=%d board=%d place=%d lap=%d prog=%d sect=%d stick=%d,%d "
-               "btn=%04x pos=%d,%d,%d spd=%d/%d anim=%08x beh=%d/%d roll=%d item=%d/%d ammo=%d boss=%d hp=%d gold=%d\n",
+               "btn=%04x pos=%d,%d,%d spd=%d/%d anim=%08x beh=%d/%d/%d wait=%d roll=%d hit=%d slow=%d inv=%d "
+               "item=%d/%d ammo=%d boss=%d hp=%d gold=%d\n",
                retraces, i, p->isCpuControlled, p->aiDifficultyIndex, p->characterId, p->snowboardId,
                p->finishPosition + 1, p->currentLap, p->lapProgressRemaining, p->sectorIndex, p->inputStickX,
                p->inputStickY, (unsigned)p->inputButtonsHeld, (int)p->worldPos.x, (int)p->worldPos.y, (int)p->worldPos.z,
                (int)p->smoothedSpeedCap, (int)p->baseMaxSpeed, (unsigned)p->animationFlags, p->behaviorMode,
-               p->behaviorStep, (int)p->rollAngle, p->primaryItemId,
+               p->behaviorStep, p->behaviorCounter, (int)p->unkB8C, (int)p->rollAngle, (int)p->hitReactionState,
+               (int)p->slowdownLevel, (int)p->invincibilityTimer, p->primaryItemId,
                p->secondaryItemId, (int)p->primaryItemAmmo, (int)p->isBossRacer, (int)p->bossHealth, (int)p->raceGold);
     }
     fflush(stdout);

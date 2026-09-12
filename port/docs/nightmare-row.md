@@ -207,3 +207,26 @@ Worth noting for whoever runs this next: the navigator logged
 row around the level-3 handover. `nav_town_exits` is being reset each time, so
 the loop guard that counts town exits never sees a run -- if the campaign ever
 does stall on the boss courses, that counter is the first thing to look at.
+
+## The campaign table, 2026-09-12
+
+The second sitting, on the user's own save (backed up to
+`~/eeprom.sav.bak-2026-09-12-course8` and again to `...-boostfix`). It began
+with courses 0-7 already won, both bosses included, and course 8 sitting at six
+losses.
+
+| # | course | rung | boost / tax / relief | place | result |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 8 Starlight Highway | 3 (old ladder) | 28 / 0 / 165 | 3rd | wedged at the lift; the retune had already been fixed, the board had not |
+| 2 | 8 | 1 (old ladder) | 28 / 0 / 0 | -- | **the boost reached a race for the first time**, and the race wedged twice: once at the lift, once mid-sector against a wall |
+| 3 | 8 | 1 (new ladder) | 0 / 0 / 100 | -- | crawled sectors 104-115 scraping a wall, killed by hand to run the sweep |
+| -- | | | | | *the lever sweep, off the user's save: see PLAN.md* |
+| 4 | 8 | 1 (measured ladder) | 0 / 60 / 165 | -- | *(the run this table was written during)* |
+
+The lesson of rows 1-3 is that every one of them was a different experiment
+being run on a rider whose handicap was being silently reverted, and that no
+amount of watching races was going to reveal it -- the two lines that gave it
+away (`top=1394607` at the handoff, `spd=.../1257111` in the race) were both in
+the log from the very first campaign run and neither had ever been read against
+the other. **A lever is not applied until `--racedbg` shows it in the race.**
+
