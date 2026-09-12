@@ -355,6 +355,7 @@ static int nav_next_story_level(void) {
  * slots 12..14 are all 1 as well, and a slot still at 0 is never offered by the
  * course list at all. Returns the location id to walk into, or -1. */
 static int nav_cross_tries[15];
+static int nav_cross_rung[15];
 
 static int nav_next_cross(void) {
     static const struct { u8 slot, location; } cross[3] = { { 13, 2 }, { 14, 5 }, { 12, 8 } };
@@ -687,6 +688,21 @@ static void nav_level_begin(int level) {
      * narrowly still gets a nearly-honest race. */
     int known_lost;
     if (level < 0 || level == nav_level) return;
+    /* A Cross game keeps its own rung. The navigator now rotates between the
+     * outstanding ones rather than butting against the first, so a level
+     * change is the normal case here rather than the end of a course -- and
+     * resetting to rung 0 on every rotation means neither of them ever
+     * climbs. */
+    if (nav_level_is_cross(level)) {
+        nav_level = level;
+        nav_rung = nav_cross_rung[level];
+        nav_losses = nav_wedges = 0;
+        nav_wedge_relief = 0;
+        nav_ladder_set(nav_rung);
+        printf("sbk-nav: cross game %d resumes at rung %d (boost=%d)\n", level, nav_rung, sbk_campaign_boost);
+        fflush(stdout);
+        return;
+    }
     known_lost = EepromSaveData != NULL && level < 15 && EepromSaveData->levelUnlockStatus[level] == 4;
     nav_level = level;
     nav_rung = sbk_nav_start_rung;
@@ -749,8 +765,10 @@ static void nav_handicap(int level, int place) {
     }
 
     nav_losses++;
-    if (nav_rung < NAV_LADDER_TOP(nav_level_is_boss(nav_level))) {
+    if (nav_rung < (nav_level_is_cross(nav_level) ? NAV_CROSS_LADDER_TOP
+                                                  : NAV_LADDER_TOP(nav_level_is_boss(nav_level)))) {
         nav_rung++;
+        if (nav_level_is_cross(nav_level) && nav_level < 15) nav_cross_rung[nav_level] = nav_rung;
         nav_ladder_set(nav_rung);
         printf("sbk-nav: level %d lost %d time(s); retrying at rung %d (boost=%d +%d%% top speed, rivaltax=%d, "
                "rivalrelief=%d)\n",
