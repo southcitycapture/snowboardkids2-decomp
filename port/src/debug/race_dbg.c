@@ -396,13 +396,27 @@ static void retune_arm(Player *p, int boost) {
  * at the chairlift, the only way out of the lift wait is spawnChairliftEffect,
  * and that is a scheduleTask returning NULL once the task pool is full.
  *
- * The watchdog does not try to diagnose which wedge it is. It watches player 1's
- * lap, sector and world position, and when all four are byte-identical for a
- * minute it ends the race the game's own way -- finishPosition last, then the
- * finished flag -- so the result comes back as a 4 (raced, not won), the course
- * keeps its "go back for this one" marker, and the campaign carries on. Forcing
- * the flag *without* first forcing the place would be a save-corrupting bug: a
- * finishPosition that happened to be 0 would write the course down as won.
+ * The watchdog does not try to diagnose which wedge it is. When the rider stops
+ * getting anywhere for forty seconds it ends the race the game's own way --
+ * finishPosition last, then the finished flag -- so the result comes back as a
+ * 4 (raced, not won), the course keeps its "go back for this one" marker, and
+ * the campaign carries on. Forcing the flag *without* first forcing the place
+ * would be a save-corrupting bug: a finishPosition that happened to be 0 would
+ * write the course down as won.
+ *
+ * "Stops getting anywhere" used to mean a byte-identical lap, sector and world
+ * position, which is what a rider held at the lift looks like -- and only that.
+ * The second wedge found on Starlight Highway was a rider at full speed with
+ * `lap=2 prog=511 sect=138` frozen for two thousand retraces while its position
+ * jittered by a few hundred thousandths of a unit a frame: driving into
+ * geometry, not held by the game. Byte-equality could not see it, the race
+ * never ended, and the campaign sat there until somebody looked.
+ *
+ * So the test is progress, not stillness: `currentLap` and
+ * `lapProgressRemaining` are what the game itself ranks riders by, and a rider
+ * that has not improved either of them in forty seconds is stuck whatever its
+ * position is doing. That covers the lift (pinned, no progress) and the wall
+ * (moving, no progress) with one rule.
  */
 int sbk_campaign_wedge; /* set here, consumed by menu_nav.c's handicap ladder */
 #define WEDGE_RETRACES 2400
@@ -410,6 +424,7 @@ int sbk_campaign_wedge; /* set here, consumed by menu_nav.c's handicap ladder */
 static void race_watchdog(GameState *gs, unsigned long retraces) {
     static unsigned long since;
     static s32 last[5];
+    static s32 last_prog;
     static void *last_gs;
     Player *p = &gs->players[0];
     s32 now[5];
@@ -425,19 +440,31 @@ static void race_watchdog(GameState *gs, unsigned long retraces) {
     now[3] = (s32)p->worldPos.y;
     now[4] = (s32)p->worldPos.z;
 
-    if (last_gs != (void *)gs || memcmp(now, last, sizeof(now)) != 0) {
-        memcpy(last, now, sizeof(now));
+    /* Progress, the way the game ranks it: a later lap, or less of this lap
+     * left. Anything else -- a new sector entered sideways, a position that
+     * jitters against a wall -- is not progress and must not restart the
+     * clock. */
+    if (last_gs != (void *)gs) {
         last_gs = (void *)gs;
+        last[0] = now[0];
+        last_prog = p->lapProgressRemaining;
+        since = retraces;
+        return;
+    }
+    if (now[0] > last[0] || (now[0] == last[0] && p->lapProgressRemaining < last_prog)) {
+        last[0] = now[0];
+        last_prog = p->lapProgressRemaining;
         since = retraces;
         return;
     }
     if (retraces - since < WEDGE_RETRACES) return;
     since = retraces;
 
-    printf("sbk: WEDGE -- player 1 has not moved for %d retraces on level %d "
-           "(lap=%d sect=%d pos=%d,%d,%d anim=%08x); ending the race as a loss\n",
-           WEDGE_RETRACES, gs->memoryPoolId, p->currentLap, p->sectorIndex, (int)now[2], (int)now[3], (int)now[4],
-           (unsigned)p->animationFlags);
+    printf("sbk: WEDGE -- player 1 has got nowhere for %d retraces on level %d "
+           "(lap=%d prog=%d sect=%d pos=%d,%d,%d anim=%08x spd=%d pool=%d); ending the race as a loss\n",
+           WEDGE_RETRACES, gs->memoryPoolId, p->currentLap, (int)p->lapProgressRemaining, p->sectorIndex,
+           (int)now[2], (int)now[3], (int)now[4], (unsigned)p->animationFlags, (int)p->smoothedSpeedCap,
+           sbk_race_pool(0));
     fflush(stdout);
     /* Last place first, THEN the finished flag: a race that was never finished
      * must never be recorded as won. */
