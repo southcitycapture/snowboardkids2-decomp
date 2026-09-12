@@ -897,21 +897,49 @@ rider empty when the boss finally arrives; firing only inside the homing
 radius throws away the shoulders of the approach, where a star still has 200
 million units of life left to close the gap. The first row is kept.
 
-So four heads a race, against the ten-plus-three the race needs, and the
-remaining factor is **time inside the homing radius**, which is about fifty
-frames a race. Two ways to buy more of it, neither tried yet:
+So four heads a race against the thirteen the race needs, and the remaining
+factor is **time inside the homing radius**, which is about fifty frames.
 
-1. **The crawl branch.** `updateIceLandBoss` caps the boss at `0x70000` -- one
-   seventh of the rider's speed -- whenever the rider is more than 0x8C00000
-   (146,800,640) behind. The measured swing peaks at about 141,000,000, just
-   under it. A rider that deliberately fell a little further back would have
-   the boss wait for it, and could then reel it in and hold station. The
-   marshal (`race_dbg.c`) already has the machinery to move a rider that is
-   not going where it should.
-2. **Track progress rather than distance.** The rider is 43% faster and still
-   finishes second, so it is losing the ground back somewhere the speed model
-   does not show -- the same question `pool=`/`wall=` were added for on course
-   8. `--pintrace` on a boss race has not been run.
+### Why: the course is bigger than the weapon
+
+The 140-million-unit swing is not the boss running away. Reading `prog` and
+`sect` out of the same log instead of positions says the opposite -- the two
+riders are **neck and neck the whole race**:
+
+```
+retrace   p0 (prog, sect)   boss (prog, sect)   sector deficit
+   480    (5521,  45)       (5692,  42)          -3
+  5280    (5709,  23)       (5350,  26)          +3
+ 10080    (5350,  26)       (6264,  18)          -8
+ 11880    (2611,  50)       (1904,  58)          +8
+ 16680    (2374,  52)       (2865,  48)          -4
+```
+
+The lead changes hands six or seven times, the deficit never leaves +/-8 of a
+78-sector lap, and they cross the lap line together. **Three sectors of Ice
+Land is about 140,000,000 units**, and `getHomingAngleToTarget`'s radius is
+0x1800000 -- 25,165,824, call it half a sector. So the star can only reach a
+boss the rider is almost exactly level with, and the rider is only level with
+it while the deficit is passing through zero: six brief crossings a race,
+fifty frames in total, and the pilot converts them at about one head each.
+
+That is the whole of it, and it says what the next attempt has to be. Not more
+supply, not a faster trigger, not a wider window -- all three were measured
+and two made it worse. **The rider has to stop overtaking the boss and pace
+it.** It is already the same speed on average; what it does is sail past,
+lose it over the next two sectors, and come back round. Holding station
+within half a sector for even a few hundred frames would turn fifty frames of
+opportunity into a thousand, and thirteen heads is then a formality. The
+marshal in `race_dbg.c` already has the machinery to move player 1 along the
+track graph; what a boss race wants from it is the opposite of a push -- a
+brake, aimed at the boss's own `sectorIndex`.
+
+(The two guesses this section made before the sector numbers were read are
+both dead, and are recorded so nobody spends the afternoon again.
+`updateIceLandBoss`'s crawl branch -- `0x70000` beyond 0x8C00000 -- never
+fires: the boss's speed is a flat 1,072,168 for every frame of every race, so
+it never leaves the one branch it starts in. And the rider is not losing
+ground to the boss's projectiles either; it is not losing ground at all.)
 
 ### What the levers actually do, measured
 
