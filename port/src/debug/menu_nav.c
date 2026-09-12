@@ -500,10 +500,48 @@ static void nav_handicap(int level, int place) {
 /* A race has ended when a result handler comes up. The purse is in
  * gGameSessionContext->gold; it only reaches the EEPROM through the map's save
  * point, so after every N races the navigator aims the rider at it. */
-static void nav_watch(void) {
+/* Is one of the race's result screens up?
+ *
+ * This used to be three fragments -- "GameResult", "ContinuePress",
+ * "AwardGold" -- and it silently could not see a boss race. The boss's result
+ * handlers are handleBossRaceResult, handleBossDefeatResult and
+ * awaitBossResultAndFadeOut, and not one of those contains any of the three:
+ * "BossRaceResult" is a RaceResult, not a GameResult. So the navigator watched
+ * the Jingle Town boss finish, never counted the race, never saved, never
+ * climbed the handicap ladder, and sent the rider straight back in at the same
+ * rung -- a loop with a real race in it every time, which is exactly the shape
+ * the town-exit guard cannot catch.
+ *
+ * Matching "Result" outright is the fix, with one exclusion that matters: the
+ * skill game's HUD has init/update/cleanupSkillGameResultTimerDisplay, and
+ * those run *during* the race. A rule keyed on the word alone would call a
+ * race finished the moment it started. */
+static int menu_is_result(void) {
+    int i;
+    for (i = 0; i < cur_count; i++) {
+        const char *n = sbk_fn_name((void *)cur_fn[i]);
+        if (strstr(n, "TimerDisplay") != NULL) continue;
+        if (strstr(n, "Result") != NULL || strstr(n, "ContinuePress") != NULL || strstr(n, "AwardGold") != NULL)
+            return 1;
+    }
+    return 0;
+}
+
+static void nav_watch(unsigned long retraces) {
     static int in_results;
-    int results = menu_has("GameResult") || menu_has("ContinuePress") || menu_has("AwardGold");
+    static unsigned long last_counted;
+    int results = menu_is_result();
+    /* One race can show two result handlers in succession -- a screen, then
+     * session_manager's own awaitRaceResult funnel -- and if the list happens
+     * to be empty of both for a frame between them that is two rising edges
+     * and one race counted twice. A race takes minutes; nothing legitimate
+     * finishes two of them inside ten seconds. */
+    if (results && in_results == 0 && last_counted != 0 && retraces - last_counted < 600) {
+        in_results = results;
+        return;
+    }
     if (results && !in_results) {
+        last_counted = retraces;
         /* The place the rider finished in decides everything downstream:
          * handleSpeedCrossGameResult / handleBossRaceResult return 3 only for
          * finishPosition 0, and only a 3 (or a 5) turns the course's
@@ -794,7 +832,7 @@ void sbk_menu_nav_tick(unsigned long retraces) {
             }
         }
     }
-    nav_watch();
+    nav_watch(retraces);
     nav_progress("tick");
     /* Clear the loop guard on the rising edge of a *story* race only. The
      * attract demo runs this same handler, so the demo is excluded; and the
