@@ -584,6 +584,120 @@ so redeploying a binary mid-course would otherwise drop a course that had
 climbed two rungs back to rung 0 and re-lose the same races at five minutes
 each. It applies to the first course after boot and is consumed by it.
 
+### The boss races, which no handicap can win
+
+Courses 3 and 7 -- Jingle Town and Ice Land -- are not races, and the campaign
+spent four attempts and half an hour proving it, losing by exactly one place at
+every rung of the ladder without ever earning a coin.
+
+`race_main.c` ~5188 gives `RACE_TYPE_BOSS_JINGLE` and `RACE_TYPE_BOSS_ICE`
+exactly two endings:
+
+```
+the boss crosses the line     showPlacementAnnouncement(0, 2), both riders
+                              flagged finished        -> gRaceResultCode 4, lost
+boss animationFlags & 0x100000  showPlacementAnnouncement(0, 1), snowflakes
+                                                      -> gRaceResultCode 3, won
+```
+
+Our own rider crossing the line appears in neither. So no amount of top speed
+can win a boss race, and the rival levers cannot even reach the boss: the roster
+dump (`sbk: autoplay: rider N:`, printed at every handoff) shows the boss on
+`RIVAL_ROW` with `baseMaxSpeed` **0**, because `updateJingleTownBoss` writes its
+own `maxSpeedCap` from its distance to us and never reads the racer speed model
+the tax subtracts from.
+
+`0x100000` is set when `bossHealth` reaches 0 -- the ten snowman heads along the
+bottom of the screen, `initJingleTownBoss` writes `0xA`. Health only falls in the
+two hover phases, and the hover phases are entered from exactly one test in
+`updateJingleTownBoss`: `hitReactionState` 0x3D or 0x3E, one head each. Tracing
+those two back through `hit_reactions.c` leaves a very short list of things that
+can hurt a boss:
+
+| state | set by | reached from |
+| --- | --- | --- |
+| 0x3D | `setPlayerStarHitState` | `checkStarProjectileHit` -- the **star**, primary item 5, projectile type 4 |
+| 0x3E | `setPlayerBouncedBackState` | `descendWarpEffect` -- the **frying pan** secondary, and a couple of level hazards |
+
+Every other throwable lands a state the boss ignores: parachute 0x34, shrink
+0x35, panel 0x36, frozen 0x3C. One primary item in seven, and the pan.
+
+And the CPU rider will not throw the one that counts. `findPrimaryItemTarget`
+finds the boss, rolls its `altChance`, and then asks whether a real rider is
+still ahead of it:
+
+```c
+i = player->finishPosition;
+for (; i >= 0; i--) if (players[rankOrder[i]].isBossRacer == 0) break;
+if (i >= 0) return -1;
+```
+
+The scan starts at our **own** rank, and `rankOrder[our rank]` is us -- a
+non-boss rider -- so it breaks on the first step every time and returns -1. In a
+two-rider boss race a CPU rider can never throw at the boss, and self-play *is* a
+CPU rider.
+
+**The boss pilot** (`port/src/debug/boss_pilot.c`) is therefore one hook, in
+`processPlayerItemUsage` (`port/patches.txt`), that answers that one question
+differently for our rider on a health boss:
+
+* the boss inside `sbk_boss_range`, and the heading error inside a window
+  computed from the geometry rather than guessed -- the star flies straight at
+  `0x1B8000` a frame, so an error of *e* radians misses by `dist * e`, and
+  `checkStarProjectileHit` forgives `0x1EC000 + 0xC0000`; a full turn is
+  `0x2000`, so the window is `1303 * 0x2AC000 / dist`, clamped to
+  `0x40..0x200` -> return the targeting mode, and the game's own
+  `spawnAttackProjectile` does everything after that. The first run ignored
+  distance and threw 21 stars from as far as `0x27C0000`, landing five.
+* nothing else is faked: the projectile, its flight, the collision test, the
+  boss's reaction and the result code are all the game's.
+
+**The supply is the honest handicap, and it is logged as one.** A boss course has
+no item boxes -- a handful of items lie on the ground, and the borrowed CPU path
+does not steer to them (`processItemTriggers` wants the rider within `0x100000`
+of one). A rider with nothing in its hands cannot use the mechanic at all, so
+after a loss the navigator's boss ladder opens a supply, and the pilot puts an
+item in the rider's hand every *N* retraces while it is empty-handed:
+
+```c
+static const struct { s16 boost, supply; } nav_boss_ladder[] = {
+    { 14, 0 }, { 28, 180 }, { 28, 120 }, { 28, 60 }, { 28, 30 },
+};
+```
+
+Rung 0 is the pure mechanic -- throw what the course gives us -- and every star
+or pan the pilot conjures is counted and printed against the ones the rider
+picked up itself, at every hit and once at the end:
+
+```
+sbk: bosspilot: supplied pan (#5) at r=4627, boss hp=7
+sbk: bosspilot: boss hp 7 -> 6 (thrown=5 supplied=2 picked=0)
+sbk: bosspilot: race over -- boss hp=0 defeated=1, stars thrown=6
+                (supplied=2, pans=11, picked up=1)
+```
+
+The **pan is the supply's first choice**, because the pan cannot miss:
+`processPlayerItemUsage` spawns a warp effect over *every* other rider and
+`descendWarpEffect` calls `setPlayerBouncedBackState` on the boss when it lands.
+No aiming, one head, and the rider throws it through the game's ordinary
+`shouldUseSecondaryItem` path -- the pilot only fills its hand. It is also what
+the course intends: the three pans lying on the Jingle Town run are the
+walkthrough's weapon of choice. Stars fill the gaps while a pan is in flight.
+That is the difference between the run that stalled at five heads and the run
+that took all ten.
+
+**A won boss race does not look won from `finishPosition`.** The boss is usually
+still ahead on the track when its last head goes, so the rank order the finish
+flag freezes says 2nd, and the navigator would have filed a win as a loss and
+ground the course for ever at rising rungs. `nav_place_of()` asks the question
+the game asks -- `0x100000` on the boss -- and falls back to `finishPosition`
+everywhere else.
+
+**Course 0xB, the Crazy Jungle boss, is not one of these.** It is
+`RACE_TYPE_BOSS_JUNGLE`, it has no `bossHealth` at all, and `race_main.c` decides
+it on who reaches the line first, so it stays on the ordinary ladder where boost
+is the lever that works.
+
 ### The loop guard, which had latched on
 
 `nav_town_exits` counts town exits since a race last *started*, and is cleared

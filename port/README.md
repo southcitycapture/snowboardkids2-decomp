@@ -21,7 +21,8 @@ command lists, a fixed-function OpenGL 1.3 backend, scripted input.
 | Self-play: `--racedbg`, `--peek`, `--autoplay`, `--soak`, `--nightmare` | works |
 | The navigator: `--autonav`, `--menutrace`, `--saveevery`, `--trial`, `--plan` | works; the campaign wins a course, writes the EEPROM, leaves the town by the right door and aims itself at the next course |
 | The lift wedge that stopped the campaign on Turtle Island | fixed -- it was the Nightmare row starving the task pool, not the borrowed path table. `docs/nightmare-row.md` |
-| The campaign end to end (every course, a save after each race) | not yet watched through |
+| The boss races (courses 3 and 7): ten snowman heads, not a finish line | won by the boss pilot -- `docs/PLAN.md`, "The boss races, which no handicap can win" |
+| The campaign end to end (every course, a save after each race) | in progress: courses 0-4 won on the user's own save, boss 3 included |
 
 The title screen matches the emulator reference frame
 (`g4-shots/sbk2-s2dex-fix1.png` against Mupen64Plus's `snowboard_kids2-020.png`):
@@ -55,6 +56,7 @@ More, uncropped, are in `~/Apps/islandPowerPC/g4-shots`.
                    [--dumpframes N] [--dumptris] [--bigtri N] [--perf]
                    [--racedbg] [--peek ADDR:LEN] [--autoplay] [--soak] [--nightmare]
                    [--autonav] [--menutrace] [--saveevery N] [--status]
+                   [--startrung N] [--nobosspilot] [--bosssupply N]
                    [--trial SPEC] [--plan LEVEL:CHAR:BOARD:BOOST,...]
                    [snowboardkids2.z64]
 
@@ -84,6 +86,17 @@ between races; `--soak` is the same with the save point skipped: the town cannot
 with `dladdr()` off the task scheduler's `gamestateHandler`, so there is no
 hand-written table. `--racedbg` prints the four riders once a second and
 `--peek ADDR:LEN` dumps RDRAM.
+
+**Boss races.** Courses 3 and 7 are decided by the boss's ten snowman heads,
+not by the finish line -- our own rider crossing it does nothing -- and the CPU
+rider can never throw the one item that takes a head off. The boss pilot
+(`port/src/debug/boss_pilot.c`, on by default with `--autoplay`, off with
+`--nobosspilot`) hooks the game's own `processPlayerItemUsage` and throws the
+star when the boss is in range and inside a firing window worked out from the
+star's flight; the pan, which cannot miss, is what the navigator's boss ladder
+supplies after a loss (`--bosssupply N`, retraces between hand-outs). Every
+conjured item is logged and counted against the ones the rider picked up itself.
+`docs/PLAN.md`, "The boss races, which no handicap can win", has the chain.
 
 `--autonav` plays the campaign, not one course: it leaves Jingle Town by the
 door that leads to the course list (`unk427 = 0xFF`, not a location id -- see
