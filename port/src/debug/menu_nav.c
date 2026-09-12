@@ -411,8 +411,8 @@ static void nav_handicap(int level, int place) {
         nav_wedge_relief = 0;
         nav_ladder_set(rung);
         if (rung != 0) {
-            printf("sbk-nav: level %d resumed at rung %d (boost=%d rivaltax=%d itemrelief=%d)\n", level, rung,
-                   sbk_campaign_boost, sbk_rival_tax, sbk_item_relief);
+            printf("sbk-nav: level %d resumed at rung %d (boost=%d rivaltax=%d rivalrelief=%d)\n", level, rung,
+                   sbk_campaign_boost, sbk_rival_tax, sbk_rival_item_relief);
             fflush(stdout);
         }
     }
@@ -760,8 +760,8 @@ void sbk_menu_nav_tick(unsigned long retraces) {
             armed = 1;
             nav_ladder_set(sbk_nav_start_rung);
             if (sbk_nav_start_rung != 0) {
-                printf("sbk-nav: --startrung %d: boost=%d rivaltax=%d itemrelief=%d before the first race\n",
-                       sbk_nav_start_rung, sbk_campaign_boost, sbk_rival_tax, sbk_item_relief);
+                printf("sbk-nav: --startrung %d: boost=%d rivaltax=%d rivalrelief=%d before the first race\n",
+                       sbk_nav_start_rung, sbk_campaign_boost, sbk_rival_tax, sbk_rival_item_relief);
                 fflush(stdout);
             }
         }

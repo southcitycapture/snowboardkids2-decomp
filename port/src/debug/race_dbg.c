@@ -211,8 +211,9 @@ static void nightmare_write_row(void) {
     }
     if (!nightmare_written) {
         nightmare_written = 1;
-        printf("sbk: nightmare: gAIPlayerParams row %d retuned tax=%d delay=%d use=%d alt=%d (rivals on row %d)\n",
-               NIGHTMARE_ROW, nm_tax, nm_delay, nm_use, nm_alt, RIVAL_ROW);
+        printf("sbk: nightmare: gAIPlayerParams row %d retuned tax=%d delay=%d use=%d alt=%d; "
+               "rivals on row %d at tax=%d use=%d alt=%d\n",
+               NIGHTMARE_ROW, nm_tax, nm_delay, use, nm_alt, RIVAL_ROW, rival, rival_use, rival_alt);
         fflush(stdout);
     }
 }
