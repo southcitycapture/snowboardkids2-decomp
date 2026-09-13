@@ -48,6 +48,7 @@
  */
 #include <stdio.h>
 #include <math.h>
+#include <string.h>
 #include "haze.h"
 #include "../ultra/ultra.h"
 #include "common.h"
@@ -68,6 +69,15 @@ int sbk_haze_enabled;
 int sbk_haze_debug;
 
 int sbk_haze_on;
+int sbk_race_proj_on;
+int sbk_fadein_enabled;
+int sbk_fadein_debug;
+int sbk_fadein_on;
+float sbk_fadein_start;
+float sbk_fadein_end;
+float sbk_fadein_inv_span;
+unsigned sbk_fadein_dbg_draws, sbk_fadein_dbg_faded;
+float sbk_fadein_dbg_min = 1.0f;
 float sbk_haze_start;
 float sbk_haze_end;
 float sbk_haze_inv_span;
@@ -104,10 +114,87 @@ unsigned long sbk_haze_retrace;
 #define HAZE_END_MULT   1.50f
 
 static float haze_far;      /* the race far plane, already scaled */
+static float cull_range;    /* isObjectCulled's half extent, in world units */
 
 float sbk_haze_note_far(float f) {
     haze_far = f;
     return f;
+}
+
+/* isObjectCulled (src/graphics/graphics.c) keeps every object inside a cube of
+ * RACE_CULL_BOX_HALF_EXTENT_FIXED (0x0FEA0000 = 4074 units) around the
+ * viewport's own translation, and --drawdistance does *not* scale it: only the
+ * far planes scale.  So at --drawdistance 4 the ground is drawn out to 15,200
+ * units and hazed out by 5,700, but a prop, a rider or an item box still
+ * vanishes at 4,074, where the haze is only about 40% thick -- a visible pop.
+ * That is what `fadein` is for, and this is where the port learns the number
+ * (patches.txt).  Returns its argument. */
+int sbk_fadein_note_cull(int range) {
+    cull_range = (float)range / 65536.0f;
+    return range;
+}
+
+/* The last 14% of the cull range: 3504..4074 units.  Shorter than that and an
+ * object still arrives visibly; longer and props are half-transparent while
+ * they are plainly in view. */
+#define FADEIN_FRAC 0.86f
+
+/* --- which matrices belong to a cullable object -------------------------
+ *
+ * The first version of the fade keyed on the object's origin distance alone
+ * (MP[3][3]), guarded by "all three vertices are past the start of the band".
+ * That is not enough, and the sequel said so loudly: at --drawdistance 4 it
+ * faded 20,000 of 40,000 triangles a second down to alpha 0, because the
+ * course's own terrain is drawn in chunks with their own far-away origins and
+ * every chunk past 3,504 units looked exactly like a distant prop.
+ *
+ * So the port stops guessing and lets the game say which matrices belong to
+ * the objects the cull applies to.  Each game has one function that builds an
+ * object's transform matrix -- allocFixedTransformMatrix in the first game,
+ * setupDisplayListMatrix in the sequel -- and patches.txt has it hand the
+ * pointer over.  gfx_pc then fades a draw only when the modelview it loaded
+ * is one of those.  Terrain, the sky and the HUD never appear in the table.
+ *
+ * The table is cleared after every frame's display list is walked, because
+ * the matrices come out of a per-frame scratch allocator: a pointer from the
+ * last frame means nothing.  A collision loses one object's fade, never
+ * anything else, so eviction is a shrug rather than a problem. */
+#define FADEIN_TABLE 1024
+#define FADEIN_PROBE 4
+static const void *fadein_mtx[FADEIN_TABLE];
+static int fadein_mtx_used;
+
+void sbk_fadein_note_object(const void *mtx) {
+    unsigned long h;
+    int i;
+    if (!sbk_fadein_on || mtx == NULL) return;
+    h = ((unsigned long)mtx >> 6) ^ ((unsigned long)mtx >> 3);
+    for (i = 0; i < FADEIN_PROBE; i++) {
+        unsigned k = (unsigned)((h + (unsigned long)i) & (FADEIN_TABLE - 1));
+        if (fadein_mtx[k] == mtx) return;
+        if (fadein_mtx[k] == NULL) { fadein_mtx[k] = mtx; fadein_mtx_used = 1; return; }
+    }
+    fadein_mtx[(unsigned)(h & (FADEIN_TABLE - 1))] = mtx;   /* evict: one lost fade */
+    fadein_mtx_used = 1;
+}
+
+int sbk_fadein_is_object(const void *mtx) {
+    unsigned long h;
+    int i;
+    if (!fadein_mtx_used || mtx == NULL) return 0;
+    h = ((unsigned long)mtx >> 6) ^ ((unsigned long)mtx >> 3);
+    for (i = 0; i < FADEIN_PROBE; i++) {
+        unsigned k = (unsigned)((h + (unsigned long)i) & (FADEIN_TABLE - 1));
+        if (fadein_mtx[k] == mtx) return 1;
+        if (fadein_mtx[k] == NULL) return 0;
+    }
+    return 0;
+}
+
+void sbk_fadein_frame_end(void) {
+    if (!fadein_mtx_used) return;
+    memset(fadein_mtx, 0, sizeof(fadein_mtx));
+    fadein_mtx_used = 0;
 }
 
 void sbk_haze_frame(void) {
@@ -118,8 +205,8 @@ void sbk_haze_frame(void) {
 
     sbk_haze_retrace++;
     sbk_haze_on = 0;
-    if (!sbk_haze_enabled) return;
-    if (sbk_far_scale <= 1.001f) return;   /* nothing extra was drawn to hide */
+    sbk_fadein_on = 0;
+    sbk_race_proj_on = 0;
     if (haze_far <= 1.0f) return;          /* no race viewport has been built */
 
     gs = sbk_race_state();
@@ -131,6 +218,30 @@ void sbk_haze_frame(void) {
     sbk_haze_color[0] = lc->environmentColors.fog.r / 255.0f;
     sbk_haze_color[1] = lc->environmentColors.fog.g / 255.0f;
     sbk_haze_color[2] = lc->environmentColors.fog.b / 255.0f;
+
+    /* The race camera's perspNorm, computed whether or not either effect is
+     * switched on: widescreen needs the same answer -- "is this draw the race
+     * camera's?" -- to leave the menu passes in their 4:3 box. */
+    sbk_haze_persp_norm = (int)(131072.0f / haze_far);
+    sbk_race_proj_on = 1;
+
+    if (sbk_fadein_enabled && cull_range > 1.0f) {
+        sbk_fadein_end = cull_range;
+        sbk_fadein_start = cull_range * FADEIN_FRAC;
+        sbk_fadein_inv_span = 1.0f / (sbk_fadein_end - sbk_fadein_start);
+        sbk_fadein_on = 1;
+    }
+
+    if (sbk_fadein_debug && (sbk_haze_retrace % 60 == 0)) {
+        printf("sbk-fade: r%lu cull %.0f fade %.0f..%.0f draws %u faded %u minalpha %.2f\n",
+               sbk_haze_retrace, cull_range, sbk_fadein_start, sbk_fadein_end,
+               sbk_fadein_dbg_draws, sbk_fadein_dbg_faded, sbk_fadein_dbg_min);
+        sbk_fadein_dbg_draws = sbk_fadein_dbg_faded = 0;
+        sbk_fadein_dbg_min = 1.0f;
+    }
+
+    if (!sbk_haze_enabled) return;
+    if (sbk_far_scale <= 1.001f) return;   /* nothing extra was drawn to hide */
 
     {
         float orig_far = haze_far / sbk_far_scale;   /* what the N64 clipped at */
@@ -147,8 +258,6 @@ void sbk_haze_frame(void) {
      * viewport, whose far plane is a flat 10000 that --drawdistance does not
      * scale; its perspNorm is a different integer, so gfx_pc can tell the two
      * apart without a heuristic and the sky is never fogged into itself. */
-    sbk_haze_persp_norm = (int)(131072.0f / haze_far);
-
     sbk_haze_on = 1;
 
     if (sbk_haze_debug && (ticks++ % 60 == 0 || gs->memoryPoolId != last_course)) {

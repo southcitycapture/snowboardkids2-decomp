@@ -12,6 +12,27 @@ src/race/race_session.c	#define RACE_VIEWPORT_FAR_PLANE 3800.0f	#define RACE_VIE
 src/race/race_session.c	#define MULTIPLAYER_RACE_VIEW_FAR_PLANE 3000.0f	#define MULTIPLAYER_RACE_VIEW_FAR_PLANE sbk_haze_note_far(3000.0f * sbk_far_scale)
 src/race/race_session.c	#define BOSS_RACE_VIEW_FAR_PLANE 2000.0f	#define BOSS_RACE_VIEW_FAR_PLANE sbk_haze_note_far(2000.0f * sbk_far_scale)
 
+# The camera-distance cull box, for the Enhanced-mode far-object fade-in
+# (`fadein`). isObjectCulled keeps every prop, rider, item box and effect
+# inside a cube of RACE_CULL_BOX_HALF_EXTENT_FIXED (0x0FEA0000 = 4074 units)
+# around the viewport, and --drawdistance does NOT scale it -- only the far
+# planes scale. So at 4x the ground runs out to 15,200 units while an object
+# still vanishes at 4,074, where the haze is only about 40% thick: a visible
+# pop. The port needs that one number to fade across it, and takes it from the
+# game rather than keeping a copy. sbk_fadein_note_cull returns its argument,
+# so nothing the game does changes.
+src/graphics/graphics.c	s32 isObjectCulled(Vec3i *arg0) {	s32 isObjectCulled(Vec3i *arg0) {\n    sbk_fadein_note_cull(RACE_CULL_BOX_HALF_EXTENT_FIXED);
+
+# And which matrices belong to those objects. setupDisplayListMatrix is what
+# builds a DisplayListObject's transform, immediately after isObjectCulled has
+# let it through, so the port is handed each pointer and fades only draws whose
+# modelview is one of them. Without this the fade keyed on the object's origin
+# distance alone, and the course's own terrain -- drawn in chunks with their
+# own far-away origins -- looked exactly like distant props: 20,000 of 40,000
+# triangles a second faded to alpha 0 at --drawdistance 4. See
+# port/src/gfx/haze.c.
+src/graphics/displaylist.c	    if (arg0->displayLists->flags & 1) {	    { extern void sbk_fadein_note_object(const void *); sbk_fadein_note_object(arg0->transformMatrix); }\n    if (arg0->displayLists->flags & 1) {
+
 # Snowboard Kids 2: three KMC/MIPS-isms in src/race/race_main.c that a PowerPC
 # compiler cannot take. The first keeps a local in $t3 for a byte-exact match;
 # the other two are the lean offset, written in asm so KMC would emit the exact

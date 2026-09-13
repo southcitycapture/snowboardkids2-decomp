@@ -11,6 +11,42 @@ extern int sbk_haze_enabled;
 /* --hazedbg: one line a second naming the course, the colour and the range. */
 extern int sbk_haze_debug;
 
+/* --- far-object fade-in (the same file, the same per-frame hook) ---------
+ * Props, riders, item panels and effects are drawn only while they are inside
+ * a cubic camera-distance cull box (isObjectCulled, src/graphics/graphics.c),
+ * so at the edge of it they appear from nothing -- and in the sequel that box
+ * does not grow with --drawdistance, so at 4x they vanish at 4,074 units while
+ * the ground behind them runs on to 15,200.
+ * With `fadein` on they are faded in across the last stretch of that range
+ * instead.  The range is not a constant here: patches.txt hands the port the
+ * game's own number, already multiplied by --drawdistance. */
+extern int sbk_fadein_enabled;
+extern int sbk_fadein_debug;     /* --fadedbg */
+extern int sbk_fadein_on;        /* 1 when this frame can fade anything */
+extern float sbk_fadein_start;   /* eye distance where the fade-in begins */
+extern float sbk_fadein_end;     /* the cull distance itself */
+extern float sbk_fadein_inv_span;
+
+/* Called from the patched cull range in patches.txt, like sbk_haze_note_far:
+ * the range in the game's own 16.16 fixed point.  Returns its argument. */
+int sbk_fadein_note_cull(int range);
+
+/* 1 once this frame's race viewport is known, whether or not either effect is
+ * switched on: it is what lets gfx_pc tell the race camera's projection from
+ * the menu and overlay ones. */
+extern int sbk_race_proj_on;
+
+/* Which matrices belong to an object the cull applies to: patches.txt has the
+ * game's own matrix builder hand each one over, and gfx_pc asks before it
+ * fades a draw.  Cleared once the frame's display list has been walked. */
+void sbk_fadein_note_object(const void *mtx);
+int sbk_fadein_is_object(const void *mtx);
+void sbk_fadein_frame_end(void);
+
+/* --fadedbg counters. */
+extern unsigned sbk_fadein_dbg_draws, sbk_fadein_dbg_faded;
+extern float sbk_fadein_dbg_min;
+
 /* Recomputed once a frame by sbk_haze_frame(); read by gfx_pc.c.
  * sbk_haze_on is 0 for every frame that is not a race frame, and gfx_pc then
  * does not touch a single vertex. */

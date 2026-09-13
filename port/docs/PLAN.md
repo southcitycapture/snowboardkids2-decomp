@@ -2184,3 +2184,86 @@ where the haze takes its colour. The first game has no per-viewport fog at all
 -- one global `gSPFogPosition(gFadeTimer, 1000)` a frame, whose colour is the
 per-course `gFadeColorRed/Green/Blue` that `setBootFadeColor` writes at the end
 of each case of `initRaceCourseSceneTasks`. Same idea, different drawer.
+
+## The four Enhanced rendering options, 2026-09-13
+
+Far-object fade-in, widescreen, anti-aliasing and a texture-filter override,
+added to both ports at once.  The design, and what the Radeon 9000 turned out
+to allow, is written down once in the first game's
+`port/docs/PLAN.md` ("The four Enhanced rendering options"): the short version
+is that `GL_ARB_multisample` is real (4 samples, `GL_SAMPLES 4` on the actual
+framebuffer), `GL_ARB_imaging` / `GL_EXT_blend_color` make a constant-alpha
+fade possible without the combiner knowing about it, and a true three-point
+texture filter cannot be built on this card, so `texfilter` ships
+`rdp` / `point` / `bilinear` and no fake.
+
+Two things are the sequel's own.
+
+### The cull box does not grow with the draw distance, and that is the pop
+
+`patches.txt` scales the three race far planes (3800 / 3000 / 2000) with
+`--drawdistance`.  `isObjectCulled` (`src/graphics/graphics.c`) is not a far
+plane: it is a cube of `RACE_CULL_BOX_HALF_EXTENT_FIXED` = 0x0FEA0000 = 4,074
+units around the viewport's own translation, and nothing scaled it.  So at
+`--drawdistance 4` the ground is drawn to 15,200 units and hazed flat by
+5,700, while a prop, a rider or an item box still vanishes at 4,074 -- where
+the haze is only about 40% thick.  That is a real pop, and it is the one the
+first game does *not* have, because there the same patch scales the cull along
+with the plane.
+
+The README's old claim that "props stop popping for free" was therefore wrong
+for this game, and is now corrected in place.
+
+### Telling a distant prop from a distant piece of course
+
+The first version of the fade used the object's origin distance --
+`MP[3][3] * w_to_dist`, one multiply per `G_MTX` -- guarded by "all three of
+the triangle's vertices are past the start of the band".  The first game
+tolerated that.  The sequel did not:
+
+    sbk-fade: r10800 cull 4074 fade 3504..4074 draws 42625 faded 23103 minalpha 0.00
+
+Twenty-three thousand of forty-two thousand triangles a second faded to
+nothing, because the course's terrain is drawn in chunks that have their own
+far-away origins and a distant chunk is arithmetically indistinguishable from
+a distant prop.
+
+The fix is to stop inferring it.  `setupDisplayListMatrix` is the one function
+that builds a `DisplayListObject`'s transform, and it is called immediately
+after `isObjectCulled` has let the object through, so `patches.txt` has it hand
+the matrix pointer to the port; `port/src/gfx/haze.c` keeps the frame's
+pointers in a 1,024-entry table and `gfx_pc` fades a draw only when the
+modelview it just loaded is one of them.  The table is cleared when the frame's
+display list has been walked, because the matrices come from a per-frame
+scratch allocator.  The same hook exists in the first game on
+`allocFixedTransformMatrix`.
+
+    sbk-fade: r10800 cull 4074 fade 3504..4074 draws 42625 faded 248 minalpha 0.00
+
+### And then the honest number
+
+With the table in place, a frame-exact pixel diff of the same retrace with the
+fade on and off is **11 to 18 pixels** (five retraces around r7500 of the
+level-0 golden, `--drawdistance 4`).  An object at 4,074 units is a few pixels
+across and already deep in the haze, so the pop being removed is real and
+small.  The first game's equivalent measurement is 11 pixels for the same
+reason, with the game's own fog doing the covering instead of the haze.
+
+Kept in Enhanced because it costs 0.04 ms of a 2.4 ms frame and because an
+edge appearing out of nothing is worth not having -- not because it changes
+what a race looks like.  `--fadedbg` prints the range, the draw count and the
+lowest alpha reached, once a second, which is how both numbers above were got.
+
+### Cost here
+
+Level 0 at `--drawdistance 2`, 640x480 windowed, `--perf` averaged over the
+same stretch of retraces in each run:
+
+    run                                        gfx ms   GL ms   CPU   Hz    tris
+    all four off                                 3.21    0.41   42%   60.0   422
+    fade-in + anti-aliasing 4x                   3.32    0.43   42%   60.0   439
+    fade-in + anti-aliasing 2x + widescreen      3.37    0.44   43%   60.0   445
+
+The sequel's frame is a little heavier than the first game's to begin with
+(3.2 ms against 2.4), and the options move it by about the same absolute
+amounts.  Everything held 60.0 Hz.

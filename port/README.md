@@ -88,13 +88,18 @@ they call themselves. The keys:
     game=sbk2          mode=original|enhanced|custom
     draw_distance=1..4 resolution=native|n64|2x
     filter=none|scanlines|grille|smooth
-    widescreen=0|1     fullscreen=0|1     vsync=0|1
+    texfilter=rdp|point|bilinear          msaa=0|2|4
+    widescreen=4:3|16:9                   fadein=0|1
+    fullscreen=0|1     vsync=0|1
     volume=0..100      launcher=0|1       perf=0|1
     haze=0|1
 
-**Original** is draw distance 1, `n64` resolution, no filter, no haze.
-**Enhanced** is draw distance 2, `native` resolution, no filter, **haze on**.
-Touching any single setting moves Mode to CUSTOM rather than lying.
+**Original** is draw distance 1, `n64` resolution, no filter, no haze, no
+fade-in, no anti-aliasing, `texfilter=rdp`, 4:3. **Enhanced** is draw distance
+2, `native` resolution, no filter, **haze on**, **fade-in on**, **2x
+anti-aliasing**, `texfilter=rdp`. Touching any single setting moves Mode to
+CUSTOM rather than lying -- except widescreen, which is a framing choice for
+the player's own screen and belongs to neither preset.
 
 `--drawdistance N` multiplies the three race far planes in
 `src/race/race_session.c` (3800 for a normal race, 3000 split-screen, 2000 for
@@ -142,14 +147,69 @@ geometry the game did not fog far enough out.
   clipped -- the trees and the hut on the ridge at Sunny Mountain, 23,000
   pixels of one 640x480 frame, between 3800 and about 5000 units. A ramp that
   reached full haze at 15,200 was 6% thick there.
-* **Props** stop popping for free: anything appearing at the edge of the range
-  appears already deep in haze.
+* **Props do not stop popping for free, and that was wrong here until
+  2026-09-13.** `--drawdistance` scales the three far planes and nothing else;
+  `isObjectCulled` (`src/graphics/graphics.c`) keeps every prop, rider, item
+  box and effect inside a cube of 4,074 units around the viewport, and that
+  number does not scale. So at 4x the ground runs out to 15,200 units and is
+  hazed flat by 5,700, while an object still vanishes at 4,074 where the haze
+  is only about 40% thick. That is what the `fadein` option below is for.
 
 `--hazedbg` prints a line a second: the course, the colour, the range, the
 perspNorm the race camera carried against every other perspNorm in the frame,
 how many triangles were tinted and the farthest vertex seen. Scripted and
 golden runs force the haze off, like the filters, so `regress` still replays
 bit-identical.
+
+## The four Enhanced rendering options
+
+Added 2026-09-13 in both ports at once: **far-object fade-in** (`fadein`),
+**widescreen** (`widescreen=4:3|16:9`), **anti-aliasing** (`msaa=0|2|4`) and a
+**texture filter override** (`texfilter=rdp|point|bilinear`). The machinery is
+the first game's, file for file --
+[its README](../../snowboardkids-decomp/port/README.md) has the long version,
+including what the Radeon 9000 turned out to allow (`GL_ARB_multisample` and
+`GL_EXT_blend_color` yes, a true three-point filter no) and why there is no
+fake `n64` filter. What is different here:
+
+<p align="center">
+  <img src="docs/screenshots/race-widescreen.png" width="70%" alt="A race in 16:9">
+</p>
+
+* **The fade-in has more to do in the sequel than in the first game**, because
+  the sequel's cull box does not grow with `--drawdistance` (above). The port
+  is handed the box's half extent by `patches.txt` wrapping
+  `RACE_CULL_BOX_HALF_EXTENT_FIXED`, and fades objects across the last 14% of
+  it, 3,504 to 4,074 units.
+* **It has to know which matrices belong to a cullable object**, and this is
+  the sequel's contribution to the design. Keyed on the object's origin
+  distance alone -- `MP[3][3]` turned into world units by the same w-column
+  scale the haze uses -- the fade took 20,000 of 40,000 triangles a second
+  down to alpha 0 at `--drawdistance 4`: the course's own terrain is drawn in
+  chunks with their own far-away origins, and a distant chunk looks exactly
+  like a distant prop. So `patches.txt` has `setupDisplayListMatrix` -- the
+  one function that builds a `DisplayListObject`'s transform, immediately
+  after `isObjectCulled` has let it through -- hand each matrix pointer to the
+  port, and a draw is faded only when the modelview it loaded is one of them.
+  With the table in place the same race fades 0 to 250 triangles a second, all
+  of them objects.
+* **And then the honest measurement**: a frame-exact pixel diff of the same
+  retrace with the fade on and off is **11 to 18 pixels**. By the time an
+  object reaches 4,074 units it is a few pixels across and already deep in the
+  haze, so the pop the option removes is a real one but a small one. It is in
+  Enhanced because it costs nothing measurable (0.04 ms of a 2.4 ms frame) and
+  because a hard edge appearing from nothing is worth not having, not because
+  it transforms a race.
+* **Cost on the G4**, one measured race each (level 0, `--drawdistance 2`,
+  640x480 windowed, `--perf` averaged over the same stretch of retraces):
+  3.21 ms of gfx with all four off, 3.32 with the fade-in and 4x
+  anti-aliasing, 3.37 with widescreen on top. 60.0 Hz and 42-43% CPU
+  throughout. The first game's port has the full per-option table.
+* **Widescreen** widens the race cameras' field of view and leaves the HUD,
+  the menus and the S2DEX passes in a centred 4:3 box, exactly as in the first
+  game -- the S2DEX object commands go through the same
+  `gfx_adjust_x_for_aspect_ratio` as everything else (`gfx_pc_tex_quad`), so
+  nothing had to be done for them.
 
 ## Self-play
 
