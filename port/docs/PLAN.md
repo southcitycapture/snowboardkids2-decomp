@@ -2267,3 +2267,60 @@ same stretch of retraces in each run:
 The sequel's frame is a little heavier than the first game's to begin with
 (3.2 ms against 2.4), and the options move it by about the same absolute
 amounts.  Everything held 60.0 Hz.
+
+## The launcher, and bringing your own ROM, 2026-09-13
+
+The port layer's front end is shared in design with the first game's, and the
+long-form notes on the rewrite -- why the art is read out of the cartridge
+rather than copied, what the two games' assets turned out to have in common,
+why the glyphs are kept in colour, the three things the first build got wrong
+-- live in that repository's `port/docs/PLAN.md` under the same heading. This
+is what is specific to the sequel.
+
+**The files are identical.** `port/src/ui/ui.c`, `ui_gl.c`, `ui_gl.h`,
+`ui_scene.c`, `ui_scene.h`, `ui_rom_art.c`, `ui_rom_art.h`, `rom_codec.c`,
+`rom_codec.h`, `port/src/rom_scan.c` and `rom_scan.h` are byte-for-byte the
+same in both repositories, which is deliberate: the launcher lists both games
+and either bundle is a front door to both, so a difference between the two
+copies would be a bug waiting to happen. Only `settings.c` differs (which game
+this executable *is*) and `main.c` (this game's ROM name and its EEPROM).
+
+**What this game's launcher reads out of its own ROM:**
+
+* `FONT_DATA_TABLE`, ROM `0x215D70..0x216290`, "Sno"-compressed to `0x918`
+  bytes. Inside it: a `SpriteSheetData` with eight 16-colour RGBA5551 palettes
+  at `+0x18` and a 64x64 CI4 sheet at `+0x118`, 8x8 cells, glyph =
+  `ascii - 0x20`. The same shape as the first game's `_2427D0`, which is why
+  one decoder serves both.
+* `titleLogo`, ROM `0x414CF0..0x418520`, "Sno"-compressed to `0x7B50` bytes: a
+  `TileMapTextureAsset`, a 10x8 grid of 32x32 CI8 tiles with one 256-colour
+  palette. Only rows 1 to 3 are populated, so the drawn logo is 320x96 -- but
+  nothing in the port knows that. The decoder builds the whole 320x256 canvas
+  and crops to the non-transparent bounding box, which is also what makes the
+  first game's logo (in the top left) come out right with no special case.
+
+**"Sno" is not MIO0.** Two bytes at a time: `00 xx` emits `xx`, anything else
+is a copy of `b0 >> 4` bytes from `((b0 & 0x0F) << 8) | b1` back. No header,
+no magic, so the output size has to be supplied -- it is the constant the game
+itself passes to `loadCompressedData` in `src/graphics/displaylist.c` and
+`src/ui/title_ui_elements.c`. `port/src/ui/rom_codec.c` carries it, and the
+first game's Huffman-then-LZ codec beside it, because this bundle draws the
+first game's box too.
+
+**None of the launcher's assets are inside a run-time overlay.** Both are
+top-level data segments at fixed ROM addresses, so the offsets above are read
+straight out of the file with `sbk_rom_read_at` -- no overlay thunks, no
+relocation, and no need for the game to have booted.
+
+**The ROM folder is shared with the first game**
+(`~/Library/Application Support/SnowboardKids/ROMs`), which is the whole point:
+this bundle can show the first game's box art because it can read the first
+game's cartridge. The EEPROM stays where it was, in
+`~/Library/Application Support/SnowboardKids2/eeprom.sav` -- saves are this
+game's, ROMs and settings are shared.
+
+Verified on the G4: this bundle's launcher comes up with both boxes, writes
+with *this* game's sprite font (`sbk: launcher font from Snowboard Kids 2's
+own sprite sheet`), starts its own game, hands over to the first game's bundle
+from the other box, and draws the restyled overlay over a running title
+screen. `regress` unaffected.

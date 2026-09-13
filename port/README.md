@@ -41,8 +41,8 @@ everything drawn under the game's sprite setup list was transparent black.
 | --- | --- |
 | ![Title](docs/screenshots/title.png) | ![Race](docs/screenshots/race-hud.png) |
 | The title screen: logo, snow background, menu, copyright, Rumble Pak badge. Pixel-for-pixel the layout of the emulator's frame. | A race with the full HUD: lap, item slots, place, the progress bar with rider heads, coins, and a sky that reaches the horizon. |
-| ![File select](docs/screenshots/file-select.png) | |
-| The file select, drawn from the 512-byte EEPROM image. | |
+| ![File select](docs/screenshots/file-select.png) | ![Launcher](docs/screenshots/launcher.png) |
+| The file select, drawn from the 512-byte EEPROM image. | The launcher, written in this game's own sprite font with this game's own title logo on the box front -- both read out of the cartridge dump at run time. |
 
 More, uncropped, are in `~/Apps/islandPowerPC/g4-shots`.
 
@@ -83,7 +83,8 @@ Scripts in `scripts/`: `title-start.txt`, `menu-walk.txt`, `menu-soak.txt`.
 The launcher, the in-game overlay (**F1** or the pad's **View** button) and
 `~/Library/Application Support/SnowboardKids/settings.txt` are the first
 game's, shared file for file; the sequel's copies differ only in which game
-they call themselves. The keys:
+they call themselves -- see **The launcher** and **Bring your own ROM** below.
+The keys:
 
     game=sbk2          mode=original|enhanced|custom
     draw_distance=1..4 resolution=native|n64|2x
@@ -210,6 +211,103 @@ fake `n64` filter. What is different here:
   game -- the S2DEX object commands go through the same
   `gfx_adjust_x_for_aspect_ratio` as everything else (`gfx_pc_tex_quad`), so
   nothing had to be done for them.
+
+## The launcher
+
+<p align="center">
+  <img src="docs/screenshots/launcher.png" width="49%" alt="Pick a game">
+  <img src="docs/screenshots/launcher-mode.png" width="49%" alt="Mode">
+  <img src="docs/screenshots/launcher-options.png" width="49%" alt="Options">
+  <img src="docs/screenshots/overlay.png" width="49%" alt="The same options over the running game">
+</p>
+
+Three screens on a Sunny Mountain sky with drifting clouds and light snowfall:
+**Pick a game** (the two games as N64 boxes on a snow shelf, the selected one
+lifted and slowly turning), **Mode** (Original / Enhanced / Custom, each with
+a line saying what it is, plus Tweak and Start), and **Options** (the settings
+above, one row each). Arrows or the stick move, Enter or A selects, Esc or B
+backs out and quits from the first screen. Transitions are 160 ms.
+
+The code is the first game's, file for file -- `port/src/ui/ui.c`,
+`ui_gl.c`, `ui_scene.c`, `ui_rom_art.c`, `rom_codec.c` -- and its design notes
+live in that repository's `port/docs/PLAN.md`. What differs here is only which
+bytes it reads:
+
+| | first game | this game |
+| --- | --- | --- |
+| font sheet | `_2427D0` at ROM `0x2427D0` | `FONT_DATA_TABLE` at `0x215D70` |
+| title logo | `_5DCBE0` at ROM `0x5DCBE0` | `titleLogo` at `0x414CF0` |
+| compression | Huffman then LZ | two-byte token LZ ("Sno") |
+
+**All the type on the launcher is the game's own sprite font and each box
+front carries the game's own title logo**, read out of whichever cartridge
+dump the player owns, at run time -- so none of the games' art is in this
+repository. Both games keep their ASCII font as a 64x64 CI4 sheet of 8x8 cells
+indexed by `ascii - 0x20` and both title logos as a 10x8 grid of 32x32 CI8
+tiles, so one decoder each serves both; the port carries *both*
+decompressors, because either bundle draws both boxes and so reads the
+sibling's ROM as well as its own. With no ROM at all the port's own 5x7 font
+and a generated box front spell the whole thing out instead.
+
+The sky, the clouds, the snow, the boxes and their shadows are generated in
+code -- one 64x64 soft blob is every cloud and every flake, and a box is six
+quads at the proportions of a real N64 box (1 : 1.4 : 0.15) lit by one
+directional light. Drop `port/resources/box-sbk1.png` or `box-sbk2.png` in and
+run `port/tools/gen_box.py` to put your own picture on a front instead.
+
+**No menu sounds.** The games' menu effects are sequenced by their own sound
+driver out of banks the audio thread loads after boot, and the launcher runs
+before any of that exists; the port makes no sound there rather than inventing
+one that is not the game's.
+
+Measured on the G4 with `--perf`, which the launcher answers with its own line
+a second:
+
+    sbk-launcher: 60.0 Hz  draw 0.80 ms  frame 15.50 ms
+
+## Bring your own ROM
+
+<p align="center">
+  <img src="docs/screenshots/launcher-missing.png" width="49%" alt="A game with no cartridge: a grey, unlit box">
+  <img src="docs/screenshots/launcher-norom.png" width="49%" alt="Where to put one">
+  <img src="docs/screenshots/launcher-wrong-region.png" width="49%" alt="The Japanese cartridge, named as such">
+</p>
+
+Both bundles share one folder for the player's cartridge dumps, next to the
+Controller Pak and `settings.txt`:
+
+    ~/Library/Application Support/SnowboardKids/ROMs/
+
+**Any filename**, and any of the three byte orders: the order is read off the
+first four bytes (every N64 ROM starts with the word `0x80371240`, so which
+permutation a file begins with names it) and `.v64` and `.n64` images are
+converted to big-endian as they load. The extension is never consulted.
+
+Which game a file is comes from the ROM header's cartridge id at `0x3C` (`SK`
+for the first game, `K2` for this one); whether it is the right one comes from
+its SHA-1:
+
+| game | SHA-1 of the USA dump | size |
+| --- | --- | --- |
+| Snowboard Kids | `1583bacc9046a360df8ea4d536942155247e154c` | 8 MB |
+| Snowboard Kids 2 | `5ce896fd64276948bc2b8cccd8cd51c25a9f32aa` | 16 MB |
+
+Those are what each decompilation's own matching build produces, so "the ROM
+this port was built against" and "the retail USA cartridge" are the same bytes.
+
+A file that is neither game is ignored. A file that is one of them but wrong
+says so in plain words -- *"this is the Japanese cartridge; the port needs the
+USA one"*, or *"this file is damaged; the port needs a clean USA dump"* --
+rather than failing to boot. With nothing at all for a game, its box is grey
+and unlit with a small *no cartridge* label, and choosing it shows the folder
+path with an **Open folder** action; leaving that panel rescans, so dropping a
+file in and coming back lights the box up without restarting.
+
+The bundle's own `Contents/Resources` ROM is still read, **last**, so a
+personal build in the shared folder wins. Hashes are cached by path, size and
+mtime in `.rom-hashes` so a 16 MB SHA-1 is paid once, not at every launch. A
+scripted run (`--play`, `--record`, `--headless`, `--nolauncher`) skips the
+scan entirely and keeps the old path search, so golden replays are untouched.
 
 ## Self-play
 
