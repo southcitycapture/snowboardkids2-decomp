@@ -2112,3 +2112,75 @@ without capturing it, so the list wants a sentinel frame on the end.
 Both games' goldens were re-run after the shared `gfx_pc.c` changes:
 Snowboard Kids 1 `regress` 8/8 PASS, Snowboard Kids 2 `regress` 1/1 PASS
 (`place=1/14256`, unchanged).
+
+## The Enhanced-mode distance haze, 2026-09-13
+
+`--drawdistance N` pushes the race camera's far plane out by N. What it
+actually buys you, and what it costs, took three measurements to find out, and
+none of them was what the feature description assumed.
+
+**1. The extra geometry is not spread over the extra range.** A three-way
+pixel diff -- `--drawdistance 1`, `4` without the haze, `4` with it, all three
+frame-exact off the same deterministic trial (`--nopad --eeprom scratch
+--trial level=0,quit=1 --shotat R`, which reproduce to the pixel) -- puts the
+whole difference in one band: 23,000 pixels of a 640x480 frame, a row of trees
+and a hut on a ridge, between 3800 and about 5000 units. A haze ramp that only
+reached full strength at the new far plane (15,200) was 6% thick there. The
+ramp has to be anchored to the far plane the *unmodified* game clipped at,
+not to the extended one.
+
+**2. Most of that band is not new geometry at all.** It is the same geometry
+with the *game's own fog* taken off it. `gSPFogPosition` takes normalised
+depth, not world units, so a fog band written as 0x3E3..0x3E7 (995..999 per
+mille) stretches with the far plane: on the N64 it ran about 1950 to 3190
+world units and was total by the time anything clipped, and at
+`--drawdistance 4` the same two numbers mean 3170 to 8640. Pushing the far
+plane out does not so much draw more as *un-fog* what was already being drawn.
+That is the honest description of what `--drawdistance` does to this game.
+
+**3. So the haze has to beat the game's fog, not merely add to it.** The two
+are the same colour -- both come from the course's own atmosphere colour -- so
+a ramp thinner than the game's changes not one pixel, and every early version
+of this measured exactly zero pixels different. `--hazeflat`, which paints
+every hazed vertex flat instead of ramped, is what settled it: with the colour
+swapped for magenta the band it covers is unmistakable, and it is exactly the
+ground past the N64's horizon. The shipped ramp starts at 0.85x the old far
+plane and is total at 1.5x, which passes the game's own fog at about 4000
+units.
+
+### What it is made of
+
+No post-process and no shader. F3DEX already carries a per-vertex fog factor,
+`gfx_pc.c` already computes one for `G_FOG` geometry and `gfx_gl13.c` already
+hands it to `GL_FOG` as a per-vertex fog coordinate (`GL_EXT_fog_coord`,
+`GL_LINEAR`, start 0 end 1), which the Radeon 9000 does in fixed function.
+`port/src/gfx/haze.c` fills in that same slot; where the game has a factor of
+its own the thicker of the two wins, per vertex, so the haze can only ever add.
+
+* **Distance** is the vertex's clip-space *w* divided by the length of the
+  projection's w column. The game MULs the view matrices into the same
+  `G_MTX_PROJECTION` slot, but the view part is rigid, so that column's length
+  is exactly the scale `guPerspective` was given -- 0.5 in the first game, 1.0
+  in the sequel -- and `w / scale` is the eye distance in the units the far
+  plane is written in. No estimate, and no per-game constant.
+* **Which viewport** comes from `gSPPerspNormalize`, which sm64-port ignores
+  as an RSP precision register but which is `2*65536/(near+far)` and therefore
+  names the far plane on its own. The race camera and every other pass in the
+  frame carry different integers, so the sky, the HUD and the menus are left
+  alone without a heuristic. `--hazedbg` prints the whole histogram.
+* **Colour** is the game's own per-course atmosphere colour, so there is no
+  table in the port and no sampling of the sky.
+* **Cost** on the real G4 at `--drawdistance 4`, 500 triangles a frame:
+  gfx 3.5 ms against 3.6 ms, 48-54 draw calls either way, 60.0 Hz and 44-46%
+  CPU in both. Under 0.1 ms, which is inside the noise of the readout.
+* **Off** in Original mode, in a scripted run and in a golden replay, the same
+  way the filters are, so `regress` still replays bit-identical.
+
+### Where the sequel differs from the first game
+
+The sequel already fogs its races: `race_session.c` calls `setViewportFogById`
+for every race viewport with `LevelConfig.environmentColors.fog`, which is also
+where the haze takes its colour. The first game has no per-viewport fog at all
+-- one global `gSPFogPosition(gFadeTimer, 1000)` a frame, whose colour is the
+per-course `gFadeColorRed/Green/Blue` that `setBootFadeColor` writes at the end
+of each case of `initRaceCourseSceneTasks`. Same idea, different drawer.

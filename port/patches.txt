@@ -4,9 +4,13 @@
 #
 # Draw distance (--drawdistance N): the race cameras' far planes scale with
 # sbk_far_scale (port_stubs.c). The sequel has three of them, in race_session.c.
-src/race/race_session.c	#define RACE_VIEWPORT_FAR_PLANE 3800.0f	#define RACE_VIEWPORT_FAR_PLANE (3800.0f * sbk_far_scale)
-src/race/race_session.c	#define MULTIPLAYER_RACE_VIEW_FAR_PLANE 3000.0f	#define MULTIPLAYER_RACE_VIEW_FAR_PLANE (3000.0f * sbk_far_scale)
-src/race/race_session.c	#define BOSS_RACE_VIEW_FAR_PLANE 2000.0f	#define BOSS_RACE_VIEW_FAR_PLANE (2000.0f * sbk_far_scale)
+# Each one also tells the Enhanced-mode distance haze (port/src/gfx/haze.c)
+# where it landed -- sbk_haze_note_far returns its argument, so the expression
+# is unchanged for the game and the haze gets the one number it cannot work
+# out for itself: the far plane in the game's own world units.
+src/race/race_session.c	#define RACE_VIEWPORT_FAR_PLANE 3800.0f	#define RACE_VIEWPORT_FAR_PLANE sbk_haze_note_far(3800.0f * sbk_far_scale)
+src/race/race_session.c	#define MULTIPLAYER_RACE_VIEW_FAR_PLANE 3000.0f	#define MULTIPLAYER_RACE_VIEW_FAR_PLANE sbk_haze_note_far(3000.0f * sbk_far_scale)
+src/race/race_session.c	#define BOSS_RACE_VIEW_FAR_PLANE 2000.0f	#define BOSS_RACE_VIEW_FAR_PLANE sbk_haze_note_far(2000.0f * sbk_far_scale)
 
 # Snowboard Kids 2: three KMC/MIPS-isms in src/race/race_main.c that a PowerPC
 # compiler cannot take. The first keeps a local in $t3 for a byte-exact match;

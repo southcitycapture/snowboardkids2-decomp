@@ -53,6 +53,7 @@ More, uncropped, are in `~/Apps/islandPowerPC/g4-shots`.
     port/tools/make_bundle.sh     # SnowboardKids2.app with the ROM in Resources
 
     snowboardkids2 [--fullscreen] [--windowed] [--nolauncher]
+                   [--drawdistance N] [--haze[=0|1]] [--hazedbg]
                    [--play SCRIPT|MOVIE.m64] [--record MOVIE.m64]
                    [--frames N] [--hashframe] [--mute] [--noaudio] [--wav OUT.wav]
                    [--pak FILE.mpk] [--nopak] [--eeprom FILE] [--unlockall]
@@ -76,6 +77,79 @@ whatever save block is loaded, so the course list offers every course; it
 belongs with `--eeprom` and nowhere near a save you want to keep.
 
 Scripts in `scripts/`: `title-start.txt`, `menu-walk.txt`, `menu-soak.txt`.
+
+## Draw distance and the distance haze
+
+The launcher, the in-game overlay (**F1** or the pad's **View** button) and
+`~/Library/Application Support/SnowboardKids/settings.txt` are the first
+game's, shared file for file; the sequel's copies differ only in which game
+they call themselves. The keys:
+
+    game=sbk2          mode=original|enhanced|custom
+    draw_distance=1..4 resolution=native|n64|2x
+    filter=none|scanlines|grille|smooth
+    widescreen=0|1     fullscreen=0|1     vsync=0|1
+    volume=0..100      launcher=0|1       perf=0|1
+    haze=0|1
+
+**Original** is draw distance 1, `n64` resolution, no filter, no haze.
+**Enhanced** is draw distance 2, `native` resolution, no filter, **haze on**.
+Touching any single setting moves Mode to CUSTOM rather than lying.
+
+`--drawdistance N` multiplies the three race far planes in
+`src/race/race_session.c` (3800 for a normal race, 3000 split-screen, 2000 for
+a boss) by N, through `port/patches.txt`. The extra range is honest geometry,
+and that is the problem: the N64 clipped it, so nobody ever made it look like
+anything. At `--drawdistance 4` on Sunny Mountain a band of far terrain stands
+across the sky at the chairlift, hard-edged and fully lit, with clouds behind
+it.
+
+`haze=1` fades that band into the course's own air. It is not a post-process
+and not a shader: F3DEX2 already carries a per-vertex fog factor, gfx_pc
+already computes one for `G_FOG` geometry and `gfx_gl13.c` already hands it to
+`GL_FOG` as a per-vertex fog coordinate, which the Radeon 9000 does in fixed
+function for nothing. `port/src/gfx/haze.c` fills that same slot in for race
+geometry the game did not fog far enough out.
+
+* **The sequel already fogs its races** -- every race viewport gets
+  `setViewportFogById(id, 0x3E3, 0x3E7, ...)`, a band in the last half a
+  percent of the *normalised depth* range. Normalised depth stretches with the
+  far plane, so once `--drawdistance` has moved the plane that band lands
+  nowhere useful. The haze therefore does not stand aside for it: it takes
+  whichever of the two factors is thicker, per vertex. The colour is the same
+  colour either way, so this can only add haze, never remove the game's.
+* **Distance** is exact, not estimated. `setViewportPerspective` is
+  `guPerspective(..., scale = 1.0f)` MUL'd with the view matrices into the
+  same `G_MTX_PROJECTION` slot, so a vertex's clip-space *w* is its eye
+  distance; gfx_pc takes the length of the matrix's w column anyway, which is
+  why the first game's 0.5 scale needs no special case.
+* **Which viewport** comes from `gSPPerspNormalize`, which is
+  `2*65536/(near+far)` and so names the far plane on its own. At
+  `--drawdistance 4` the race camera carries 8 and the root viewport that
+  draws the sky carries 13, so the sky is never fogged into itself.
+* **Colour** is the game's own `LevelConfig.environmentColors.fog`
+  (`src/data/course_data.c`) -- the colour `race_session.c` already hands
+  `setViewportFogById`, authored per course and per time of day: `50 70 F0`
+  for Sunny Mountain's blue, `FF FF C0` for the sunset course, `07 00 20` and
+  `00 10 20` for the night ones. No table of the port's own, and no guessing
+  at the sky.
+* **Range** runs from 0.85x the far plane the *unmodified* game clipped at to
+  2x that distance, capped at the extended plane. Anchoring it to the old
+  horizon rather than the new one is the whole trick, and it was measured
+  rather than guessed: a three-way pixel diff between `--drawdistance 1`,
+  4-without-haze and 4-with-haze says the geometry `--drawdistance` adds is
+  not spread over the new range at all. It is a band just past where the N64
+  clipped -- the trees and the hut on the ridge at Sunny Mountain, 23,000
+  pixels of one 640x480 frame, between 3800 and about 5000 units. A ramp that
+  reached full haze at 15,200 was 6% thick there.
+* **Props** stop popping for free: anything appearing at the edge of the range
+  appears already deep in haze.
+
+`--hazedbg` prints a line a second: the course, the colour, the range, the
+perspNorm the race camera carried against every other perspNorm in the frame,
+how many triangles were tinted and the farthest vertex seen. Scripted and
+golden runs force the haze off, like the filters, so `regress` still replays
+bit-identical.
 
 ## Self-play
 
